@@ -38,6 +38,11 @@ try:
    time.sleep(.25);g=call('generate','status')
   s=call('status')
   if p['configuration']['orchestra']>0:
+   # Some authored scores deliberately introduce an acoustic answer after four
+   # bars. Test the actual entrance, rather than requiring piano on the first beat.
+   deadline=time.monotonic()+35
+   while not (g['orchestra_events']>0 and g['orchestra_voices']>0) and time.monotonic()<deadline:
+    time.sleep(.2);g=call('generate','status')
    check(g['sample_based'] and g['orchestra_samples']==76,'Verified acoustic bank '+p['id'])
    check(g['orchestra_events']>0 and g['orchestra_voices']>0,'Real acoustic note playback '+p['id'])
   check(g['engine']=='onde-living-7' and g['running'] and g['rendered_seconds']>0,'Native live audio '+p['id'])
