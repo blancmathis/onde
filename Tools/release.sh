@@ -21,6 +21,11 @@ codesign --verify --deep --strict dist/Onde.app
 /usr/libexec/PlistBuddy -c 'Print :OndeCommit' dist/Onde.app/Contents/Info.plist
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
+# Audition files use the same just-built DSP and documented profile settings.
+for profile in elan reacteur traction; do
+  .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-5min.wav" --minutes 5
+  /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-5min.wav" "dist/$profile-5min.m4a"
+done
 printf 'TAG=%s\nVERSION=%s\nONDE_BUILD=%s\n' "$TAG" "$VERSION" "$ONDE_BUILD" > dist/release.env
 cat > dist/release-notes.md <<EOF
 ## Onde $VERSION

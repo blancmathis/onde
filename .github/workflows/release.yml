@@ -38,5 +38,6 @@ jobs:
           fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft \
             --title "Onde $VERSION · $ONDE_BUILD" --notes-file dist/release-notes.md \
-            dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256
+            dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256 \
+            dist/elan-5min.m4a dist/reacteur-5min.m4a dist/traction-5min.m4a
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

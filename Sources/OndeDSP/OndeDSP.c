@@ -508,7 +508,8 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         l=s->tone2L-s->dcPrevL+dc*s->dcL;r=s->tone2R-s->dcPrevR+dc*s->dcR;
         s->dcPrevL=s->tone2L;s->dcPrevR=s->tone2R;s->dcL=l;s->dcR=r;
         float target=s->now[ONDE_GAIN];s->master+=(target>s->master?up:down)*(target-s->master);
-        float calibration=.85f+.05f*s->meditation;
+        /* Reserve headroom for articulated bass instead of relying on the safety ceiling. */
+        float calibration=(.85f+.05f*s->meditation)/(1.f+.35f*drive+.15f*punch);
         l*=s->master*calibration;r*=s->master*calibration;
         if(fabsf(l)>.78f)l=copysignf(.78f+.17f*(1-expf(-(fabsf(l)-.78f)/.17f)),l);
         if(fabsf(r)>.78f)r=copysignf(.78f+.17f*(1-expf(-(fabsf(r)-.78f)/.17f)),r);
