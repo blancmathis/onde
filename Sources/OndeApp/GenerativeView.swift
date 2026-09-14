@@ -249,6 +249,7 @@ struct GenerativeContinuityPanel: View {
                         Spacer()
                         Text("Fondu : \(Int(model.transitionSeconds)) s").font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.muted)
                     }
+                    if let error = status["last_error"] as? String { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
                     if state == "crossfading" {
                         ProgressView(value: Double(transition["progress"] as? Float ?? 0)).tint(Theme.accent)
                     }

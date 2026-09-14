@@ -62,6 +62,7 @@ final class AppModel: ObservableObject {
             store.imported = store.imported.filter { $0.filename == URL(fileURLWithPath: $0.filename).lastPathComponent && !$0.filename.hasPrefix(".") }
             for id in Array(store.layers.keys) { store.layers[id]?.volume = clamp(store.layers[id]?.volume ?? 0) }
             sounds = (Sound.builtins + [Sound.living]).filter { audio.available($0) } + store.imported.filter { audio.available($0) }
+            audio.transitionSeconds = min(30, max(2, store.transitionSeconds ?? 10))
             try server.start { [weak self] request in self?.handle(request) ?? ["ok": false] }
             ownsProfile = true
         } catch let e as OndeError where e.code == "already_running" {
