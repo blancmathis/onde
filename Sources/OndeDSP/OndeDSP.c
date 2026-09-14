@@ -506,6 +506,20 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         float halfSeconds=half*beatDuration*.5f;
         float rollEnvelope=smooth(halfSeconds/.016f)*expf(-halfSeconds/.150f)*smooth((beatDuration*.5f-halfSeconds)/.028f);
         float accent=s->beatPhase<.5?1.f:.72f;
+        if(s->score && s->planReady){
+            /* The kick remains an anchor; the upper-bass accents answer across
+               eight bars instead of identical eighth notes for the whole session. */
+            static const float bassAccents[4][8]={
+                {1,.67f,.87f,.56f,.95f,.72f,.84f,.62f},
+                {1,.58f,.91f,.71f,.89f,.64f,.95f,.55f},
+                {1,.74f,.82f,.62f,.94f,.55f,.88f,.70f},
+                {1,.62f,.94f,.55f,.85f,.73f,.92f,.65f}
+            };
+            uint64_t localBar=s->bars-s->scoreStartBar;
+            int halfBeat=((s->step+15)%16)/2;
+            int phraseVariant=(s->plan.variant+(localBar%8>=4?1:0))%4;
+            accent*=bassAccents[phraseVariant][halfBeat];
+        }
         float harmonicBody=sn(s,wrap(s->bassPhase*2))+.44f*sn(s,wrap(s->bassPhase*3))+.24f*sn(s,wrap(s->bassPhase*4))+.085f*sn(s,wrap(s->bassPhase*6));
         float motion=(.070f+.28f*s->now[ONDE_BASS])*drive*rollEnvelope*accent*harmonicBody;
         float impact=(.16f+.35f*s->now[ONDE_BASS])*punch*kick;

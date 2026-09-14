@@ -54,7 +54,7 @@ MIXES & DATA
   onde events
   onde watch [--interval 1]            NDJSON snapshots until Ctrl-C
 
-ORIGINAL GENERATIVE MUSIC (OFFLINE, NO SAMPLES)
+ORIGINAL GENERATIVE MUSIC (OFFLINE, VERIFIED ACOUSTIC BANK)
   onde generate transition-render <from> <to> <new.wav> --seconds 60 --at 20 --fade 10
   onde generate transition <seconds>    Smooth handover duration, 2...30 seconds
   onde generate presets               Three original starting palettes
@@ -114,7 +114,7 @@ let commandSpecs: [[String: Any]] = [
     ["command":"generate.status","arguments":[:],"effect":"Live original synthesis state, seed, controls, render time, output level"],
     ["command":"generate.play","arguments":["mode":"focus|relax|meditation","seed":"optional integer 0...2^53-1","reset":"optional boolean"],"effect":"Solo the living layer, start mode, preserve chime preferences"],
     ["command":"generate.transition","arguments":["seconds":"number 2...30"],"effect":"Set persistent smooth crossfade duration; does not reset the timer"],
-    ["command":"generate.set","arguments":["key":"density|brightness|movement|space|texture|pulse|evolution|settleMinutes|bass|tempo|stability|warmth|character|drive|punch|orchestra|strings|brass|woods|harp|ostinato|percussion|composition|vocals|piano","value":"number 0...1; settleMinutes 0...120; tempo 40...120; composition integer 0...4"],"effect":"Smoothly change a persisted per-mode generator parameter"],
+    ["command":"generate.set","arguments":["key":"density|brightness|movement|space|texture|pulse|evolution|settleMinutes|bass|tempo|stability|warmth|character|drive|punch|orchestra|strings|brass|woods|harp|ostinato|percussion|composition|vocals|piano","value":"number 0...1; settleMinutes 0...120; tempo 40...120; composition integer 0...7"],"effect":"Smoothly change a persisted per-mode generator parameter"],
     ["command":"generate.seed","arguments":["value":"integer 0...2^53-1"],"effect":"Change future generative choices smoothly, no timer reset"],
     ["command":"generate.defaults","arguments":[:],"effect":"Restore current mode synthesis defaults, not chimes or layer volumes"],
 

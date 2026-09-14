@@ -70,6 +70,9 @@ final class GenerativeEngine {
         requestedIdentity = identity; loading = true; lastError = nil
         let rate = sampleRate
         builder.async { [weak self] in
+            var needed = false
+            DispatchQueue.main.sync { needed = self?.requestTicket == ticket }
+            guard needed else { return }
             var candidate: OpaquePointer?
             do {
                 let valid = try configuration.validated()

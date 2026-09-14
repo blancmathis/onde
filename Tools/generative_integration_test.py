@@ -30,8 +30,8 @@ try:
   # Core Audio may reconfigure its device asynchronously on a heavily loaded Mac.
   # Observe successful rendering instead of assuming it within a fixed 1.3s sleep.
   # No playback command is retried and the original assertions remain mandatory.
-  deadline=time.monotonic()+12;g=call('generate','status')
-  while not (g['running'] and g['rendered_seconds']>0) and time.monotonic()<deadline:
+  deadline=time.monotonic()+35;g=call('generate','status')
+  while not (g['running'] and g['rendered_seconds']>0 and not g.get('loading') and g.get('transition',{}).get('state')=='idle' and not g.get('transition',{}).get('queued')) and time.monotonic()<deadline:
    time.sleep(.25);g=call('generate','status')
   s=call('status')
   if not (g['running'] and g['rendered_seconds']>0):print('AUDIO_DIAGNOSTIC',json.dumps(g),flush=True)
