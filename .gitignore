@@ -1,0 +1,17 @@
+.DS_Store
+.build/
+.swiftpm/
+dist/
+Assets/*
+!Assets/.gitkeep
+*.log
+.build-*/
+.env
+.env.*
+*.key
+*.pem
+ExternalSources/
+Imports/
+Backups/
+Tools/apply_*.py
+Tools/install_living3_verified.py

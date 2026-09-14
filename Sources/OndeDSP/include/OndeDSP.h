@@ -1,0 +1,41 @@
+#ifndef ONDE_DSP_H
+#define ONDE_DSP_H
+#include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Original procedural sound engine, MIT. No samples or trained model weights.
+   Allocation happens only in create/destroy. Render never allocates, blocks,
+   accesses a file, or calls back into Swift. Controls use lock-free atomics.
+   One render thread per instance. UI setters and stat readers may be concurrent. */
+typedef struct OndeDSP OndeDSP;
+enum { ONDE_DENSITY, ONDE_BRIGHTNESS, ONDE_MOVEMENT, ONDE_SPACE,
+       ONDE_TEXTURE, ONDE_PULSE, ONDE_EVOLUTION, ONDE_SETTLE_MINUTES,
+       ONDE_GAIN, ONDE_BASS, ONDE_TEMPO, ONDE_STABILITY, ONDE_WARMTH, ONDE_CHARACTER, ONDE_DRIVE, ONDE_PUNCH, ONDE_PARAM_COUNT };
+OndeDSP *onde_dsp_create(double sample_rate, int mode, uint64_t seed);
+void onde_dsp_destroy(OndeDSP *s);
+void onde_dsp_set(OndeDSP *s, int parameter, float value);
+void onde_dsp_set_mode(OndeDSP *s, int mode);
+void onde_dsp_set_seed(OndeDSP *s, uint64_t seed);
+void onde_dsp_render(OndeDSP *s, float *left, float *right, uint32_t frames);
+uint64_t onde_dsp_frames(const OndeDSP *s);
+uint64_t onde_dsp_events(const OndeDSP *s);
+float onde_dsp_peak(const OndeDSP *s);
+float onde_dsp_rms(const OndeDSP *s);
+float onde_dsp_gain(const OndeDSP *s);
+uint64_t onde_dsp_note_events(const OndeDSP *s);
+uint64_t onde_dsp_grain_events(const OndeDSP *s);
+uint64_t onde_dsp_bars(const OndeDSP *s);
+int onde_dsp_section(const OndeDSP *s);
+int onde_dsp_harmony(const OndeDSP *s);
+int onde_dsp_voices(const OndeDSP *s);
+float onde_dsp_bpm(const OndeDSP *s);
+
+uint64_t onde_dsp_beats(const OndeDSP *s);
+uint64_t onde_dsp_ticks(const OndeDSP *s);
+uint64_t onde_dsp_min_beat_gap(const OndeDSP *s);
+uint64_t onde_dsp_max_beat_gap(const OndeDSP *s);
+#ifdef __cplusplus
+}
+#endif
+#endif

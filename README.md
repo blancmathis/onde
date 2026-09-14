@@ -1,0 +1,99 @@
+# Onde
+
+**A native macOS sound studio. Original generative music, a local JSON CLI, and open-ended meditation.**
+
+Focus, relax, or meditate. Shape the sound while it plays. No subscription, no account, no cloud audio engine.
+
+[Download the latest macOS app](https://github.com/blancmathis/onde/releases/latest) · [Agent guide](Documentation/AGENTS.md) · [MIT license](LICENSE)
+
+## Sound
+
+Nine procedural profiles, including **Élan (88 BPM)**, **Réacteur (96 BPM)** and **Traction (104 BPM)** for energetic focus. The new Impact and Drive controls shape beat-locked low-frequency attacks and an eighth-note bass line, rather than only increasing a continuous sub-bass tone.
+
+The six calmer profiles remain available: Ancrage, Abysses, Courant, Velours, Rive and Immersion. Tempo stays independent of note density. There are no random missing beats, synthetic hiss layer or recycled Endel samples. Each seed determines an original composition; settings and seeds can be saved with a mix. The same C11 engine powers live Core Audio playback and deterministic WAV exports.
+
+These are original compositions. Perceptual similarity or cognitive effects equivalent to another product have **not** been established. This is not a medical device.
+
+## Meditation
+
+The stopwatch counts up without a time limit. Default soft chimes occur at **10, 20 and 30 minutes**, then no more. The soundscape and stopwatch continue. Chime times and volume are configurable; an empty list disables all chimes. Paused time is excluded. Immersion can independently reduce musical details over time.
+
+Existing personal chime settings are preserved on upgrade. Master volume also controls chime volume: use `onde silence` to remove music while keeping the timer and chimes.
+
+## Install
+
+Download `Onde-macOS-universal.zip` from Releases, unzip it, and move `Onde.app` to `~/Applications` or `/Applications`. It contains both Apple Silicon and Intel executables and requires macOS 14 or later.
+
+**Community Build:** ad-hoc signed, not notarized by Apple. macOS may request explicit approval to open it. Onde does not disable Gatekeeper or change security settings. For a source build, use the commands below.
+
+The CLI is embedded at `Onde.app/Contents/MacOS/ondectl`. The optional source installer creates `~/.local/bin/onde` without changing your shell profile.
+
+## Updates from main
+
+Every push to `main` triggers a GitHub Actions build. It runs unit tests, compiles Apple Silicon and Intel binaries, packages a universal app, and publishes a release **only after all assets are ready**. Superseded builds are not published as latest.
+
+Onde checks the public GitHub release API at launch, on returning to the app, and approximately every five minutes while running. A new build displays a **Download** button. The archive is size-checked and SHA-256-verified using GitHub's asset digest. It is saved in Downloads; it is **not executed or installed automatically**. Quit Onde and replace the app when convenient.
+
+Automatic metadata checks can be disabled in **Mises à jour**. No account token, listening history, settings or personal audio is transmitted. GitHub necessarily receives the normal network request (including IP address and app user agent). Failed or still-running builds do not trigger an update prompt.
+
+## CLI for humans and agents
+
+```sh
+~/.local/bin/onde schema
+~/.local/bin/onde generate profiles
+~/.local/bin/onde generate profile reacteur --launch
+~/.local/bin/onde generate set punch 0.85
+~/.local/bin/onde generate set drive 0.80
+~/.local/bin/onde generate set bass 0.90
+~/.local/bin/onde generate status
+~/.local/bin/onde pause
+~/.local/bin/onde play
+~/.local/bin/onde mix save 'My focused morning'
+~/.local/bin/onde update check --wait
+~/.local/bin/onde update download --wait
+~/.local/bin/onde update automatic off
+```
+
+Replies are JSON. `watch` streams NDJSON. A private, owner-only UNIX socket connects the UI and CLI; no TCP listener is opened and no shell command is evaluated from an IPC request. Run `schema` to discover the full protocol. `--launch` explicitly opens the app when needed.
+
+Standalone export, app not required:
+
+```sh
+~/Applications/Onde.app/Contents/MacOS/ondectl generate render reacteur "$HOME/Desktop/Reactor.wav" --minutes 10
+```
+
+Exports use a fresh instance of the same synthesis core and never overwrite an existing destination. Reproducing customized live settings requires passing those settings explicitly. Outputs include a JSON provenance sidecar.
+
+## Build and test
+
+Install Apple's Xcode command-line tools (Swift 5.9 or later) and Python 3, then:
+
+```sh
+git clone https://github.com/blancmathis/onde.git
+cd onde
+ONDE_SKIP_DOWNLOADS=1 ONDE_ORIGINALS_ONLY=1 ./Tools/build.sh
+./Tools/install.sh
+open ~/Applications/Onde.app
+```
+
+The build generates the original audio beds and chime locally. Optional CC BY music downloads are disabled above. Public automated builds contain only original audio. No private reference audio is required to build or run the generator.
+
+```sh
+swift test -c release -j 3
+python3 Tools/generative_integration_test.py
+python3 Tools/profile_integration_test.py
+```
+
+Integration tests require an interactive macOS session and use isolated temporary profiles with muted output. Pure unit tests run in CI. `ONDE_HOME` supplies a separate local profile and disables automatic update checks in test instances.
+
+## Privacy and licenses
+
+User data lives in `~/Library/Application Support/Onde/`, outside this repository and the app bundle. Personal imports are never automatically uploaded or included in release builds. Keep your own imports out of Git. Update download preferences are stored in macOS UserDefaults.
+
+Code: **MIT**. Original procedurally generated audio: **CC0-1.0**. Optional third-party compositions have separate credits in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No audio from Endel or Brain.fm is redistributed. The optional Endel section links to public official players; streaming is distinct from local synthesis and is not required by Onde.
+
+## Architecture
+
+`OndeDSP` (C11): preallocated render core, stable musical clock, oscillator voices and diffuse reverb. `OndeCore`: state, export, local IPC, release validation. `OndeApp`: SwiftUI, Core Audio and verified opt-in downloads. `onde`: native command-line interface. GitHub release workflow: `.github/workflows/release.yml`.
+
+For contributors: preserve timer semantics, backwards-compatible settings, private imports and no-autoplay behavior. Keep the release asset name and build-tag format synchronized with `UpdatePolicy.swift`. Changing a fork's update source requires explicitly updating `AppBuild.repository` and the package metadata.
