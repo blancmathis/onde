@@ -39,5 +39,6 @@ jobs:
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft \
             --title "Onde $VERSION · $ONDE_BUILD" --notes-file dist/release-notes.md \
             dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256 \
-            dist/sillage-12min.m4a dist/filigrane-12min.m4a dist/confluence-12min.m4a dist/sanctuaire-12min.m4a
+            dist/sillage-12min.m4a dist/filigrane-12min.m4a dist/confluence-12min.m4a dist/sanctuaire-12min.m4a \
+            dist/ambre-12min.m4a dist/canopee-12min.m4a dist/meridien-12min.m4a dist/transition-ambre-sanctuaire.m4a
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

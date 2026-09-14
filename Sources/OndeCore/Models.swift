@@ -90,6 +90,7 @@ public struct SessionRecord: Codable, Identifiable {
     public init(date: Date, mode: SessionMode, seconds: Double) { self.date = date; self.mode = mode; self.seconds = seconds }
 }
 public struct StoredState: Codable {
+    public var transitionSeconds: Double?
     public var generatorSettings: [String: GenerativeSettings]?
     public var version = 1
     public var preferences = Preferences()

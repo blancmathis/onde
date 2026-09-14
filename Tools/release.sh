@@ -26,10 +26,12 @@ REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'imp
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
 # Audition files use the same just-built DSP and documented profile settings.
-for profile in sillage filigrane confluence sanctuaire; do
+for profile in ambre canopee meridien sillage filigrane confluence sanctuaire; do
   .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-12min.wav" --minutes 12
   /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-12min.wav" "dist/$profile-12min.m4a"
 done
+.build/release/ondectl generate transition-render ambre sanctuaire "$PWD/dist/transition-ambre-sanctuaire.wav" --seconds 70 --at 25 --fade 10
+/usr/bin/afconvert -f m4af -d aac -b 256000 dist/transition-ambre-sanctuaire.wav dist/transition-ambre-sanctuaire.m4a
 printf 'TAG=%s\nVERSION=%s\nONDE_BUILD=%s\n' "$TAG" "$VERSION" "$ONDE_BUILD" > dist/release.env
 cat > dist/release-notes.md <<EOF
 ## Onde $VERSION

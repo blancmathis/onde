@@ -28,6 +28,11 @@ int onde_dsp_composition(const OndeDSP *s);
 uint64_t onde_dsp_signature_events(const OndeDSP *s);
 int onde_dsp_choir_voices(const OndeDSP *s);
 void onde_dsp_render(OndeDSP *s, float *left, float *right, uint32_t frames);
+uint64_t onde_dsp_phrase(const OndeDSP *s);
+uint64_t onde_dsp_chapter(const OndeDSP *s);
+uint64_t onde_dsp_plan_hash(const OndeDSP *s);
+int onde_dsp_variant(const OndeDSP *s);
+void onde_dsp_set_rhythm_weight(OndeDSP *s,float weight);
 uint64_t onde_dsp_frames(const OndeDSP *s);
 uint64_t onde_dsp_events(const OndeDSP *s);
 float onde_dsp_peak(const OndeDSP *s);
@@ -48,4 +53,6 @@ uint64_t onde_dsp_max_beat_gap(const OndeDSP *s);
 #ifdef __cplusplus
 }
 #endif
+#include "PhrasePlanner.h"
+#include "SceneMixer.h"
 #endif

@@ -60,11 +60,11 @@ public enum GenerativeRenderer {
         try FileManager.default.moveItem(at: temp, to: url)
         let result: [String: Any] = ["path": url.path, "seconds": seconds, "sample_rate": sr,
                                      "mode": mode.rawValue, "seed": config.seed, "configuration": jsonObject(config),
-                                     "engine": "onde-living-6", "channels": 2, "bit_depth": 16,
+                                     "engine": "onde-living-7", "channels": 2, "bit_depth": 16,
                                      "render_wall_seconds": ProcessInfo.processInfo.systemUptime - start,
                                      "peak": peak, "rms": sqrt(energy / Double(total * 2)),
                                      "scheduled_events": onde_dsp_events(dsp), "license": "CC0-1.0",
-                                     "uses_endel_audio": false, "composition_id": config.composition, "vocal_source": config.vocals > 0 ? "original_synthesized_vowels" : "none", "sample_based": config.orchestra>0, "orchestra_samples": onde_dsp_orchestra_samples(dsp), "orchestra_events": onde_dsp_orchestra_events(dsp), "sample_license":"CC0-1.0"]
+                                     "uses_endel_audio": false, "phrase_index": onde_dsp_phrase(dsp), "chapter_index": onde_dsp_chapter(dsp), "phrase_fingerprint": String(onde_dsp_plan_hash(dsp)), "composition_id": config.composition, "vocal_source": config.vocals > 0 ? "original_synthesized_vowels" : "none", "sample_based": config.orchestra>0, "orchestra_samples": onde_dsp_orchestra_samples(dsp), "orchestra_events": onde_dsp_orchestra_events(dsp), "sample_license":"CC0-1.0"]
         // Sidecar only when free; never overwrite an existing user's manifest.
         let manifest = url.appendingPathExtension("json")
         if !FileManager.default.fileExists(atPath: manifest.path) { try? jsonData(result, pretty: true).write(to: manifest, options: .withoutOverwriting) }

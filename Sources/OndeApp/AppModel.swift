@@ -118,7 +118,10 @@ final class AppModel: ObservableObject {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: OndePaths.state.path)
         } catch { errorMessage = "Impossible d’enregistrer les réglages : \(error.localizedDescription)" }
     }
+    var transitionSeconds: Double { min(30, max(2, store.transitionSeconds ?? 10)) }
+    func setTransitionSeconds(_ seconds: Double) { store.transitionSeconds = min(30, max(2, seconds)); audio.transitionSeconds = transitionSeconds; persist() }
     func applyAudio() {
+        audio.transitionSeconds = transitionSeconds;
         do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing && endel.selected == nil, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration) }
         catch { fail(error) }
         updateSleepAssertion()
@@ -383,6 +386,8 @@ final class AppModel: ObservableObject {
                 var seed: UInt64? = nil
                 if r["seed"] != nil { let n = try number("seed", max: 9_007_199_254_740_991); guard n.rounded(.down) == n else { throw OndeError("invalid_seed", "Seed must be an integer.") }; seed = UInt64(n) }
                 startGenerator(selected, seed: seed, reset: r["reset"] as? Bool ?? false); result = generatorSnapshot
+            case "generate.transition":
+                setTransitionSeconds(try number("seconds", min: 2, max: 30)); result = generatorSnapshot
             case "generate.set":
                 let key = try string("key"); let value = try number("value", min: GenerativeSettings.range(key).lowerBound, max: GenerativeSettings.range(key).upperBound)
                 var copy = generatorConfiguration; try copy.set(key, value)

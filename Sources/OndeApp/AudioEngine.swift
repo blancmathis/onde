@@ -7,6 +7,7 @@ import OndeCore
 final class AudioEngine {
     private var players: [String: AVAudioPlayer] = [:]
     private let living = GenerativeEngine()
+    var transitionSeconds: Double { get { living.transitionSeconds } set { living.transitionSeconds = newValue } }
     var generatorStatus: [String: Any] { living.snapshot() }
     private var generation = 0
     private var bell: AVAudioPlayer?

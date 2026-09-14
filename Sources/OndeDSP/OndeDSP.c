@@ -4,6 +4,7 @@
  * All voices, wavetables and delay memory are allocated by create(), never render().
  */
 #include "OndeDSP.h"
+#include "PhrasePlanner.h"
 #include "Orchestra.h"
 #include "VowelChoir.h"
 #include <math.h>
@@ -60,6 +61,10 @@ struct OndeDSP {
     VowelChoir *choir;
     int score;uint64_t scoreStartBar,signatureEvents;
     float choirMix,bassMix;
+    OndePhrasePlan plan;int planReady;float sectionMix[7];
+    _Atomic uint64_t publishedPhrase,publishedChapter,publishedPlanHash;
+    _Atomic int publishedVariant;
+    _Atomic float rhythmTarget;float rhythmWeight;
     _Atomic int publishedComposition,publishedChoirVoices;
     _Atomic uint64_t publishedSignatureEvents;
     _Atomic uint64_t publishedOrchestraEvents;
@@ -172,15 +177,21 @@ static void note(OndeDSP *s,int midi,int kind,float level,float pan,float delayS
     v->life=(uint64_t)(dur*s->sr);
     for(int j=0;j<6;j++){
         double ratio=kind==5?j+1:ratios[timbre][j];
+        if(kind==6){const float rr[6]={1,2,3,4.006f,6,8};ratio=rr[j];}
+        if(kind==7){const float rr[6]={1,3.98f,9.96f,13.9f,16,20};ratio=rr[j];}
         v->step[j]=f*ratio/s->sr;
         v->p[j]=0;
         v->env[j]=1;
         float decay=kind==5?.24f/(1+j):kind==4?.045f:
             (s->mode==0?.8f:s->mode==1?2.3f:3.8f)*(kind==2?1.7f:kind==1?.57f:1.f);
+        if(kind==6)decay=1.25f;
+        if(kind==7)decay=.48f;
         decay/=1+j*.62f;
         v->decay[j]=expf(-1.f/(decay*s->sr));
         float upper=j==0?1.f:(.18f+.68f*s->now[ONDE_BRIGHTNESS]);
         v->amp[j]=kind==5?(j==0?1.f:j==1?.17f:0):kind==4?(j==0?.10f:0):amplitudes[timbre][j]*upper;
+        if(kind==6){const float aa[6]={1,.22f,.13f,.18f,.035f,.01f};v->amp[j]=aa[j]*(j==0?1.f:.4f+.6f*s->now[ONDE_BRIGHTNESS]);v->attack=.026f*s->sr;v->send=.30f;}
+        if(kind==7){const float aa[6]={1,.16f,.035f,.009f,0,0};v->amp[j]=aa[j];v->attack=.014f*s->sr;v->send=.27f;}
         if(f*ratio>s->sr*.42)v->amp[j]=0;
     }
     s->events++;s->noteEvents++;
@@ -311,10 +322,12 @@ static void control(OndeDSP *s){
     if(seed!=s->seed){s->seed=seed;s->music.state=seed;newMotif(s);}
     int score=(int)atomic_load_explicit(&s->target[ONDE_COMPOSITION],memory_order_relaxed);
     if(score!=s->score){
-        s->score=score;s->scoreStartBar=s->bars;s->nextPad=s->frame;
+        s->score=score;s->scoreStartBar=s->bars;s->nextPad=s->frame;s->planReady=0;
         if(s->frame==0 && score>0)memset(s->pads,0,sizeof(s->pads));
     }
     float dt=128.f/(float)s->sr;
+    s->rhythmWeight+=(1-expf(-dt/.030f))*(atomic_load_explicit(&s->rhythmTarget,memory_order_relaxed)-s->rhythmWeight);
+    for(int j=0;j<7;j++)s->sectionMix[j]+=(1-expf(-dt/8.f))*((s->planReady?s->plan.levels[j]:1.f)-s->sectionMix[j]);
     for(int j=0;j<ONDE_PARAM_COUNT;j++){
         float t=atomic_load_explicit(&s->target[j],memory_order_relaxed);
         s->now[j]+=(s->frame==0||j==ONDE_GAIN||j==ONDE_COMPOSITION?1.f:(1-expf(-dt/.65f)))*(t-s->now[j]);
@@ -324,7 +337,7 @@ static void control(OndeDSP *s){
     s->sectionEnergy+=(1-expf(-dt/5.f))*(s->energyTarget-s->sectionEnergy);
     s->openness+=(1-expf(-dt/8.f))*(s->opennessTarget-s->openness);
     float evolution=s->now[ONDE_EVOLUTION];
-    float wantedBass=s->score==2?.08f:s->score==3?.65f:s->score==4?.67f:1.f;
+    float wantedBass=s->score==2?.08f:s->score==3?.65f:s->score==4?.67f:s->score==5?.55f:s->score==6?.55f:1.f;
     s->bassMix+=(s->frame==0?1.f:(1-expf(-dt/2.f)))*(wantedBass-s->bassMix);
     s->choirMix+=(1-expf(-dt/2.f))*((s->score==4?1.f:0.f)-s->choirMix);
     s->bpm=s->now[ONDE_TEMPO];
@@ -369,6 +382,9 @@ OndeDSP *onde_dsp_create(double sr,int mode,uint64_t seed){
     atomic_init(&s->publishedComposition,0);atomic_init(&s->publishedChoirVoices,0);atomic_init(&s->publishedSignatureEvents,0);
     s->orchestra=orc_create(sr);if(!s->orchestra){choir_destroy(s->choir);free(s);return NULL;}
     atomic_init(&s->publishedOrchestraEvents,0);atomic_init(&s->publishedOrchestraVoices,0);
+    s->rhythmWeight=1;atomic_init(&s->rhythmTarget,1);
+    atomic_init(&s->publishedPhrase,0);atomic_init(&s->publishedChapter,0);atomic_init(&s->publishedPlanHash,0);atomic_init(&s->publishedVariant,0);
+    for(int j=0;j<7;j++)s->sectionMix[j]=1;
     s->sr=sr;s->mode=mode;s->focus=mode==0;s->meditation=mode==2;
     s->seed=seed;s->music.state=seed;s->air.state=seed^UINT64_C(0x18a394829bac);
     s->bpm=mode==0?72:mode==1?56:48;
@@ -417,7 +433,7 @@ uint64_t onde_dsp_orchestra_events(const OndeDSP *s){return s?atomic_load_explic
 void onde_dsp_set(OndeDSP *s,int p,float v){
     if(p==ONDE_COMPOSITION && (!isfinite(v)||v!=floorf(v)))return;
     if(s&&p>=0&&p<ONDE_PARAM_COUNT&&isfinite(v))
-        atomic_store_explicit(&s->target[p],cl(v,p==ONDE_TEMPO?40:0,(p==ONDE_SETTLE_MINUTES||p==ONDE_TEMPO)?120:p==ONDE_COMPOSITION?4:1),memory_order_relaxed);
+        atomic_store_explicit(&s->target[p],cl(v,p==ONDE_TEMPO?40:0,(p==ONDE_SETTLE_MINUTES||p==ONDE_TEMPO)?120:p==ONDE_COMPOSITION?7:1),memory_order_relaxed);
 }
 void onde_dsp_set_mode(OndeDSP *s,int m){if(s&&m>=0&&m<=2)atomic_store_explicit(&s->wantedMode,m,memory_order_relaxed);}
 void onde_dsp_set_seed(OndeDSP *s,uint64_t seed){if(s)atomic_store_explicit(&s->wantedSeed,seed,memory_order_relaxed);}
@@ -476,8 +492,8 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         /* Energy rack: a beat-locked impact plus an eighth-note bass ostinato.
            Original synthesis only. Zero-valued controls preserve the legacy timbre.
            No white noise, clipping-based distortion or randomized drum omissions. */
-        float drive=s->now[ONDE_DRIVE]*s->focus;
-        float punch=s->now[ONDE_PUNCH]*s->focus;
+        float drive=s->now[ONDE_DRIVE]*s->focus*s->rhythmWeight;
+        float punch=s->now[ONDE_PUNCH]*s->focus*s->rhythmWeight;
         float beatSeconds=(float)(s->beatPhase*60.0/s->bpm);
         float beatDuration=(float)(60.0/s->bpm);
         float attack=smooth(beatSeconds/.010f);
@@ -502,7 +518,7 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         float sub=osc(s,&s->bassPhase,s->bassStep);
         float harm=sn(s,wrap(s->bassPhase*2));
         float bassAmount=s->now[ONDE_BASS];
-        float pulse=s->now[ONDE_PULSE]*(s->mode==2?detail:1.f);
+        float pulse=s->now[ONDE_PULSE]*(s->mode==2?detail:1.f)*s->rhythmWeight;
         float raised=.5f+.5f*sn(s,wrap(s->beatPhase-.25));
         float beatShape=raised*raised;
         float bed=(.070f+.090f*bassAmount)*(1.f-.32f*drive);
@@ -524,19 +540,20 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
             v->nlp+=.12f*(x-v->nlp);x=v->nlp;
             v->noiseEnv*=v->noiseDecay;
             float tail=smooth((float)(v->life-v->age)/(.22f*s->sr));
-            x*=smooth((float)v->age/v->attack)*tail*v->gain*(1-.95f*s->now[ONDE_ORCHESTRA]);
+            x*=smooth((float)v->age/v->attack)*tail*v->gain*(1-.95f*s->now[ONDE_ORCHESTRA])*s->rhythmWeight;
             if(v->kind<5)x*=detail;
             float pl=x*(1-v->pan)*1.4f,pr=x*v->pan*1.4f;
             l+=pl;r+=pr;sendL+=pl*v->send;sendR+=pr*v->send;
-            if(v->kind<4){echoSendL+=pl*.38f;echoSendR+=pr*.38f;}
+            if(v->kind<4||v->kind>=6){echoSendL+=pl*.38f;echoSendR+=pr*.38f;}
             v->age++;
         }
         /* Real acoustic families share the hall and stable electronic foundation. */
         float levels[7]={s->now[ONDE_STRINGS],s->now[ONDE_BRASS],s->now[ONDE_WOODS],s->now[ONDE_HARP]*detail,s->now[ONDE_OSTINATO]*detail,s->now[ONDE_PERCUSSION]*detail,s->now[ONDE_PIANO]*detail};
+        for(int j=0;j<7;j++){levels[j]*=s->sectionMix[j];if(j>=3)levels[j]*=s->rhythmWeight;}
         float acousticL=0,acousticR=0;
         orc_frame(s->orchestra,levels,s->now[ONDE_WARMTH],&acousticL,&acousticR);
         float orchestralGain=s->now[ONDE_ORCHESTRA];
-        float acousticCalibration=s->score==2?2.10f:s->score==3?1.50f:1.f;
+        float acousticCalibration=s->score==2?2.10f:s->score==3?1.50f:s->score==5?1.35f:1.f;
         acousticL*=orchestralGain*acousticCalibration;acousticR*=orchestralGain*acousticCalibration;
         l+=acousticL;r+=acousticR;sendL+=acousticL*.40f;sendR+=acousticR*.40f;
         float vocalL=0,vocalR=0;
@@ -598,12 +615,18 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         float target=s->now[ONDE_GAIN];s->master+=(target>s->master?up:down)*(target-s->master);
         /* Reserve headroom for articulated bass instead of relying on the safety ceiling. */
         float calibration=(.85f+.05f*s->meditation)/(1.f+.35f*drive+.15f*punch);
+        static const float collectionGain[8]={1,.95f,1.50f,1.10f,1.23f,1.75f,1.90f,.90f};
+        calibration*=collectionGain[s->score];
         l*=s->master*calibration;r*=s->master*calibration;
         if(fabsf(l)>.78f)l=copysignf(.78f+.17f*(1-expf(-(fabsf(l)-.78f)/.17f)),l);
         if(fabsf(r)>.78f)r=copysignf(.78f+.17f*(1-expf(-(fabsf(r)-.78f)/.17f)),r);
         if(!isfinite(l))l=0;if(!isfinite(r))r=0;
         left[n]=l;right[n]=r;peak=fmaxf(peak,fmaxf(fabsf(l),fabsf(r)));energy+=(double)l*l+(double)r*r;
     }
+    atomic_store_explicit(&s->publishedPhrase,s->planReady?s->plan.phrase:0,memory_order_relaxed);
+    atomic_store_explicit(&s->publishedChapter,s->planReady?s->plan.chapter:0,memory_order_relaxed);
+    atomic_store_explicit(&s->publishedPlanHash,s->planReady?s->plan.fingerprint:0,memory_order_relaxed);
+    atomic_store_explicit(&s->publishedVariant,s->planReady?s->plan.variant:0,memory_order_relaxed);
     atomic_store_explicit(&s->publishedComposition,s->score,memory_order_relaxed);
     atomic_store_explicit(&s->publishedSignatureEvents,s->signatureEvents,memory_order_relaxed);
     atomic_store_explicit(&s->publishedChoirVoices,choir_voices(s->choir),memory_order_relaxed);
@@ -649,3 +672,14 @@ uint64_t onde_dsp_max_beat_gap(const OndeDSP *s){return s?atomic_load_explicit(&
 int onde_dsp_composition(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedComposition,memory_order_relaxed):0;}
 uint64_t onde_dsp_signature_events(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedSignatureEvents,memory_order_relaxed):0;}
 int onde_dsp_choir_voices(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedChoirVoices,memory_order_relaxed):0;}
+
+uint64_t onde_dsp_phrase(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedPhrase,memory_order_relaxed):0;}
+uint64_t onde_dsp_chapter(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedChapter,memory_order_relaxed):0;}
+uint64_t onde_dsp_plan_hash(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedPlanHash,memory_order_relaxed):0;}
+int onde_dsp_variant(const OndeDSP*s){return s?atomic_load_explicit(&s->publishedVariant,memory_order_relaxed):0;}
+void onde_dsp_set_rhythm_weight(OndeDSP*s,float weight){if(s&&isfinite(weight))atomic_store_explicit(&s->rhythmTarget,cl(weight,0,1),memory_order_relaxed);}
+uint64_t onde_dsp_frames_to_bar(const OndeDSP*s){
+ if(!s||s->bpm<=0)return 0;
+ double offset=s->nextStep+((16-s->step)%16)*(60/s->bpm)*s->sr/4-(double)s->frame;
+ return offset>0?(uint64_t)ceil(offset):0;
+}

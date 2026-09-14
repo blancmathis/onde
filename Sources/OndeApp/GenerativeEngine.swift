@@ -3,22 +3,33 @@ import AVFoundation
 import OndeCore
 import OndeDSP
 
-/// Main-thread owner; rendering occurs entirely in a preallocated C11 DSP core.
-/// Acoustic CC0 notes are preloaded from the installed app; no audio capture, runtime downloads or ML.
+/// One Core Audio graph, two render scenes during a transition. Preparation and
+/// disposal are outside the audio callback. Rapid clicks retain the last request.
 final class GenerativeEngine {
     private let engine = AVAudioEngine()
-    private var source: AVAudioSourceNode?
-    private var core: OpaquePointer?
     private let sampleRate: Double = 44_100
+    private let builder = DispatchQueue(label: "app.onde.scene-preparation", qos: .userInitiated)
+    private var source: AVAudioSourceNode?
+    private var mixer: OpaquePointer?
+    private var targetCore: OpaquePointer?
+    private var requestedIdentity: String?
+    private var requestTicket = 0
     private var fadeTicket = 0
     private var config = GenerativeSettings()
     private var selectedMode: SessionMode = .focus
-    private var configurationObserver: NSObjectProtocol?
     private var wantedPlaying = false
     private var wantedGain: Float = 0
+    private var configurationObserver: NSObjectProtocol?
+    private var collector: Timer?
+    private var fromTitle = ""
+    private(set) var loading = false
     private(set) var lastError: String?
+    var transitionSeconds: Double = 10
 
     init() {
+        collector = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            if let mixer = self?.mixer { onde_scene_mixer_collect(mixer) }
+        }
         configurationObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
             guard let self, self.wantedPlaying else { return }
             do { try self.engine.start(); self.lastError = nil }
@@ -26,67 +37,121 @@ final class GenerativeEngine {
         }
     }
     deinit {
+        collector?.invalidate()
         if let configurationObserver { NotificationCenter.default.removeObserver(configurationObserver) }
         engine.stop()
         if let source { engine.detach(source) }
-        if let core { onde_dsp_destroy(core) }
+        if let mixer { onde_scene_mixer_destroy(mixer) }
     }
-    private func prepare(_ mode: SessionMode, _ config: GenerativeSettings) throws {
-        guard core == nil else { return }
-        guard let ptr = onde_dsp_create(sampleRate, mode.dspMode, config.seed) else {
-            throw OndeError("generator_init_failed", "Le moteur sonore n’a pas pu être initialisé.")
-        }
-        do { try OrchestraBank.load(into:ptr,required:config.orchestra>0) }
-        catch { onde_dsp_destroy(ptr);throw error }
+    private func prepareGraph() throws {
+        guard mixer == nil else { return }
+        guard let mix = onde_scene_mixer_create(sampleRate) else { throw OndeError("generator_init_failed", "Le mixeur n’a pas pu être initialisé.") }
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2)!
-        let node = AVAudioSourceNode(format: format) { _, _, frameCount, list -> OSStatus in
-            // Buffer lists are provided by Core Audio. No new buffers are allocated here.
+        let node = AVAudioSourceNode(format: format) { _, _, count, list -> OSStatus in
             let buffers = UnsafeMutableAudioBufferListPointer(list)
-            guard buffers.count == 2, let left = buffers[0].mData, let right = buffers[1].mData else {
+            guard buffers.count == 2, let l = buffers[0].mData, let r = buffers[1].mData else {
                 for buffer in buffers { if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) } }
                 return noErr
             }
-            onde_dsp_render(ptr, left.assumingMemoryBound(to: Float.self), right.assumingMemoryBound(to: Float.self), frameCount)
+            onde_scene_mixer_render(mix, l.assumingMemoryBound(to: Float.self), r.assumingMemoryBound(to: Float.self), count)
             return noErr
         }
-        core = ptr; source = node
+        mixer = mix; source = node
         engine.attach(node); engine.connect(node, to: engine.mainMixerNode, format: format)
-        engine.mainMixerNode.outputVolume = 1
-        engine.prepare()
+        engine.mainMixerNode.outputVolume = 1; engine.prepare()
+    }
+    private func applyControls(_ ptr: OpaquePointer, mode: SessionMode, configuration: GenerativeSettings) {
+        onde_dsp_set_mode(ptr, mode.dspMode); onde_dsp_set_seed(ptr, configuration.seed)
+        for (i, v) in configuration.values.enumerated() { onde_dsp_set(ptr, GenerativeSettings.dspIndex(i), Float(v)) }
+        onde_dsp_set(ptr, Int32(ONDE_GAIN), 1)
+    }
+    private func prepareScene(mode: SessionMode, configuration: GenerativeSettings, identity: String) {
+        requestTicket += 1; let ticket = requestTicket
+        requestedIdentity = identity; loading = true; lastError = nil
+        let rate = sampleRate
+        builder.async { [weak self] in
+            var candidate: OpaquePointer?
+            do {
+                let valid = try configuration.validated()
+                guard let ptr = onde_dsp_create(rate, mode.dspMode, valid.seed) else { throw OndeError("generator_init_failed", "Impossible de préparer le paysage.") }
+                candidate = ptr
+                try OrchestraBank.load(into: ptr, required: valid.orchestra > 0 || valid.piano > 0)
+                if valid.piano > 0 && (onde_dsp_orchestra_families(ptr) & 2048) == 0 { throw OndeError("piano_missing", "La banque de piano complète est requise.") }
+                for (i, v) in valid.values.enumerated() { onde_dsp_set(ptr, GenerativeSettings.dspIndex(i), Float(v)) }
+                onde_dsp_set(ptr, Int32(ONDE_GAIN), 1)
+                // Warm the harmonic space silently for one whole bar, before publication.
+                var l = [Float](repeating: 0, count: 1024), r = l
+                var remaining = Int((240 / valid.tempo * rate).rounded(.up))
+                while remaining > 0 { let n = min(1024, remaining); onde_dsp_render(ptr, &l, &r, UInt32(n)); remaining -= n }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.requestTicket == ticket, let mixer = self.mixer else { onde_dsp_destroy(ptr); return }
+                    self.applyControls(ptr, mode: self.selectedMode, configuration: self.config)
+                    guard onde_scene_mixer_submit(mixer, ptr, self.transitionSeconds) == 1 else {
+                        onde_dsp_destroy(ptr); self.loading = false; self.requestedIdentity = nil
+                        self.lastError = "La transition n’a pas pu être préparée."; return
+                    }
+                    self.targetCore = ptr; self.loading = false
+                    onde_scene_mixer_gain(mixer, self.wantedPlaying ? self.wantedGain : 0)
+                }
+            } catch {
+                if let candidate { onde_dsp_destroy(candidate) }
+                let text = error.localizedDescription
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.requestTicket == ticket else { return }
+                    self.loading = false; self.requestedIdentity = nil; self.lastError = text
+                }
+            }
+        }
     }
     func apply(mode: SessionMode, config: GenerativeSettings, gain: Double, playing: Bool) throws {
-        self.config = config; self.selectedMode = mode
-        wantedPlaying = playing; wantedGain = Float(max(0, min(1, gain)))
+        let identity = mode.rawValue + ":" + (config.profileID ?? "custom") + ":" + String(Int(config.composition))
+        let previousName = self.config.displayName
+        self.config = config; selectedMode = mode; wantedPlaying = playing
+        wantedGain = Float(max(0, min(1, gain)))
         fadeTicket += 1; let ticket = fadeTicket
-        if playing { try prepare(mode, config) }
-        guard let core else { return }
-        if config.orchestra>0 && onde_dsp_orchestra_samples(core)==0 {throw OndeError("orchestra_missing","La banque orchestrale complète est requise pour ce profil.")}
-        if config.piano>0 && (onde_dsp_orchestra_families(core)&2048)==0 {throw OndeError("piano_missing", "La banque de piano de la version complète est requise.")}
-        onde_dsp_set_mode(core, mode.dspMode); onde_dsp_set_seed(core, config.seed)
-        for (index, value) in config.values.enumerated() { onde_dsp_set(core, GenerativeSettings.dspIndex(index), Float(value)) }
-        onde_dsp_set(core, Int32(ONDE_GAIN), playing ? wantedGain : 0)
+        if playing { try prepareGraph() }
+        guard let mixer else { return }
+        if playing && identity != requestedIdentity {
+            fromTitle = previousName
+            prepareScene(mode: mode, configuration: config, identity: identity)
+        } else if !loading, identity == requestedIdentity, let targetCore {
+            applyControls(targetCore, mode: mode, configuration: config)
+        }
+        onde_scene_mixer_gain(mixer, playing ? wantedGain : 0)
         if playing {
             if !engine.isRunning { try engine.start() }
-            lastError = nil
         } else {
-            // The render gain reaches silence before pausing Core Audio.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                guard let self, self.fadeTicket == ticket, !self.wantedPlaying else { return }
-                self.engine.pause()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                guard let self, self.fadeTicket == ticket, !self.wantedPlaying else { return }; self.engine.pause()
             }
         }
     }
     func reset() {
-        engine.stop()
-        if let source { engine.detach(source) }
-        source = nil
-        if let core { onde_dsp_destroy(core) }
-        core = nil; wantedPlaying = false; fadeTicket += 1
+        requestTicket += 1; loading = false; requestedIdentity = nil; targetCore = nil
+        engine.stop(); if let source { engine.detach(source) }; source = nil
+        if let mixer { onde_scene_mixer_destroy(mixer) }; mixer = nil
+        wantedPlaying = false; fadeTicket += 1
     }
-    var running: Bool { engine.isRunning && wantedPlaying }
+    var running: Bool { engine.isRunning && wantedPlaying && mixer.flatMap { onde_scene_mixer_visible($0) } != nil }
+    var transitionSnapshot: [String: Any] {
+        let phase = mixer.map(onde_scene_mixer_state) ?? 0
+        return ["state": loading ? "preparing" : phase == 1 ? "waiting_for_bar" : phase == 2 ? "crossfading" : "idle",
+                "progress": mixer.map(onde_scene_mixer_progress) ?? 1,
+                "seconds": transitionSeconds, "from": fromTitle, "to": config.displayName,
+                "queued": (mixer.map(onde_scene_mixer_pending) ?? 0) != 0,
+                "policy": "smooth_equal_power_with_rhythmic_handover"]
+    }
     func snapshot() -> [String: Any] {
+        let core = mixer.flatMap { onde_scene_mixer_visible($0) }
         let frames = core.map(onde_dsp_frames) ?? 0
-        return ["engine": "onde-living-6", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
+        return ["engine": "onde-living-7", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
+                "loading": loading,
+                "transition": transitionSnapshot,
+                "phrase_index": core.map(onde_dsp_phrase) ?? 0,
+                "chapter_index": core.map(onde_dsp_chapter) ?? 0,
+                "phrase_fingerprint": String(core.map(onde_dsp_plan_hash) ?? 0),
+                "theme_variant": core.map(onde_dsp_variant) ?? 0,
+                "phrase_bars": 8, "chapter_bars": 64,
                 "composition_id": core.map(onde_dsp_composition) ?? 0,
                 "score_events": core.map(onde_dsp_signature_events) ?? 0,
                 "choir_voices": core.map(onde_dsp_choir_voices) ?? 0,
@@ -112,9 +177,9 @@ final class GenerativeEngine {
                 "active_voices": core.map(onde_dsp_voices) ?? 0,
                 "harmony_index": core.map(onde_dsp_harmony) ?? 0,
                 "arrangement_section": ["Ouverture", "Courant", "Tissage", "Respiration", "Résonance", "Suspension"][min(5, max(0, Int(core.map(onde_dsp_section) ?? 0)))],
-                "output_peak": core.map(onde_dsp_peak) ?? 0,
-                "output_rms": core.map(onde_dsp_rms) ?? 0,
-                "actual_gain": core.map(onde_dsp_gain) ?? 0,
+                "output_peak": mixer.map(onde_scene_mixer_peak) ?? 0,
+                "output_rms": mixer.map(onde_scene_mixer_rms) ?? 0,
+                "actual_gain": mixer.map(onde_scene_mixer_actual_gain) ?? 0,
                 "sample_rate": sampleRate, "configuration": jsonObject(config),
                 "last_error": lastError as Any? ?? NSNull()]
     }

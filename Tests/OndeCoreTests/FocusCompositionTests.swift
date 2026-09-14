@@ -2,9 +2,9 @@ import XCTest
 import OndeDSP
 @testable import OndeCore
 final class FocusCompositionTests: XCTestCase {
-    func testFourAuthoredIdentitiesNotFourSeeds() throws {
-        XCTAssertEqual(FocusCompositions.profiles.map(\.id), ["sillage", "filigrane", "confluence", "sanctuaire"])
-        XCTAssertEqual(Set(FocusCompositions.profiles.map { $0.configuration.composition }).count, 4)
+    func testSevenAuthoredIdentitiesNotSevenSeeds() throws {
+        XCTAssertEqual(FocusCompositions.profiles.map(\.id), ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire"])
+        XCTAssertEqual(Set(FocusCompositions.profiles.map { $0.configuration.composition }).count, 7)
         for p in FocusCompositions.profiles { _ = try p.configuration.validated(); XCTAssertEqual(p.mode, .focus) }
     }
     func testLegacySettingsStayOnOriginalScore() throws {
@@ -18,7 +18,7 @@ final class FocusCompositionTests: XCTestCase {
     }
     func testScoreMustBeAValidInteger() throws {
         var c = GenerativeSettings()
-        for x in [-1.0, 0.5, 4.1, Double.nan, Double.infinity] { XCTAssertThrowsError(try c.set("composition", x)) }
+        for x in [-1.0, 0.5, 7.1, 8, Double.nan, Double.infinity] { XCTAssertThrowsError(try c.set("composition", x)) }
         try c.set("composition", 4); XCTAssertEqual(c.composition, 4)
         for k in ["vocals", "piano"] { XCTAssertThrowsError(try c.set(k, 1.01)); try c.set(k, 0.5) }
     }

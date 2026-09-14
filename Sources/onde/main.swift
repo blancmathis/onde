@@ -55,6 +55,8 @@ MIXES & DATA
   onde watch [--interval 1]            NDJSON snapshots until Ctrl-C
 
 ORIGINAL GENERATIVE MUSIC (OFFLINE, NO SAMPLES)
+  onde generate transition-render <from> <to> <new.wav> --seconds 60 --at 20 --fade 10
+  onde generate transition <seconds>    Smooth handover duration, 2...30 seconds
   onde generate presets               Three original starting palettes
   onde generate play focus --launch
   onde generate play meditation --seed 123
@@ -111,6 +113,7 @@ let commandSpecs: [[String: Any]] = [
 
     ["command":"generate.status","arguments":[:],"effect":"Live original synthesis state, seed, controls, render time, output level"],
     ["command":"generate.play","arguments":["mode":"focus|relax|meditation","seed":"optional integer 0...2^53-1","reset":"optional boolean"],"effect":"Solo the living layer, start mode, preserve chime preferences"],
+    ["command":"generate.transition","arguments":["seconds":"number 2...30"],"effect":"Set persistent smooth crossfade duration; does not reset the timer"],
     ["command":"generate.set","arguments":["key":"density|brightness|movement|space|texture|pulse|evolution|settleMinutes|bass|tempo|stability|warmth|character|drive|punch|orchestra|strings|brass|woods|harp|ostinato|percussion|composition|vocals|piano","value":"number 0...1; settleMinutes 0...120; tempo 40...120; composition integer 0...4"],"effect":"Smoothly change a persisted per-mode generator parameter"],
     ["command":"generate.seed","arguments":["value":"integer 0...2^53-1"],"effect":"Change future generative choices smoothly, no timer reset"],
     ["command":"generate.defaults","arguments":[:],"effect":"Restore current mode synthesis defaults, not chimes or layer volumes"],
@@ -203,6 +206,13 @@ func send(_ request: [String: Any]) throws -> [String: Any] {
 }
 do {
 
+    if args.count >= 2 && args[0] == "generate" && args[1] == "transition-render" {
+        guard let from = SoundProfile.find(try argument(2)), let to = SoundProfile.find(try argument(3)) else { throw OndeError("not_found", "Unknown composition.") }
+        let seconds = try option("--seconds").map(value) ?? 60
+        let at = try option("--at").map(value) ?? 20
+        let fade = try option("--fade").map(value) ?? 10
+        emit(["ok": true, "result": try TransitionRenderer.render(from: from, to: to, seconds: seconds, at: at, fade: fade, path: try argument(4))]); exit(0)
+    }
     if args.count >= 2 && args[0] == "generate" && args[1] == "render" {
         let selection = try argument(2)
         let selectedProfile = SoundProfile.find(selection)
@@ -240,6 +250,7 @@ do {
         case "play":
             request = ["command":"generate.play","mode":try argument(2),"reset":args.contains("--reset")]
             if let text = try option("--seed") { request["seed"] = try value(text) }
+        case "transition": request = ["command":"generate.transition","seconds":try value(argument(2))]
         case "set": request = ["command":"generate.set","key":try argument(2),"value":try value(argument(3))]
         case "seed": request = ["command":"generate.seed","value":try value(argument(2))]
         default: throw OndeError("unknown_command", "Use generate presets, play, set, seed, defaults, status, or render.")

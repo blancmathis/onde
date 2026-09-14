@@ -148,3 +148,16 @@ All thirteen earlier profiles and saved personal configurations remain available
 Research informs the design; these compositions have not been clinically tested
 and do not claim a universal optimum or superiority to silence. Detailed rationale,
 limitations, sources and commands: [Focus compositions](Documentation/FOCUS-SIGNATURES-1.7.md).
+
+## 1.8 — Long-form development and scene transitions
+
+Ambre, Canopée and Méridien join the four revised signature compositions.
+Eight-bar questions and answers, common-tone harmonic routes and gradual
+64-bar orchestration replace the previous one/two-bar-only writing.
+No automatic genre changes or claim of clinically optimal music.
+
+Selecting a new profile prepares it off the audio thread and performs a
+bar-boundary crossfade with rhythmic handover (10 seconds by default).
+Use `onde generate transition 2...30` to change its duration. The same production
+mixer can export a transition with `onde generate transition-render`.
+See [the long-form guide](Documentation/FORMES-LONGUES-1.8.md).

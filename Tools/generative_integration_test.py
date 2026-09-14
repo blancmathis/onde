@@ -24,7 +24,7 @@ def launch():
 try:
  check(len(call('generate','presets'))==3,'Three offline generative presets')
  s=launch();check(s['status']=='stopped','No automatic playback after migration')
- call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true');call('timer','markers','10,20,30,40')
+ call('generate','transition','2');call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true');call('timer','markers','10,20,30,40')
  for mode,seed in [('focus','42'),('relax','314'),('meditation','2718')]:
   call('generate','play',mode,'--seed',seed)
   # Core Audio may reconfigure its device asynchronously on a heavily loaded Mac.

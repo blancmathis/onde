@@ -11,7 +11,7 @@ struct GenerativeView: View {
     @State private var advanced = false
     @State private var otherProfiles = false
     var body: some View {
-        PageHeader(eyebrow: "Collection Focus · quatre partitions originales", title: "Trouvez votre rythme. Gardez-le.", subtitle: "Quatre univers soignés, sans paroles, sans changement automatique de style.")
+        PageHeader(eyebrow: "Collection Focus · formes longues", title: "Un rythme stable. Une musique qui avance.", subtitle: "Sept univers, des phrases de huit mesures et des transitions sans coupure.")
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
             ForEach(FocusCompositions.profiles) { profile in SoundProfileCard(profile: profile) }
         }
@@ -20,6 +20,7 @@ struct GenerativeView: View {
                 ForEach(SoundProfile.all.filter { $0.configuration.composition==0 }) { profile in SoundProfileCard(profile: profile) }
             }.padding(.top,16)
         } label: { Text("Les autres paysages · Focus, Relax et Méditation").font(.system(size:12,weight:.medium)).foregroundStyle(Theme.muted) }
+        GenerativeContinuityPanel()
         if let id = model.generatorConfiguration.profileID, FocusCompositions.ids.contains(id) {
             Panel {
                 VStack(alignment: .leading, spacing: 12) {
@@ -27,7 +28,7 @@ struct GenerativeView: View {
                     if id == "sanctuaire" {
                         GeneratorControl(key: "vocals", title: "Présence des voix", detail: "Voyelles synthétisées. À zéro : le même accompagnement, sans voix.")
                     }
-                    if id == "filigrane" {
+                    if ["filigrane", "ambre"].contains(id) {
                         GeneratorControl(key: "piano", title: "Présence du piano", detail: "Prises de piano acoustique doux ; sans bruit de vinyle ajouté.")
                     }
                 }
@@ -69,7 +70,7 @@ struct GenerativeView: View {
                         GeneratorControl(key: "brightness", title: "Lumière", detail: "La présence des harmoniques, sans souffle artificiel")
                         GeneratorControl(key: "movement", title: "Mouvement", detail: "De lentes nuances du timbre et de la stéréo")
                         GeneratorControl(key: "texture", title: "Matière harmonique", detail: "Renforcer la nappe, pas ajouter du grésillement")
-                        GeneratorControl(key: "evolution", title: "Évolution", detail: "Nuances lentes, sans changer le tempo")
+                        GeneratorControl(key: "evolution", title: "Évolution", detail: "Développement des thèmes et des pupitres, sans changer le tempo")
                         if model.generatorConfiguration.composition == 0 {
                             GeneratorControl(key: "stability", title: "Stabilité harmonique", detail: "Accords maintenus 32 ou 64 mesures")
                             GeneratorControl(key: "character", title: "Caractère", detail: "Des touches feutrées aux nappes à attaque lente")
@@ -92,7 +93,7 @@ struct GenerativeView: View {
                     Spacer()
                     Button("Profil du mode par défaut") { model.resetGeneratorSettings() }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Theme.muted)
                 }
-                Text("Les quatre partitions gardent leurs motifs composés. La graine renouvelle les nuances de timbre et les prises, sans changer le style ni remettre le chronomètre à zéro.")
+                Text("Chaque univers conserve sa palette. La graine choisit le parcours entre les phrases écrites et les couleurs de pupitres, sans réinitialiser le chronomètre.")
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
                 HStack(spacing: 12) {
                     TextField("Graine", text: $seedText).font(.system(size: 12, design: .monospaced)).textFieldStyle(.roundedBorder).frame(width: 170).onSubmit(applySeed)
@@ -230,5 +231,37 @@ struct GeneratorStudioStrip: View {
             Spacer()
             PillButton(title: "Choisir & ajuster", symbol: "slider.horizontal.3") { model.page = "generative" }
         }.padding(18).background(Theme.panel, in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.line))
+    }
+}
+
+struct GenerativeContinuityPanel: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+            let status = model.generatorSnapshot
+            let transition = status["transition"] as? [String: Any] ?? [:]
+            let state = transition["state"] as? String ?? "idle"
+            Panel {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Label(state == "idle" ? "Développement continu" : state == "preparing" ? "Préparation du paysage…" : "Transition en douceur", systemImage: "waveform.path")
+                            .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accent)
+                        Spacer()
+                        Text("Fondu : \(Int(model.transitionSeconds)) s").font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.muted)
+                    }
+                    if state == "crossfading" {
+                        ProgressView(value: Double(transition["progress"] as? Float ?? 0)).tint(Theme.accent)
+                    }
+                    Text(state == "waiting_for_bar" ? "Le changement commence au prochain début de mesure." : "La pulsation reste un repère. Les thèmes se développent sur huit mesures et l'équilibre des pupitres évolue par chapitres, sans fin de morceau.")
+                        .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
+                    Slider(value: Binding(get: { model.transitionSeconds }, set: model.setTransitionSeconds), in: 2...30, step: 1)
+                        .tint(Theme.accent).accessibilityLabel("Durée des transitions en secondes")
+                    if model.generatorActive && model.playing {
+                        Text("Phrase \((status["phrase_index"] as? UInt64 ?? 0) + 1) · chapitre \((status["chapter_index"] as? UInt64 ?? 0) + 1)")
+                            .font(.system(size: 10, design: .monospaced)).foregroundStyle(Theme.muted)
+                    }
+                }
+            }
+        }
     }
 }
