@@ -30,7 +30,16 @@ try:
  for p in profiles:
   g=call('generate','profile',p['id']);check(g['configuration']==p['configuration'],'Exact configuration '+p['id'])
   check(g['title']==p['title'],'Profile display name '+p['id'])
-  time.sleep(2.3);g=call('generate','status');s=call('status')
+  time.sleep(1.0);g=call('generate','status')
+  # The engine smooths tempo on its audio clock. Wait for the observable state,
+  # not a fixed wall-clock delay that fails when the machine is temporarily busy.
+  deadline=time.monotonic()+12
+  while abs(g['bpm']-p['configuration']['tempo'])>=1.0 and time.monotonic()<deadline:
+   time.sleep(.25);g=call('generate','status')
+  s=call('status')
+  if p['configuration']['orchestra']>0:
+   check(g['sample_based'] and g['orchestra_samples']==67,'Verified acoustic bank '+p['id'])
+   check(g['orchestra_events']>0 and g['orchestra_voices']>0,'Real acoustic note playback '+p['id'])
   check(g['engine']=='onde-living-5' and g['running'] and g['rendered_seconds']>0,'Native live audio '+p['id'])
   check(abs(g['bpm']-p['configuration']['tempo'])<1.0,'Tempo converges '+p['id'])
   check(not g['noise_layer_enabled'] and not g['granular_layer_enabled'] and g['grain_events']==0,'No noise/granular layer '+p['id'])
