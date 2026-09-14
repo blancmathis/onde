@@ -4,7 +4,7 @@ import Darwin
 import CoreFoundation
 
 let help = """
-onde 1.6 — native local controller for Onde.app
+onde \(AppBuild.version) — native local controller for Onde.app
 Every successful response: {"ok":true,"result":...}. Errors: nonzero exit + JSON.
 
 PROFILES · ORIGINAL CONTINUOUS MUSIC

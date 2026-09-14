@@ -1,10 +1,25 @@
 import Foundation
 
 public enum AppBuild {
-    public static let version = "1.5.0"
     public static let repository = "blancmathis/onde"
-    public static var number: UInt64 { UInt64(Bundle.main.object(forInfoDictionaryKey: "OndeBuild") as? String ?? "0") ?? 0 }
-    public static var commit: String { Bundle.main.object(forInfoDictionaryKey: "OndeCommit") as? String ?? "local" }
+    // Read the packaged identity rather than a stale source-code version constant.
+    // The CLI may be launched through ~/.local/bin, so resolve its symlink first.
+    private static let identity: [String: Any] = {
+        if Bundle.main.bundleIdentifier == "app.onde.mac" { return Bundle.main.infoDictionary ?? [:] }
+        let executable = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let app = executable.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        if app.pathExtension == "app", let bundle = Bundle(url: app), bundle.bundleIdentifier == "app.onde.mac" {
+            return bundle.infoDictionary ?? [:]
+        }
+        return [:]
+    }()
+    public static func versionLabel(metadata: [String: Any]) -> String {
+        guard let version = metadata["CFBundleShortVersionString"] as? String, !version.isEmpty else { return "development" }
+        return version
+    }
+    public static var version: String { versionLabel(metadata: identity) }
+    public static var number: UInt64 { UInt64(identity["OndeBuild"] as? String ?? "0") ?? 0 }
+    public static var commit: String { identity["OndeCommit"] as? String ?? "local" }
 }
 public struct ReleaseAsset: Codable {
     public var name: String

@@ -19,6 +19,9 @@ for name in Onde ondectl; do
 done
 ONDE_BIN_DIR="$PWD/.build/universal" bash Tools/package.sh
 codesign --verify --deep --strict dist/Onde.app
+# The bundled CLI must report the same version as the archive and release.
+REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["version"])')
+[[ "$REPORTED_VERSION" == "$VERSION" ]] || { echo 'Packaged CLI version mismatch' >&2; exit 1; }
 /usr/libexec/PlistBuddy -c 'Print :OndeCommit' dist/Onde.app/Contents/Info.plist
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
