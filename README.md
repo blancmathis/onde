@@ -1,3 +1,30 @@
+# Onde — Focus, Relax, Méditation sur macOS
+
+## Nouveauté 1.6 : orchestre acoustique génératif
+
+**Atlas, Ostinato, Aurore et Chambre** : 67 prises CC0 de violons, altos,
+violoncelles, cors, basson, clarinette, harpe et percussion. La partition est
+calculée en direct sur la même pulsation que les basses électroniques.
+Les neuf profils précédents et les réglages personnels sont conservés.
+
+- [Recherche complète et choix d’orchestration](Documentation/ORCHESTRE-1.6.md)
+- [Application universelle macOS 14+](https://github.com/blancmathis/onde/releases/latest/download/Onde-macOS-universal.zip)
+- [Versions et quatre écoutes de cinq minutes](https://github.com/blancmathis/onde/releases/latest)
+
+La banque est incluse dans la version publiée. Pour compiler :
+`bash Tools/prepare_orchestra.sh && bash Tools/build.sh`.
+Le code reste MIT, la banque acoustique est CC0. Les sons Endel et les imports
+personnels ne sont pas publiés. Ce n’est pas une preuve d’efficacité équivalente
+à Endel. La Community Build n’est pas notarisée par Apple.
+
+```sh
+~/.local/bin/onde generate profile atlas --launch
+~/.local/bin/onde generate set strings 0.8
+~/.local/bin/onde generate status
+```
+
+---
+
 # Onde
 
 **A native macOS sound studio. Original generative music, a local JSON CLI, and open-ended meditation.**

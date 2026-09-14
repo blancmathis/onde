@@ -9,11 +9,18 @@ struct GenerativeView: View {
     @State private var exportMinutes = 10
     @State private var seedError = ""
     @State private var advanced = false
+    @State private var otherProfiles = false
     var body: some View {
-        PageHeader(eyebrow: "Paysages vivants · édition IV", title: "Du rythme. Du relief.", subtitle: "Trois nouveaux Focus énergiques. Des basses articulées, pas seulement une nappe grave.")
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-            ForEach(SoundProfile.all) { profile in SoundProfileCard(profile: profile) }
+        PageHeader(eyebrow: "Orchestre vivant · instruments acoustiques", title: "Un ensemble, un même rythme.", subtitle: "Cordes, cors, bois et harpe. Un orchestre génératif sur une pulsation stable.")
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+            ForEach(SoundProfile.all.filter { $0.configuration.orchestra>0 }) { profile in SoundProfileCard(profile: profile) }
         }
+        DisclosureGroup(isExpanded: $otherProfiles) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+                ForEach(SoundProfile.all.filter { $0.configuration.orchestra==0 }) { profile in SoundProfileCard(profile: profile) }
+            }.padding(.top,16)
+        } label: { Text("Les neuf autres paysages · Focus, Relax et Méditation").font(.system(size:12,weight:.medium)).foregroundStyle(Theme.muted) }
+        if model.generatorConfiguration.orchestra>0 { orchestraPanel }
         Panel {
             VStack(alignment: .leading, spacing: 23) {
                 HStack(spacing: 16) {
@@ -25,7 +32,7 @@ struct GenerativeView: View {
                     VStack(alignment: .trailing, spacing: 7) {
                         Label(model.generatorActive && model.playing ? "Pulsation continue" : "Prêt à écouter", systemImage: "waveform.path")
                             .font(.system(size: 11)).foregroundStyle(Theme.accent(model.mode))
-                        Text("100 % local · sans souffle ajouté").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                        Text("100 % local · aucune piste Endel").font(.system(size: 10)).foregroundStyle(Theme.muted)
                     }
                     PillButton(title: model.generatorActive && model.playing ? "Pause" : "Écouter", symbol: model.generatorActive && model.playing ? "pause.fill" : "play.fill", primary: true) {
                         if model.generatorActive && model.playing { model.pause() } else { model.startGenerator(model.mode) }
@@ -91,6 +98,30 @@ struct GenerativeView: View {
             .font(.system(size: 10)).foregroundStyle(Theme.muted).lineSpacing(4)
             .onAppear { seedText = String(model.generatorConfiguration.seed) }
             .onChange(of: model.generatorConfiguration.seed) { _, value in seedText = String(value) }
+    }
+    var orchestraPanel: some View {
+        Panel {
+            VStack(alignment:.leading,spacing:20) {
+                HStack {
+                    VStack(alignment:.leading,spacing:7) {
+                        Text("Diriger les pupitres.").font(.system(size:23,design:.serif))
+                        Text("67 prises acoustiques · neuf instruments · banque CC0 incluse").font(.system(size:11)).foregroundStyle(Theme.muted)
+                    }
+                    Spacer()
+                    Image(systemName:"music.note.list").font(.system(size:26,weight:.light)).foregroundStyle(Theme.accent)
+                }
+                LazyVGrid(columns:[GridItem(.flexible(),spacing:28),GridItem(.flexible(),spacing:28)],spacing:22) {
+                    GeneratorControl(key:"strings",title:"Cordes liées",detail:"Violons, altos et violoncelles : le corps de l’ensemble")
+                    GeneratorControl(key:"brass",title:"Cors",detail:"Une profondeur chaude, sans fanfare")
+                    GeneratorControl(key:"woods",title:"Bois",detail:"Basson et clarinette fondus dans les accords")
+                    GeneratorControl(key:"harp",title:"Harpe",detail:"Des notes articulées dans la même harmonie")
+                    GeneratorControl(key:"ostinato",title:"Cordes rythmiques",detail:"Un motif répété, avec alternance des prises")
+                    GeneratorControl(key:"percussion",title:"Percussions graves",detail:"Timbales et grosse caisse acoustique")
+                }
+                GeneratorControl(key:"orchestra",title:"Présence de l’orchestre",detail:"L’équilibre avec les textures synthétiques ; les basses restent indépendantes")
+                Text("Les notes sont enregistrées ; leur arrangement est composé en direct. Aucune boucle de morceau, aucune connexion pendant l’écoute.").font(.system(size:10)).foregroundStyle(Theme.muted).lineSpacing(4)
+            }
+        }
     }
     var meditationPanel: some View {
         Panel {

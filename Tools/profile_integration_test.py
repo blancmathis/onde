@@ -22,8 +22,8 @@ def launch():
   except Exception:time.sleep(.5)
  raise AssertionError('App not ready')
 try:
- profiles=call('generate','profiles');check(len(profiles)==9,'Nine profiles listed without running app')
- check(len([p for p in profiles if p['mode']=='focus'])==6,'Six distinct focus profiles')
+ profiles=call('generate','profiles');check(len(profiles)==13,'Thirteen profiles listed without running app')
+ check(len([p for p in profiles if p['mode']=='focus'])==10,'Ten distinct focus profiles')
  s=launch();check(s['status']=='stopped','No playback at launch')
  call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true');call('timer','markers','10,20,30,40')
  prefs=call('status')['preferences']
@@ -31,7 +31,7 @@ try:
   g=call('generate','profile',p['id']);check(g['configuration']==p['configuration'],'Exact configuration '+p['id'])
   check(g['title']==p['title'],'Profile display name '+p['id'])
   time.sleep(2.3);g=call('generate','status');s=call('status')
-  check(g['engine']=='onde-living-4' and g['running'] and g['rendered_seconds']>0,'Native live audio '+p['id'])
+  check(g['engine']=='onde-living-5' and g['running'] and g['rendered_seconds']>0,'Native live audio '+p['id'])
   check(abs(g['bpm']-p['configuration']['tempo'])<1.0,'Tempo converges '+p['id'])
   check(not g['noise_layer_enabled'] and not g['granular_layer_enabled'] and g['grain_events']==0,'No noise/granular layer '+p['id'])
   check(s['preferences']==prefs,'Global volume and chimes unchanged '+p['id'])
@@ -49,7 +49,7 @@ try:
  check(s['preferences']==prefs,'Original chime settings survive restart')
  call('quit');process.wait(timeout=20)
  wav=profile/'abysses.wav';r=call('generate','render','abysses',str(wav),'--seconds','2')
- check(r['configuration']['profileID']=='abysses' and r['configuration']['tempo']==64 and r['engine']=='onde-living-4','Offline named-profile render')
+ check(r['configuration']['profileID']=='abysses' and r['configuration']['tempo']==64 and r['engine']=='onde-living-5','Offline named-profile render')
  with wave.open(str(wav)) as f:check(f.getnframes()==88200 and f.getnchannels()==2,'Rendered WAV duration and channels')
  check(r['peak']>0 and not r['uses_endel_audio'],'Original audible PCM, no Endel source')
  print(json.dumps({'ok':True,'passed':len(checks),'audio_muted':True,'checks':checks},indent=2),flush=True)

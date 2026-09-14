@@ -82,3 +82,19 @@ procedural engine in Sources/OndeDSP. Code MIT; newly generated recordings
 CC0-1.0. No Endel sample, recording, melody transcription or model weights
 are present. Living III disables Living II's synthetic-noise and granular
 layers. Personal imports remain outside the distributed app and source.
+
+## Onde 1.6 acoustic orchestra — VSCO 2 Community Edition (CC0)
+
+The four orchestral profiles use 67 acoustic note recordings from VSCO 2 CE,
+by Versilian Studios / Sam Gossner and the project's contributors.
+Source: https://github.com/sgossner/VSCO-2-CE
+Pinned commit: 440300901dfe9275fd84e0b7763af1f8443ae62e.
+License: CC0 1.0; original legal text in Resources/VSCO2-CC0.txt and bundled
+Orchestra/LICENSE.txt. Source URLs, MIDI mapping, original and processed
+checksums are in Resources/OrchestraSources.json and Orchestra/manifest.json.
+Changes: trimmed recording edges, removed DC, controlled normalization,
+mild low-pass smoothing, stereo PCM16 conversion and edge fades.
+No Endel recordings or personal imports are used by these profiles.
+The score and native sampler are original MIT code. The previous procedural
+profiles remain available; their synthesis-only descriptions refer to those
+profiles, not to the new acoustic sample bank.

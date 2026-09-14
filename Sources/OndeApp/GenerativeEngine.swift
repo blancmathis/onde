@@ -4,7 +4,7 @@ import OndeCore
 import OndeDSP
 
 /// Main-thread owner; rendering occurs entirely in a preallocated C11 DSP core.
-/// No audio capture, network, sample downloads or ML model is used.
+/// Acoustic CC0 notes are preloaded from the installed app; no audio capture, runtime downloads or ML.
 final class GenerativeEngine {
     private let engine = AVAudioEngine()
     private var source: AVAudioSourceNode?
@@ -36,6 +36,8 @@ final class GenerativeEngine {
         guard let ptr = onde_dsp_create(sampleRate, mode.dspMode, config.seed) else {
             throw OndeError("generator_init_failed", "Le moteur sonore n’a pas pu être initialisé.")
         }
+        do { try OrchestraBank.load(into:ptr,required:config.orchestra>0) }
+        catch { onde_dsp_destroy(ptr);throw error }
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2)!
         let node = AVAudioSourceNode(format: format) { _, _, frameCount, list -> OSStatus in
             // Buffer lists are provided by Core Audio. No new buffers are allocated here.
@@ -58,6 +60,7 @@ final class GenerativeEngine {
         fadeTicket += 1; let ticket = fadeTicket
         if playing { try prepare(mode, config) }
         guard let core else { return }
+        if config.orchestra>0 && onde_dsp_orchestra_samples(core)==0 {throw OndeError("orchestra_missing","La banque orchestrale complète est requise pour ce profil.")}
         onde_dsp_set_mode(core, mode.dspMode); onde_dsp_set_seed(core, config.seed)
         for (index, value) in config.values.enumerated() { onde_dsp_set(core, GenerativeSettings.dspIndex(index), Float(value)) }
         onde_dsp_set(core, Int32(ONDE_GAIN), playing ? wantedGain : 0)
@@ -82,7 +85,11 @@ final class GenerativeEngine {
     var running: Bool { engine.isRunning && wantedPlaying }
     func snapshot() -> [String: Any] {
         let frames = core.map(onde_dsp_frames) ?? 0
-        return ["engine": "onde-living-4", "offline": true, "sample_based": false,
+        return ["engine": "onde-living-5", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
+                "orchestra_samples": core.map(onde_dsp_orchestra_samples) ?? 0,
+                "orchestra_voices": core.map(onde_dsp_orchestra_voices) ?? 0,
+                "orchestra_events": core.map(onde_dsp_orchestra_events) ?? 0,
+                "orchestra_bank_present": OrchestraBank.directory() != nil,
                 "mode": selectedMode.rawValue, "running": running,
                 "rendered_seconds": Double(frames) / sampleRate,
                 "scheduled_events": core.map(onde_dsp_events) ?? 0,

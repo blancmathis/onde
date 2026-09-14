@@ -4,16 +4,23 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* Original procedural sound engine, MIT. No samples or trained model weights.
+/* Original hybrid engine, MIT. Optional verified CC0 acoustic note bank; no trained model weights.
    Allocation happens only in create/destroy. Render never allocates, blocks,
    accesses a file, or calls back into Swift. Controls use lock-free atomics.
    One render thread per instance. UI setters and stat readers may be concurrent. */
 typedef struct OndeDSP OndeDSP;
 enum { ONDE_DENSITY, ONDE_BRIGHTNESS, ONDE_MOVEMENT, ONDE_SPACE,
        ONDE_TEXTURE, ONDE_PULSE, ONDE_EVOLUTION, ONDE_SETTLE_MINUTES,
-       ONDE_GAIN, ONDE_BASS, ONDE_TEMPO, ONDE_STABILITY, ONDE_WARMTH, ONDE_CHARACTER, ONDE_DRIVE, ONDE_PUNCH, ONDE_PARAM_COUNT };
+       ONDE_GAIN, ONDE_BASS, ONDE_TEMPO, ONDE_STABILITY, ONDE_WARMTH, ONDE_CHARACTER, ONDE_DRIVE, ONDE_PUNCH, ONDE_ORCHESTRA, ONDE_STRINGS, ONDE_BRASS, ONDE_WOODS, ONDE_HARP, ONDE_OSTINATO, ONDE_PERCUSSION, ONDE_PARAM_COUNT };
 OndeDSP *onde_dsp_create(double sample_rate, int mode, uint64_t seed);
 void onde_dsp_destroy(OndeDSP *s);
+/* Copies a verified note recording. Only allowed before the first render.
+   Instrument IDs 0..10 and MIDI roots 0..127. Stereo, finite normalized PCM. */
+int onde_dsp_add_sample(OndeDSP *s,int instrument,int root,int rr,const float *left,const float *right,uint32_t frames,double source_rate);
+int onde_dsp_orchestra_samples(const OndeDSP *s);
+int onde_dsp_orchestra_families(const OndeDSP *s);
+int onde_dsp_orchestra_voices(const OndeDSP *s);
+uint64_t onde_dsp_orchestra_events(const OndeDSP *s);
 void onde_dsp_set(OndeDSP *s, int parameter, float value);
 void onde_dsp_set_mode(OndeDSP *s, int mode);
 void onde_dsp_set_seed(OndeDSP *s, uint64_t seed);

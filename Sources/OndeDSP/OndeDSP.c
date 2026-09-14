@@ -4,6 +4,7 @@
  * All voices, wavetables and delay memory are allocated by create(), never render().
  */
 #include "OndeDSP.h"
+#include "Orchestra.h"
 #include <math.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -54,6 +55,9 @@ typedef struct {
 } Grain;
 typedef struct {float data[AP_MAX];int at,size;} Allpass;
 struct OndeDSP {
+    Orchestra *orchestra;
+    _Atomic uint64_t publishedOrchestraEvents;
+    _Atomic int publishedOrchestraVoices;
     double sr;
     float sine[TABLE+1];
     _Atomic float target[ONDE_PARAM_COUNT];
@@ -185,6 +189,7 @@ static void nextBar(OndeDSP *s){
     if(s->bars%8==0){s->phrase++;s->motifCursor=0;}
     /* A continuous common-tone bed. Harmonic movement only on full phrases. */
     int harmonicBars=s->now[ONDE_STABILITY]>=.9f?64:32;
+    if(s->now[ONDE_ORCHESTRA]>.01f)harmonicBars=s->now[ONDE_STABILITY]>=.9f?32:16;
     if(s->mode==2)harmonicBars=64;
     if(s->bars && s->bars%(uint64_t)harmonicBars==0){
         int route=(int)(s->seed%4);
@@ -194,6 +199,45 @@ static void nextBar(OndeDSP *s){
     s->energyTarget=.82f; /* Never drop an entire arrangement section. */
     s->section=(int)((s->bars/32)%6); /* semantic progress, no abrupt energy change */
     s->opennessTarget=.63f+.025f*s->slow[5]*s->now[ONDE_EVOLUTION];
+}
+/* One shared score. Sustained inner voices and ostinati refer to the same
+   modal voicing and beat clock. Sample alternation never skips a rhythmic event. */
+static void orchestra_score(OndeDSP *s,int k){
+    if(!s->orchestra||orc_count(s->orchestra)==0||s->now[ONDE_ORCHESTRA]<.002f)return;
+    double beat=60/s->bpm;const int *chord=voicing[s->field];
+    uint64_t turn=s->bars*16+k;
+    if(k==0){
+        orc_note(s->orchestra,2,41,.45f,.62f,beat*6.5,s->seed);
+        orc_note(s->orchestra,2,48,.27f,.66f,beat*6.0,s->seed+1);
+        orc_note(s->orchestra,1,chord[1],.32f,.48f,beat*6.0,s->seed+2);
+        orc_note(s->orchestra,1,chord[2],.22f,.53f,beat*6.2,s->seed+3);
+        orc_note(s->orchestra,0,chord[3],.26f,.25f,beat*6.0,s->seed+4);
+        orc_note(s->orchestra,0,chord[4],.20f,.33f,beat*6.4,s->seed+5);
+        orc_note(s->orchestra,5,53,.24f,.62f,beat*6.4,s->seed);
+        orc_note(s->orchestra,5,60,.15f,.68f,beat*6.0,s->seed+1);
+        orc_note(s->orchestra,6,53,.24f,.51f,beat*5.9,s->seed+2);
+        orc_note(s->orchestra,7,chord[3],.21f,.43f,beat*5.9,s->seed+3);
+    }
+    if(s->detail>.005f && s->mode!=2){
+        if(k%2==0){
+            static const int low[8]={41,48,41,53,41,48,41,48};
+            int index=(int)(turn/2)%8;
+            float accent=k%4==0?1.f:.72f;
+            orc_note(s->orchestra,3,low[index],.24f*accent,.58f,beat*.82,s->seed);
+            if(s->now[ONDE_DENSITY]>.35f){
+                int degree=s->motif[index]%5;
+                orc_note(s->orchestra,4,chord[degree],.11f*accent,.29f,beat*.72,s->seed+1);
+            }
+        }
+        if(k%4==2){
+            int index=(int)(turn/4)%8,degree=s->motif[index]%5;
+            orc_note(s->orchestra,8,chord[degree],.24f,.39f,beat*3.7,s->seed);
+        }
+        if(k%8==0){
+            orc_note(s->orchestra,9,k==0?41:48,k==0?.37f:.22f,.51f,beat*2.9,s->seed);
+            orc_note(s->orchestra,10,36,k==0?.16f:.095f,.5f,beat*1.8,s->seed);
+        }
+    }
 }
 static void sequencer(OndeDSP *s){
     int k=s->step;float density=s->now[ONDE_DENSITY],detail=s->detail;
@@ -226,6 +270,7 @@ static void sequencer(OndeDSP *s){
         float pan=.5f+(index%2?.09f:-.09f);
         if(level>.0001f && detail>.001f)note(s,midi,kind,level*detail,pan,0);
     }
+    orchestra_score(s,k);
     if(++s->step==16){s->step=0;s->bars++;}
 }
 static void grain(OndeDSP *s){
@@ -286,6 +331,8 @@ static void control(OndeDSP *s){
     if(s->mode==2&&s->now[ONDE_SETTLE_MINUTES]>.1f)
         s->detail=1-smooth((float)((s->frame-s->sceneStart)/s->sr)/(60*s->now[ONDE_SETTLE_MINUTES]));
     s->lowpassCoef=1-expf(-(float)TAU*((1000+3500*s->now[ONDE_BRIGHTNESS])*(1-.40f*s->now[ONDE_WARMTH]))/(float)s->sr);
+    float acousticCut=1-expf(-(float)TAU*(3100+1800*s->now[ONDE_BRIGHTNESS])/(float)s->sr);
+    s->lowpassCoef+=(acousticCut-s->lowpassCoef)*s->now[ONDE_ORCHESTRA];
     s->dampingCoef=1-expf(-(float)TAU*(950+1800*s->now[ONDE_BRIGHTNESS])/(float)s->sr);
     const double secs[8]={.0311,.0377,.0433,.0491,.0573,.0677,.0793,.0899};
     float space=s->now[ONDE_SPACE];
@@ -303,6 +350,8 @@ static void control(OndeDSP *s){
 OndeDSP *onde_dsp_create(double sr,int mode,uint64_t seed){
     if(!isfinite(sr)||sr<8000||sr>96000||mode<0||mode>2)return NULL;
     OndeDSP *s=calloc(1,sizeof(*s));if(!s)return NULL;
+    s->orchestra=orc_create(sr);if(!s->orchestra){free(s);return NULL;}
+    atomic_init(&s->publishedOrchestraEvents,0);atomic_init(&s->publishedOrchestraVoices,0);
     s->sr=sr;s->mode=mode;s->focus=mode==0;s->meditation=mode==2;
     s->seed=seed;s->music.state=seed;s->air.state=seed^UINT64_C(0x18a394829bac);
     s->bpm=mode==0?72:mode==1?56:48;
@@ -322,7 +371,7 @@ OndeDSP *onde_dsp_create(double sr,int mode,uint64_t seed){
     atomic_init(&s->publishedPeak,0);atomic_init(&s->publishedRms,0);atomic_init(&s->publishedGain,0);
     atomic_init(&s->publishedBpm,s->bpm);atomic_init(&s->publishedSection,0);
     atomic_init(&s->publishedHarmony,0);atomic_init(&s->publishedVoices,0);
-    if(!atomic_is_lock_free(&s->target[0])||!atomic_is_lock_free(&s->wantedSeed)){free(s);return NULL;}
+    if(!atomic_is_lock_free(&s->target[0])||!atomic_is_lock_free(&s->wantedSeed)){orc_destroy(s->orchestra);free(s);return NULL;}
     const double rates[6]={.0173,.0279,.0413,.0671,.1137,.0031};
     for(int j=0;j<6;j++){s->lfo[j]=uni(&s->music);s->lfoStep[j]=rates[j]/sr;}
     for(int j=0;j<8;j++){s->delayPhase[j]=uni(&s->music);s->delayStep[j]=(.09+.017*j)/sr;}
@@ -340,7 +389,14 @@ OndeDSP *onde_dsp_create(double sr,int mode,uint64_t seed){
     for(int j=0;j<5;j++)pad(s,voicing[0][j]-(j==0?12:0),j<2?.034f:.024f,1);
     control(s);return s;
 }
-void onde_dsp_destroy(OndeDSP *s){free(s);}
+void onde_dsp_destroy(OndeDSP *s){if(s)orc_destroy(s->orchestra);free(s);}
+int onde_dsp_add_sample(OndeDSP *s,int instrument,int root,int rr,const float *left,const float *right,uint32_t frames,double rate){
+    if(!s||s->frame!=0)return 0;return orc_add(s->orchestra,instrument,root,rr,left,right,frames,rate);
+}
+int onde_dsp_orchestra_samples(const OndeDSP *s){return s?orc_count(s->orchestra):0;}
+int onde_dsp_orchestra_families(const OndeDSP *s){return s?orc_families(s->orchestra):0;}
+int onde_dsp_orchestra_voices(const OndeDSP *s){return s?atomic_load_explicit(&s->publishedOrchestraVoices,memory_order_relaxed):0;}
+uint64_t onde_dsp_orchestra_events(const OndeDSP *s){return s?atomic_load_explicit(&s->publishedOrchestraEvents,memory_order_relaxed):0;}
 void onde_dsp_set(OndeDSP *s,int p,float v){
     if(s&&p>=0&&p<ONDE_PARAM_COUNT&&isfinite(v))
         atomic_store_explicit(&s->target[p],cl(v,p==ONDE_TEMPO?40:0,(p==ONDE_SETTLE_MINUTES||p==ONDE_TEMPO)?120:1),memory_order_relaxed);
@@ -393,9 +449,9 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
             float breath=.97f+.02f*s->slow[(j+2)%4]+.01f*s->slow[4];
             float raw=(.68f*a+.29f*b+.03f*t+harmonics);
             v->tone+=.09f*(raw-v->tone);
-            float x=v->tone*env*v->amp*breath*(1.30f+.32f*s->now[ONDE_TEXTURE]);
+            float x=v->tone*env*v->amp*breath*(1-.94f*s->now[ONDE_ORCHESTRA])*(1.30f+.32f*s->now[ONDE_TEXTURE]);
             float p=cl(v->pan+.085f*move*s->slow[(j+1)%4],.05f,.95f);
-            float width=(a-b)*env*v->amp*breath*(.25f+.55f*space);
+            float width=(a-b)*env*v->amp*breath*(1-.94f*s->now[ONDE_ORCHESTRA])*(.25f+.55f*space);
             float pl=(x+width)*(1-p)*1.45f,pr=(x-width)*p*1.45f;
             l+=pl;r+=pr;sendL+=pl*.60f;sendR+=pr*.60f;v->age++;
         }
@@ -450,13 +506,20 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
             v->nlp+=.12f*(x-v->nlp);x=v->nlp;
             v->noiseEnv*=v->noiseDecay;
             float tail=smooth((float)(v->life-v->age)/(.22f*s->sr));
-            x*=smooth((float)v->age/v->attack)*tail*v->gain;
+            x*=smooth((float)v->age/v->attack)*tail*v->gain*(1-.95f*s->now[ONDE_ORCHESTRA]);
             if(v->kind<5)x*=detail;
             float pl=x*(1-v->pan)*1.4f,pr=x*v->pan*1.4f;
             l+=pl;r+=pr;sendL+=pl*v->send;sendR+=pr*v->send;
             if(v->kind<4){echoSendL+=pl*.38f;echoSendR+=pr*.38f;}
             v->age++;
         }
+        /* Real acoustic families share the hall and stable electronic foundation. */
+        float levels[6]={s->now[ONDE_STRINGS],s->now[ONDE_BRASS],s->now[ONDE_WOODS],s->now[ONDE_HARP]*detail,s->now[ONDE_OSTINATO]*detail,s->now[ONDE_PERCUSSION]*detail};
+        float acousticL=0,acousticR=0;
+        orc_frame(s->orchestra,levels,s->now[ONDE_WARMTH],&acousticL,&acousticR);
+        float orchestralGain=s->now[ONDE_ORCHESTRA];
+        acousticL*=orchestralGain;acousticR*=orchestralGain;
+        l+=acousticL;r+=acousticR;sendL+=acousticL*.40f;sendR+=acousticR*.40f;
         /* Granular texture recycles ONLY this engine's own freshly synthesized material. */
         s->grainMemory[s->grainWrite]=(l+r)*.5f-bass*.6f;
         s->grainWrite=(s->grainWrite+1)&(MEMORY-1);
@@ -516,7 +579,9 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         if(!isfinite(l))l=0;if(!isfinite(r))r=0;
         left[n]=l;right[n]=r;peak=fmaxf(peak,fmaxf(fabsf(l),fabsf(r)));energy+=(double)l*l+(double)r*r;
     }
-    int voices=0;for(int j=0;j<PADS;j++)voices+=s->pads[j].active;
+    atomic_store_explicit(&s->publishedOrchestraEvents,orc_events(s->orchestra),memory_order_relaxed);
+    atomic_store_explicit(&s->publishedOrchestraVoices,orc_voices(s->orchestra),memory_order_relaxed);
+    int voices=orc_voices(s->orchestra);for(int j=0;j<PADS;j++)voices+=s->pads[j].active;
     for(int j=0;j<NOTES;j++)voices+=s->notes[j].active;for(int j=0;j<GRAINS;j++)voices+=s->grains[j].active;
     atomic_store_explicit(&s->publishedBeats,s->beatCount,memory_order_relaxed);
     atomic_store_explicit(&s->publishedTicks,s->tickCount,memory_order_relaxed);

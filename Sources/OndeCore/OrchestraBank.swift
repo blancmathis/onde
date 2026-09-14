@@ -1,0 +1,59 @@
+import Foundation
+import AVFoundation
+import CryptoKit
+import OndeDSP
+
+/// Immutable acoustic notes are decoded and verified before Core Audio starts.
+/// The same bank is used by the app and standalone exports. Nothing is fetched at runtime.
+public enum OrchestraBank {
+    private struct Note { let instrument:Int32; let root:Int32; let rr:Int32; let rate:Double; let left:[Float]; let right:[Float] }
+    private static let lock=NSLock()
+    private static var cache:[String:[Note]]=[:]
+    public static func directory() -> URL? {
+        let fm=FileManager.default
+        if let p=ProcessInfo.processInfo.environment["ONDE_ORCHESTRA_DIR"] {
+            guard p.hasPrefix("/"),fm.fileExists(atPath:p+"/manifest.json") else {return nil}
+            return URL(fileURLWithPath:p,isDirectory:true)
+        }
+        let executable=URL(fileURLWithPath:CommandLine.arguments[0]).resolvingSymlinksInPath()
+        var options:[URL]=[]
+        if let resource=Bundle.main.resourceURL {options.append(resource.appendingPathComponent("Orchestra"))}
+        options.append(executable.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources/Orchestra"))
+        options.append(URL(fileURLWithPath:fm.currentDirectoryPath).appendingPathComponent("Assets/Orchestra"))
+        return options.first{fm.fileExists(atPath:$0.appendingPathComponent("manifest.json").path)}
+    }
+    @discardableResult public static func load(into core:OpaquePointer,required:Bool) throws -> Int {
+        guard let directory=directory() else {
+            if required {throw OndeError("orchestra_missing","La banque orchestrale est absente. Installez la version complète d’Onde ou exécutez Tools/prepare_orchestra.sh.")}
+            return 0
+        }
+        let notes=try decoded(directory)
+        for note in notes {
+            let ok=note.left.withUnsafeBufferPointer { l in note.right.withUnsafeBufferPointer { r in
+                onde_dsp_add_sample(core,note.instrument,note.root,note.rr,l.baseAddress!,r.baseAddress!,UInt32(l.count),note.rate)
+            } }
+            guard ok==1 else {throw OndeError("orchestra_invalid","Impossible de charger un instrument avant le rendu audio.")}
+        }
+        guard onde_dsp_orchestra_families(core)==2047 else {throw OndeError("orchestra_incomplete","La banque orchestrale ne contient pas toutes les familles requises.")}
+        return notes.count
+    }
+    private static func decoded(_ directory:URL) throws -> [Note] {
+        lock.lock();defer{lock.unlock()}
+        if let existing=cache[directory.path] {return existing}
+        let data=try Data(contentsOf:directory.appendingPathComponent("manifest.json"))
+        guard data.count<2_000_000,let object=try JSONSerialization.jsonObject(with:data) as? [String:Any],object["license"] as? String=="CC0-1.0",let samples=object["samples"] as? [[String:Any]],samples.count>=11,samples.count<=96 else {throw OndeError("orchestra_invalid","Manifeste orchestral invalide.")}
+        var result:[Note]=[];var total=0
+        for item in samples {
+            guard let name=item["filename"] as? String,name==URL(fileURLWithPath:name).lastPathComponent,!name.hasPrefix("."),let instrument=item["instrument"] as? Int,(0...10).contains(instrument),let root=item["root_midi"] as? Int,(0...127).contains(root),let rr=item["round_robin"] as? Int,(0...7).contains(rr),let digest=item["processed_sha256"] as? String else {throw OndeError("orchestra_invalid","Métadonnées instrumentales invalides.")}
+            let url=directory.appendingPathComponent(name),bytes=try Data(contentsOf:url)
+            guard bytes.count<=12_000_000,SHA256.hash(data:bytes).map({String(format:"%02x",$0)}).joined()==digest else {throw OndeError("orchestra_checksum","L’intégrité d’un instrument n’a pas pu être vérifiée : \(name).")}
+            let f=try AVAudioFile(forReading:url,commonFormat:.pcmFormatFloat32,interleaved:false)
+            guard f.length>=64,f.length<=1_500_000,f.processingFormat.channelCount==2 else {throw OndeError("orchestra_invalid","Format instrumental invalide.")}
+            total+=Int(f.length);guard total<=24_000_000 else {throw OndeError("orchestra_too_large","La banque dépasse la limite mémoire.")}
+            let buffer=AVAudioPCMBuffer(pcmFormat:f.processingFormat,frameCapacity:AVAudioFrameCount(f.length))!
+            try f.read(into:buffer);let channels=buffer.floatChannelData!,count=Int(buffer.frameLength)
+            result.append(Note(instrument:Int32(instrument),root:Int32(root),rr:Int32(rr),rate:f.processingFormat.sampleRate,left:Array(UnsafeBufferPointer(start:channels[0],count:count)),right:Array(UnsafeBufferPointer(start:channels[1],count:count))))
+        }
+        cache[directory.path]=result;return result
+    }
+}

@@ -4,7 +4,7 @@ import OndeDSP
 
 /// The offline exporter uses the exact same oscillator, sequencer and reverb as
 /// the app, not a separate approximation. Identical seed/config/sample rate ->
-/// identical newly-started render. Does not read any user audio files.
+/// identical newly-started render. Uses verified bundled CC0 notes for orchestral profiles; never reads personal imports.
 public enum GenerativeRenderer {
     public static func render(mode: SessionMode, configuration: GenerativeSettings,
                               seconds: Double, path: String) throws -> [String: Any] {
@@ -24,6 +24,7 @@ public enum GenerativeRenderer {
         let sr: Double = 44_100
         guard let dsp = onde_dsp_create(sr, mode.dspMode, config.seed) else { throw OndeError("generator_init_failed", "Could not allocate the synthesis core.") }
         defer { onde_dsp_destroy(dsp) }
+        try OrchestraBank.load(into:dsp,required:config.orchestra>0)
         for (index, value) in config.values.enumerated() { onde_dsp_set(dsp, GenerativeSettings.dspIndex(index), Float(value)) }
         onde_dsp_set(dsp, Int32(ONDE_GAIN), 1)
         let format = AVAudioFormat(standardFormatWithSampleRate: sr, channels: 2)!
@@ -58,11 +59,11 @@ public enum GenerativeRenderer {
         try FileManager.default.moveItem(at: temp, to: url)
         let result: [String: Any] = ["path": url.path, "seconds": seconds, "sample_rate": sr,
                                      "mode": mode.rawValue, "seed": config.seed, "configuration": jsonObject(config),
-                                     "engine": "onde-living-4", "channels": 2, "bit_depth": 16,
+                                     "engine": "onde-living-5", "channels": 2, "bit_depth": 16,
                                      "render_wall_seconds": ProcessInfo.processInfo.systemUptime - start,
                                      "peak": peak, "rms": sqrt(energy / Double(total * 2)),
                                      "scheduled_events": onde_dsp_events(dsp), "license": "CC0-1.0",
-                                     "uses_endel_audio": false]
+                                     "uses_endel_audio": false, "sample_based": config.orchestra>0, "orchestra_samples": onde_dsp_orchestra_samples(dsp), "orchestra_events": onde_dsp_orchestra_events(dsp), "sample_license":"CC0-1.0"]
         // Sidecar only when free; never overwrite an existing user's manifest.
         let manifest = url.appendingPathExtension("json")
         if !FileManager.default.fileExists(atPath: manifest.path) { try? jsonData(result, pretty: true).write(to: manifest, options: .withoutOverwriting) }

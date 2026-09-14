@@ -4,10 +4,12 @@ import Darwin
 import CoreFoundation
 
 let help = """
-onde 1.5 — native local controller for Onde.app
+onde 1.6 — native local controller for Onde.app
 Every successful response: {"ok":true,"result":...}. Errors: nonzero exit + JSON.
 
 PROFILES · ORIGINAL CONTINUOUS MUSIC
+  onde generate profile atlas --launch   Acoustic orchestral focus
+  onde generate set strings 0.8          Per-section control (also brass, woods, harp, ostinato, percussion)
   onde generate profiles
   onde generate profile abysses --launch
   onde generate profile ancrage
@@ -109,7 +111,7 @@ let commandSpecs: [[String: Any]] = [
 
     ["command":"generate.status","arguments":[:],"effect":"Live original synthesis state, seed, controls, render time, output level"],
     ["command":"generate.play","arguments":["mode":"focus|relax|meditation","seed":"optional integer 0...2^53-1","reset":"optional boolean"],"effect":"Solo the living layer, start mode, preserve chime preferences"],
-    ["command":"generate.set","arguments":["key":"density|brightness|movement|space|texture|pulse|evolution|settleMinutes|bass|tempo|stability|warmth|character|drive|punch","value":"number 0...1; settleMinutes 0...120; tempo 40...120"],"effect":"Smoothly change a persisted per-mode generator parameter"],
+    ["command":"generate.set","arguments":["key":"density|brightness|movement|space|texture|pulse|evolution|settleMinutes|bass|tempo|stability|warmth|character|drive|punch|orchestra|strings|brass|woods|harp|ostinato|percussion","value":"number 0...1; settleMinutes 0...120; tempo 40...120"],"effect":"Smoothly change a persisted per-mode generator parameter"],
     ["command":"generate.seed","arguments":["value":"integer 0...2^53-1"],"effect":"Change future generative choices smoothly, no timer reset"],
     ["command":"generate.defaults","arguments":[:],"effect":"Restore current mode synthesis defaults, not chimes or layer volumes"],
 

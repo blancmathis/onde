@@ -14,6 +14,7 @@ fi
 if [[ "${ONDE_SKIP_DOWNLOADS:-0}" != "1" ]]; then
   python3 Tools/fetch_music.py "$ROOT/Assets"
 fi
+if [[ ! -f Assets/Orchestra/manifest.json ]]; then bash Tools/prepare_orchestra.sh; fi
 APP="$ROOT/dist/Onde.app"
 # Rebuild only our owned bundle to prevent stale/private assets leaking into a release.
 if [[ -d "$APP" ]]; then
@@ -34,6 +35,7 @@ if [[ "${ONDE_ORIGINALS_ONLY:-0}" != "1" ]]; then
   for name in almost dreams; do f="Assets/$name.mp3"; [[ ! -f "$f" ]] || cp "$f" "$APP/Contents/Resources/Sounds/"; done
 fi
 for f in Assets/music-provenance.json Assets/incompetech-license-evidence.html; do [[ -f "$f" ]] && cp "$f" "$APP/Contents/Resources/"; done
+ditto Assets/Orchestra "$APP/Contents/Resources/Orchestra"
 cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -44,8 +46,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>Onde</string>
 <key>CFBundleExecutable</key><string>Onde</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.5.0</string>
-<key>CFBundleVersion</key><string>1.5.0</string>
+<key>CFBundleShortVersionString</key><string>1.6.0</string>
+<key>CFBundleVersion</key><string>1.6.0</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>

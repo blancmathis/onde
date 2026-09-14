@@ -25,9 +25,9 @@ final class LivingV3Tests: XCTestCase {
         advance(p, 22050*5); onde_dsp_set(p, Int32(ONDE_DENSITY), 1); advance(p, 22050*5)
         XCTAssertEqual(onde_dsp_bpm(p), 72, accuracy: 0.0001)
     }
-    func testNineProfilesAndDifferentFocusChoices() throws {
-        XCTAssertEqual(SoundProfile.all.count, 9)
-        XCTAssertEqual(SoundProfile.all.filter { $0.mode == .focus }.count, 6)
+    func testThirteenProfilesAndDifferentFocusChoices() throws {
+        XCTAssertEqual(SoundProfile.all.count, 13)
+        XCTAssertEqual(SoundProfile.all.filter { $0.mode == .focus }.count, 10)
         XCTAssertEqual(SoundProfile.find("abysses")?.configuration.tempo, 64)
         XCTAssertGreaterThan(SoundProfile.find("abysses")!.configuration.bass, SoundProfile.find("courant")!.configuration.bass)
         for p in SoundProfile.all { _ = try p.configuration.validated() }

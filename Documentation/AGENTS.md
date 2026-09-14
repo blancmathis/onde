@@ -115,3 +115,19 @@ The repository is https://github.com/blancmathis/onde. Releases are built from
 main by GitHub Actions. The updater uses only published non-prerelease builds
 with the exact repository/asset path and a valid SHA-256 digest. No token is
 stored in the distributed application.
+
+## Acoustic orchestration (1.6)
+
+New profile IDs: `atlas`, `ostinato`, `aurore`, `chambre`. Choose with
+`onde generate profile ID --launch`. Existing profiles are unchanged.
+
+New controls in 0...1: `orchestra`, `strings`, `brass`, `woods`, `harp`,
+`ostinato`, `percussion`. The same commands persist and restore these with mixes.
+`generate status` reports `sample_based`, `orchestra_samples`,
+`orchestra_events`, `orchestra_voices` and `orchestra_bank_present`.
+The bank has 67 CC0 note recordings. The real-time callback does not fetch data.
+For source builds, run `bash Tools/prepare_orchestra.sh`. Standalone renders
+find the bank in the app bundle or `Assets/Orchestra` under the project cwd.
+`ONDE_ORCHESTRA_DIR` can explicitly select a validated bank for testing.
+Missing or corrupt bank data causes an explicit error for orchestral profiles.
+Do not call a new recording an Endel recording or claim a verified cognitive effect.

@@ -18,11 +18,18 @@ public struct GenerativeSettings: Codable, Equatable {
     public var character: Double = 0.20
     public var drive: Double = 0
     public var punch: Double = 0
+    public var orchestra: Double = 0
+    public var strings: Double = 0.5
+    public var brass: Double = 0.5
+    public var woods: Double = 0.5
+    public var harp: Double = 0.5
+    public var ostinato: Double = 0.5
+    public var percussion: Double = 0.5
     public var profileID: String? = nil
     public init() {}
     private enum CodingKeys: String, CodingKey {
         case seed, density, brightness, movement, space, texture, pulse, evolution, settleMinutes
-        case bass, tempo, stability, warmth, character, drive, punch, profileID
+        case bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, profileID
     }
     public init(from decoder: Decoder) throws {
         self.init(); let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -42,9 +49,16 @@ public struct GenerativeSettings: Codable, Equatable {
         character = try c.decodeIfPresent(Double.self, forKey: .character) ?? character
         drive = try c.decodeIfPresent(Double.self, forKey: .drive) ?? 0
         punch = try c.decodeIfPresent(Double.self, forKey: .punch) ?? 0
+        orchestra = try c.decodeIfPresent(Double.self, forKey: .orchestra) ?? orchestra
+        strings = try c.decodeIfPresent(Double.self, forKey: .strings) ?? strings
+        brass = try c.decodeIfPresent(Double.self, forKey: .brass) ?? brass
+        woods = try c.decodeIfPresent(Double.self, forKey: .woods) ?? woods
+        harp = try c.decodeIfPresent(Double.self, forKey: .harp) ?? harp
+        ostinato = try c.decodeIfPresent(Double.self, forKey: .ostinato) ?? ostinato
+        percussion = try c.decodeIfPresent(Double.self, forKey: .percussion) ?? percussion
         profileID = try c.decodeIfPresent(String.self, forKey: .profileID)
     }
-    public static let keys = ["density", "brightness", "movement", "space", "texture", "pulse", "evolution", "settleMinutes", "bass", "tempo", "stability", "warmth", "character", "drive", "punch"]
+    public static let keys = ["density", "brightness", "movement", "space", "texture", "pulse", "evolution", "settleMinutes", "bass", "tempo", "stability", "warmth", "character", "drive", "punch", "orchestra", "strings", "brass", "woods", "harp", "ostinato", "percussion"]
     public static func preset(_ mode: SessionMode) -> Self {
         switch mode {
         case .focus: return SoundProfile.find("elan")!.configuration
@@ -57,7 +71,7 @@ public struct GenerativeSettings: Codable, Equatable {
     }
     public var displayName: String { profileID.flatMap { SoundProfile.find($0)?.title } ?? "Paysage personnel" }
     /// The first eight ABI slots predate gain (slot 8). New controls start at slot 9.
-    public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch] }
+    public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion] }
     public static func dspIndex(_ index: Int) -> Int32 { Int32(index < 8 ? index : index + 1) }
     public func value(_ key: String) -> Double { Self.keys.firstIndex(of: key).map { values[$0] } ?? 0 }
     public static func range(_ key: String) -> ClosedRange<Double> { key == "tempo" ? 40...120 : key == "settleMinutes" ? 0...120 : 0...1 }
@@ -80,7 +94,14 @@ public struct GenerativeSettings: Codable, Equatable {
         case "warmth": warmth = value
         case "character": character = value
         case "drive": drive = value
-        default: punch = value
+        case "punch": punch = value
+        case "orchestra": orchestra = value
+        case "strings": strings = value
+        case "brass": brass = value
+        case "woods": woods = value
+        case "harp": harp = value
+        case "ostinato": ostinato = value
+        default: percussion = value
         }
     }
     public func validated() throws -> Self {
@@ -109,7 +130,18 @@ public struct SoundProfile: Identifiable, Codable {
         c.character=id == "traction" ? 0.50 : 0.18
         return .init(id:id, title:title, mode:.focus, subtitle:"FOCUS ÉNERGIQUE · \(Int(tempo)) BPM", description:description, configuration:c)
     }
+    private static func ensemble(_ id:String,_ title:String,_ description:String,_ tempo:Double,_ seed:UInt64,_ strings:Double,_ brass:Double,_ woods:Double,_ harp:Double,_ ostinato:Double,_ percussion:Double,_ bass:Double,_ drive:Double,_ punch:Double,_ density:Double) -> Self {
+        var c=GenerativeSettings();c.profileID=id;c.seed=seed;c.tempo=tempo;c.orchestra=1
+        c.strings=strings;c.brass=brass;c.woods=woods;c.harp=harp;c.ostinato=ostinato;c.percussion=percussion
+        c.bass=bass;c.drive=drive;c.punch=punch;c.density=density;c.brightness=0.34;c.warmth=0.72
+        c.space=0.66;c.movement=0.10;c.pulse=0.28;c.evolution=0.12;c.stability=0.98;c.texture=0;c.character=0.18
+        return .init(id:id,title:title,mode:.focus,subtitle:"ORCHESTRE · \(Int(tempo)) BPM",description:description,configuration:c)
+    }
     public static let all: [Self] = [
+        ensemble("atlas","Atlas","Un ensemble ample : cordes graves, cors et pulsation profonde. Une même partition, sans rupture.",88,6040,0.84,0.68,0.30,0.23,0.57,0.47,0.83,0.35,0.34,0.42),
+        ensemble("ostinato","Ostinato","Violoncelles articulés, cordes en réponse et timbales. Le plus entraînant des quatre orchestres.",100,6041,0.56,0.34,0.18,0.35,0.98,0.70,0.85,0.58,0.50,0.53),
+        ensemble("aurore","Aurore","Cordes lumineuses, harpe et bois chauds. Un mouvement régulier, plus aérien.",84,6042,0.68,0.15,0.66,0.72,0.36,0.18,0.65,0.21,0.17,0.39),
+        ensemble("chambre","Chambre","Un orchestre intime, plus acoustique : cordes et bois liés, quelques touches de harpe.",76,6043,0.88,0.22,0.58,0.43,0.25,0.16,0.54,0.08,0.06,0.28),
         energetic("elan", "Élan", "Basses rebondissantes et attaques nettes. Un motif stable pour entrer dans l'action.", 88, 0.88, 0.72, 0.65, 0.43, 2042),
         energetic("reacteur", "Réacteur", "L'impact le plus marqué. Un grave massif, rythmé, avec très peu de mélodie.", 96, 0.98, 0.92, 0.90, 0.10, 3042),
         energetic("traction", "Traction", "Un mouvement rapide, des basses articulées et des touches régulières.", 104, 0.80, 0.78, 0.60, 0.63, 4083),

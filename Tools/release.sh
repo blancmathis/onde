@@ -5,6 +5,7 @@ export ONDE_BUILD="${ONDE_BUILD:-$(date -u +%Y%m%d%H%M%S)}"
 export ONDE_COMMIT="${GITHUB_SHA:-$(git rev-parse HEAD)}"
 VERSION=$(cat VERSION)
 TAG="build-$ONDE_BUILD-${ONDE_COMMIT:0:8}"
+bash Tools/prepare_orchestra.sh
 # Tests run natively. The other architecture is cross-compiled against the macOS SDK.
 swift test -c release -j 3
 native=$(uname -m)
@@ -22,7 +23,7 @@ codesign --verify --deep --strict dist/Onde.app
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
 # Audition files use the same just-built DSP and documented profile settings.
-for profile in elan reacteur traction; do
+for profile in atlas ostinato aurore chambre; do
   .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-5min.wav" --minutes 5
   /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-5min.wav" "dist/$profile-5min.m4a"
 done
@@ -39,5 +40,5 @@ Personal settings, saved soundscapes and imports are stored separately and are p
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
-Only original procedural audio is bundled in this automated release. No Endel audio or personal imports.
+Original compositions with a pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No Endel audio or personal imports.
 EOF

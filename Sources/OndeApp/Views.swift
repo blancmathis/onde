@@ -472,13 +472,20 @@ struct CLIGuideView: View {
 struct CreditsView: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
-        PageHeader(eyebrow: "Onde · 1.2", title: "Le calme n’a pas besoin de compte.", subtitle: "Application native macOS. Code ouvert, bibliothèque locale, aucune télémétrie.")
+        PageHeader(eyebrow: "Onde · 1.6", title: "Le calme n’a pas besoin de compte.", subtitle: "Application native macOS. Code ouvert, bibliothèque locale, aucune télémétrie.")
         Panel {
             VStack(alignment: .leading, spacing: 15) {
                 Text("Une application personnelle, pas une promesse médicale.").font(.system(size: 21, design: .serif))
                 Text("Onde propose un environnement sonore configurable. Ses effets sur la concentration ou la méditation ne sont pas établis comme équivalents à ceux de Brain.fm ou d’Endel. Aucun mécanisme propriétaire de ces services n’est reproduit ici.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
-                Text("Code : licence MIT. Synthèses originales : CC0. Vos imports restent privés et ne sont jamais inclus dans les archives du projet.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
+                Text("Code : licence MIT. Compositions originales et banque acoustique VSCO 2 CE : CC0. Vos imports restent privés et ne sont jamais inclus dans les archives du projet.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
                 Link("Licence MIT", destination: URL(string: "https://opensource.org/license/mit")!).font(.system(size: 11)).tint(Theme.accent)
+            }
+        }
+        Panel {
+            VStack(alignment:.leading,spacing:10) {
+                Text("L’orchestre acoustique").font(.system(size:21,design:.serif))
+                Text("67 prises VSCO 2 Community Edition · Versilian Studios, Sam Gossner et contributeurs · CC0 1.0. Bords ajustés, niveaux équilibrés et léger filtrage ; stéréo conservée.").font(.system(size:12)).foregroundStyle(Theme.muted).lineSpacing(4)
+                Link("Source et licence des instruments",destination:URL(string:"https://github.com/sgossner/VSCO-2-CE")!).font(.system(size:11)).tint(Theme.accent)
             }
         }
         ForEach(model.sounds.filter { !$0.imported }) { sound in
@@ -488,7 +495,7 @@ struct CreditsView: View {
                 if sound.source.hasPrefix("https://"), let url = URL(string: sound.source) { Link("Source officielle", destination: url).font(.system(size: 10)).tint(Theme.accent) }
                 if sound.license == "CC BY 4.0" {
                     Link("Creative Commons Attribution 4.0 · fichier audio non modifié", destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!).font(.system(size: 10)).tint(Theme.muted)
-                } else { Text("Génération par le script inclus. Les textures naturelles sont synthétisées.").font(.system(size: 10)).foregroundStyle(Theme.muted) }
+                } else { Text(sound.id == "living" ? "Synthèse originale ou instruments acoustiques CC0 selon le profil." : "Génération par le script inclus. Les textures naturelles sont synthétisées.").font(.system(size: 10)).foregroundStyle(Theme.muted) }
             }.padding(20).background(Theme.panel, in: RoundedRectangle(cornerRadius: 14))
         }
     }
