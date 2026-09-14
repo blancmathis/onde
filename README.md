@@ -132,3 +132,19 @@ Code: **MIT**. Original procedurally generated audio: **CC0-1.0**. Optional thir
 `OndeDSP` (C11): preallocated render core, stable musical clock, oscillator voices and diffuse reverb. `OndeCore`: state, export, local IPC, release validation. `OndeApp`: SwiftUI, Core Audio and verified opt-in downloads. `onde`: native command-line interface. GitHub release workflow: `.github/workflows/release.yml`.
 
 For contributors: preserve timer semantics, backwards-compatible settings, private imports and no-autoplay behavior. Keep the release asset name and build-tag format synchronized with `UpdatePolicy.swift`. Changing a fork's update source requires explicitly updating `AppBuild.repository` and the package metadata.
+
+## Focus collection — Onde 1.7
+
+Four authored scores are now at the front of the library, rather than a growing
+wall of similar presets: **Sillage** (deep electronic, 92 BPM), **Filigrane**
+(recorded soft piano, 78 BPM), **Confluence** (hybrid orchestra, 88 BPM) and
+**Sanctuaire** (original synthesized nonverbal vowels, 86 BPM).
+
+The selected identity stays stable; rhythmic events are composed, not randomly
+omitted. Common-tone voice leading, sustained-instrument crossfades and separate
+piano/choir controls are implemented in the live engine and offline renderer.
+All thirteen earlier profiles and saved personal configurations remain available.
+
+Research informs the design; these compositions have not been clinically tested
+and do not claim a universal optimum or superiority to silence. Detailed rationale,
+limitations, sources and commands: [Focus compositions](Documentation/FOCUS-SIGNATURES-1.7.md).

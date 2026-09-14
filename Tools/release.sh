@@ -26,9 +26,9 @@ REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'imp
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
 # Audition files use the same just-built DSP and documented profile settings.
-for profile in atlas ostinato aurore chambre; do
-  .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-5min.wav" --minutes 5
-  /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-5min.wav" "dist/$profile-5min.m4a"
+for profile in sillage filigrane confluence sanctuaire; do
+  .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-12min.wav" --minutes 12
+  /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-12min.wav" "dist/$profile-12min.m4a"
 done
 printf 'TAG=%s\nVERSION=%s\nONDE_BUILD=%s\n' "$TAG" "$VERSION" "$ONDE_BUILD" > dist/release.env
 cat > dist/release-notes.md <<EOF
@@ -43,5 +43,9 @@ Personal settings, saved soundscapes and imports are stored separately and are p
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
-Original compositions with a pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No Endel audio or personal imports.
+Four authored Focus compositions: Sillage, Filigrane, Confluence and Sanctuaire.
+Twelve-minute audition recordings use this exact engine and its defaults.
+Filigrane uses recorded soft piano; Sanctuaire uses original synthesized nonverbal vowels, not recordings of singers.
+The source is evidence-informed; these individual tracks have not been clinically validated.
+Pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No Endel audio or personal imports.
 EOF

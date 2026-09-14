@@ -29,7 +29,7 @@ for var item in manifest["samples"] as! [[String:Any]] {
  while last>first && max(abs(lc[last]),abs(rc[last]))<threshold*0.3 {last-=1}
  first=max(0,first-Int(sr*0.012));last=min(n-1,last+Int(sr*0.040))
  let sustained=[0,1,2,5,6,7].contains(inst)
- let maximum=sustained ? 7.5 : inst==8 ? 6.5 : inst==9 ? 4.5 : inst==10 ? 3.5 : 2.2
+ let maximum=inst==11 ? 12.0 : sustained ? 7.5 : inst==8 ? 6.5 : inst==9 ? 4.5 : inst==10 ? 3.5 : 2.2
  last=min(last,first+Int(maximum*sr)-1);let count=last-first+1
  guard count>64 else {fatalError("Too short: \(name)")}
  var meanL:Double=0,meanR:Double=0
@@ -42,7 +42,7 @@ for var item in manifest["samples"] as! [[String:Any]] {
   for i in offset..<end {let a=lc[i]-dcL,b=rc[i]-dcR;energy+=Double(a*a+b*b);newPeak=max(newPeak,abs(a),abs(b))}
   maxWindow=max(maxWindow,sqrt(energy/Double((end-offset)*2)))
  }
- let desired=sustained ? 0.15/max(0.00001,maxWindow) : 0.58/Double(max(0.00001,newPeak))
+ let desired=(sustained || inst==11) ? 0.15/max(0.00001,maxWindow) : 0.58/Double(max(0.00001,newPeak))
  let gain=Float(min(32,desired,0.72/Double(max(0.00001,newPeak))))
  let format=AVAudioFormat(standardFormatWithSampleRate:sr,channels:2)!
  let rendered=AVAudioPCMBuffer(pcmFormat:format,frameCapacity:AVAudioFrameCount(count))!;rendered.frameLength=AVAudioFrameCount(count)

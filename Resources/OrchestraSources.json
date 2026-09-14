@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "name": "Onde Chamber Orchestra",
+  "name": "Onde Acoustic Notes",
   "license": "CC0-1.0",
   "author": "Versilian Studios / Sam Gossner and VSCO 2 CE contributors",
   "source": "https://github.com/sgossner/VSCO-2-CE",
   "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
-  "notes": "Original acoustic note recordings; musical arrangement by Onde. MIDI roots from upstream SFZ, not inferred from filenames.",
+  "notes": "Original acoustic notes; authored arrangements by Onde. Piano recorded by Simon Dalzell / Ivy Audio and distributed in VSCO 2 CE. Piano roots follow MappingChart.txt; other roots follow upstream SFZ.",
   "instruments": [
     "Violin ensemble sustain",
     "Viola ensemble sustain",
@@ -17,7 +17,8 @@
     "Clarinet sustain",
     "Harp",
     "Timpani",
-    "Concert bass drum"
+    "Concert bass drum",
+    "Upright piano, soft dynamic"
   ],
   "samples": [
     {
@@ -823,6 +824,114 @@
       "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/BDrumNewhit_v1_rr2_Sum.wav",
       "mapping_source": "unpitched bass drum",
       "sha256": "6f24fe2383879e396d1af52c47e2fa2e5a8dae97d8737d846d996985fde73eb8"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 41,
+      "round_robin": 0,
+      "filename": "i11-n041-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_010.wav",
+      "git_blob_sha1": "2b3b3f25903ed087eb334d985a0b25f4bbd510d4",
+      "upstream_bytes": 5770636,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_010.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "6bdbe8457f7b921ddfd2456aa5dd5932e60a687ca6fb255b3b80ffc6eecbd199"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 45,
+      "round_robin": 0,
+      "filename": "i11-n045-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_012.wav",
+      "git_blob_sha1": "5942615eb10199382e44c0e052ebb7885b167f53",
+      "upstream_bytes": 3870382,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_012.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "16be23a8378185f1b392600d3fa800a206945543866548640f7573534f76faf2"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 49,
+      "round_robin": 0,
+      "filename": "i11-n049-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_014.wav",
+      "git_blob_sha1": "30127aa63c8342a363b9a13b8052a3428d3bb046",
+      "upstream_bytes": 2270980,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_014.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "f3d00b63bb178680fdd4d9ed7ea43d1df1cf29e00b567ccb022c2bd411a20607"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 53,
+      "round_robin": 0,
+      "filename": "i11-n053-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_016.wav",
+      "git_blob_sha1": "480e9d56f8cfaefde9be4a7f9bde2b01ac3d100f",
+      "upstream_bytes": 3546940,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_016.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "f1a3a542cf70a13aa865ce130d50d72cd735449e605d1c5a45dc06b5a60b27fd"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 57,
+      "round_robin": 0,
+      "filename": "i11-n057-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_018.wav",
+      "git_blob_sha1": "90745e10b1d8774db29a9817a218277102cd998b",
+      "upstream_bytes": 3002200,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_018.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "01387cb5318c5abf11410ae8e2f4ef6aa83ec03254b4bccfe865aba262a2e412"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 61,
+      "round_robin": 0,
+      "filename": "i11-n061-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_020.wav",
+      "git_blob_sha1": "084b3f131592beecd311b309e6c5f42190653f4f",
+      "upstream_bytes": 3134164,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_020.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "08242e8d1c865c8cdc794cc7921d3d9663bedb5a12bfefe0de13aaa86fd23133"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 65,
+      "round_robin": 0,
+      "filename": "i11-n065-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_022.wav",
+      "git_blob_sha1": "a4238a2d033e560225a1b3d9d3fa1eef9c21ac50",
+      "upstream_bytes": 4126858,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_022.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "660e57ad8fd868ed9c56fe36e4862a6aff1cb65b7838a568d4c4f2f0865ad1ab"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 69,
+      "round_robin": 0,
+      "filename": "i11-n069-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_024.wav",
+      "git_blob_sha1": "6350b1cf0a614fe0920ad212e807d4575fcf71bd",
+      "upstream_bytes": 2222998,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_024.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "916c3ec2d61fb421e74fb4866ef75d3ef17e9d88e9dc858da24159846489d33f"
+    },
+    {
+      "instrument": 11,
+      "root_midi": 73,
+      "round_robin": 0,
+      "filename": "i11-n073-r0.wav",
+      "upstream_path": "Keys/Upright Piano/Player_dyn1_rr1_026.wav",
+      "git_blob_sha1": "9a6cd6b879752f747e136ee001e7f1b78b40dc9c",
+      "upstream_bytes": 3558112,
+      "url": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn1_rr1_026.wav",
+      "mapping_source": "Keys/Upright Piano/MappingChart.txt",
+      "sha256": "254be5d34270e5eb78bbda3f7425c3e82b9596845db2c065b13179f23c23196b"
     }
   ]
 }

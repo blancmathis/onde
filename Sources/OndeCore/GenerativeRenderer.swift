@@ -25,6 +25,7 @@ public enum GenerativeRenderer {
         guard let dsp = onde_dsp_create(sr, mode.dspMode, config.seed) else { throw OndeError("generator_init_failed", "Could not allocate the synthesis core.") }
         defer { onde_dsp_destroy(dsp) }
         try OrchestraBank.load(into:dsp,required:config.orchestra>0)
+        if config.piano>0 && (onde_dsp_orchestra_families(dsp)&2048)==0 {throw OndeError("piano_missing", "Install the complete acoustic bank for piano compositions.")}
         for (index, value) in config.values.enumerated() { onde_dsp_set(dsp, GenerativeSettings.dspIndex(index), Float(value)) }
         onde_dsp_set(dsp, Int32(ONDE_GAIN), 1)
         let format = AVAudioFormat(standardFormatWithSampleRate: sr, channels: 2)!
@@ -59,11 +60,11 @@ public enum GenerativeRenderer {
         try FileManager.default.moveItem(at: temp, to: url)
         let result: [String: Any] = ["path": url.path, "seconds": seconds, "sample_rate": sr,
                                      "mode": mode.rawValue, "seed": config.seed, "configuration": jsonObject(config),
-                                     "engine": "onde-living-5", "channels": 2, "bit_depth": 16,
+                                     "engine": "onde-living-6", "channels": 2, "bit_depth": 16,
                                      "render_wall_seconds": ProcessInfo.processInfo.systemUptime - start,
                                      "peak": peak, "rms": sqrt(energy / Double(total * 2)),
                                      "scheduled_events": onde_dsp_events(dsp), "license": "CC0-1.0",
-                                     "uses_endel_audio": false, "sample_based": config.orchestra>0, "orchestra_samples": onde_dsp_orchestra_samples(dsp), "orchestra_events": onde_dsp_orchestra_events(dsp), "sample_license":"CC0-1.0"]
+                                     "uses_endel_audio": false, "composition_id": config.composition, "vocal_source": config.vocals > 0 ? "original_synthesized_vowels" : "none", "sample_based": config.orchestra>0, "orchestra_samples": onde_dsp_orchestra_samples(dsp), "orchestra_events": onde_dsp_orchestra_events(dsp), "sample_license":"CC0-1.0"]
         // Sidecar only when free; never overwrite an existing user's manifest.
         let manifest = url.appendingPathExtension("json")
         if !FileManager.default.fileExists(atPath: manifest.path) { try? jsonData(result, pretty: true).write(to: manifest, options: .withoutOverwriting) }

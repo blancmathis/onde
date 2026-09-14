@@ -61,6 +61,7 @@ final class GenerativeEngine {
         if playing { try prepare(mode, config) }
         guard let core else { return }
         if config.orchestra>0 && onde_dsp_orchestra_samples(core)==0 {throw OndeError("orchestra_missing","La banque orchestrale complète est requise pour ce profil.")}
+        if config.piano>0 && (onde_dsp_orchestra_families(core)&2048)==0 {throw OndeError("piano_missing", "La banque de piano de la version complète est requise.")}
         onde_dsp_set_mode(core, mode.dspMode); onde_dsp_set_seed(core, config.seed)
         for (index, value) in config.values.enumerated() { onde_dsp_set(core, GenerativeSettings.dspIndex(index), Float(value)) }
         onde_dsp_set(core, Int32(ONDE_GAIN), playing ? wantedGain : 0)
@@ -85,7 +86,11 @@ final class GenerativeEngine {
     var running: Bool { engine.isRunning && wantedPlaying }
     func snapshot() -> [String: Any] {
         let frames = core.map(onde_dsp_frames) ?? 0
-        return ["engine": "onde-living-5", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
+        return ["engine": "onde-living-6", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
+                "composition_id": core.map(onde_dsp_composition) ?? 0,
+                "score_events": core.map(onde_dsp_signature_events) ?? 0,
+                "choir_voices": core.map(onde_dsp_choir_voices) ?? 0,
+                "vocal_source": config.vocals > 0 ? "original_synthesized_vowels" : "none",
                 "orchestra_samples": core.map(onde_dsp_orchestra_samples) ?? 0,
                 "orchestra_voices": core.map(onde_dsp_orchestra_voices) ?? 0,
                 "orchestra_events": core.map(onde_dsp_orchestra_events) ?? 0,

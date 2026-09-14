@@ -98,3 +98,14 @@ No Endel recordings or personal imports are used by these profiles.
 The score and native sampler are original MIT code. The previous procedural
 profiles remain available; their synthesis-only descriptions refer to those
 profiles, not to the new acoustic sample bank.
+
+## Onde 1.7 acoustic piano and original vowel synthesis
+
+Nine soft upright-piano recordings are included from VSCO 2 Community Edition,
+recorded by Simon Dalzell / Ivy Audio and distributed by Versilian Studios.
+Their exact mapping, source commit and checksums are in OrchestraSources.json.
+The existing VSCO 2 CE CC0 license applies; no proprietary piano plugin is used.
+
+Sanctuaire's ah/oh/oo-like sounds are original additive/formant synthesis in
+VowelChoir.c. No recording of a person, external vocal bank or trained model
+is used. This is a synthesized vowel ensemble, not an acoustic choir recording.

@@ -25,11 +25,14 @@ public struct GenerativeSettings: Codable, Equatable {
     public var harp: Double = 0.5
     public var ostinato: Double = 0.5
     public var percussion: Double = 0.5
+    public var composition: Double = 0
+    public var vocals: Double = 0
+    public var piano: Double = 0
     public var profileID: String? = nil
     public init() {}
     private enum CodingKeys: String, CodingKey {
         case seed, density, brightness, movement, space, texture, pulse, evolution, settleMinutes
-        case bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, profileID
+        case bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, composition, vocals, piano, profileID
     }
     public init(from decoder: Decoder) throws {
         self.init(); let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -56,9 +59,12 @@ public struct GenerativeSettings: Codable, Equatable {
         harp = try c.decodeIfPresent(Double.self, forKey: .harp) ?? harp
         ostinato = try c.decodeIfPresent(Double.self, forKey: .ostinato) ?? ostinato
         percussion = try c.decodeIfPresent(Double.self, forKey: .percussion) ?? percussion
+        composition = try c.decodeIfPresent(Double.self, forKey: .composition) ?? 0
+        vocals = try c.decodeIfPresent(Double.self, forKey: .vocals) ?? 0
+        piano = try c.decodeIfPresent(Double.self, forKey: .piano) ?? 0
         profileID = try c.decodeIfPresent(String.self, forKey: .profileID)
     }
-    public static let keys = ["density", "brightness", "movement", "space", "texture", "pulse", "evolution", "settleMinutes", "bass", "tempo", "stability", "warmth", "character", "drive", "punch", "orchestra", "strings", "brass", "woods", "harp", "ostinato", "percussion"]
+    public static let keys = ["density", "brightness", "movement", "space", "texture", "pulse", "evolution", "settleMinutes", "bass", "tempo", "stability", "warmth", "character", "drive", "punch", "orchestra", "strings", "brass", "woods", "harp", "ostinato", "percussion", "composition", "vocals", "piano"]
     public static func preset(_ mode: SessionMode) -> Self {
         switch mode {
         case .focus: return SoundProfile.find("elan")!.configuration
@@ -71,14 +77,14 @@ public struct GenerativeSettings: Codable, Equatable {
     }
     public var displayName: String { profileID.flatMap { SoundProfile.find($0)?.title } ?? "Paysage personnel" }
     /// The first eight ABI slots predate gain (slot 8). New controls start at slot 9.
-    public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion] }
+    public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, composition, vocals, piano] }
     public static func dspIndex(_ index: Int) -> Int32 { Int32(index < 8 ? index : index + 1) }
     public func value(_ key: String) -> Double { Self.keys.firstIndex(of: key).map { values[$0] } ?? 0 }
-    public static func range(_ key: String) -> ClosedRange<Double> { key == "tempo" ? 40...120 : key == "settleMinutes" ? 0...120 : 0...1 }
+    public static func range(_ key: String) -> ClosedRange<Double> { key == "composition" ? 0...4 : key == "tempo" ? 40...120 : key == "settleMinutes" ? 0...120 : 0...1 }
     public mutating func set(_ key: String, _ value: Double) throws {
         guard Self.keys.contains(key) else { throw OndeError("invalid_key", "Generator keys: \(Self.keys.joined(separator: ", ")).") }
         let range = Self.range(key)
-        guard value.isFinite, range.contains(value) else { throw OndeError("invalid_argument", "\(key) must be a number in \(range.lowerBound)...\(range.upperBound).") }
+        guard value.isFinite, range.contains(value), (key != "composition" || value.rounded(.down) == value) else { throw OndeError("invalid_argument", "\(key) must be a number in \(range.lowerBound)...\(range.upperBound).") }
         switch key {
         case "density": density = value
         case "brightness": brightness = value
@@ -101,7 +107,10 @@ public struct GenerativeSettings: Codable, Equatable {
         case "woods": woods = value
         case "harp": harp = value
         case "ostinato": ostinato = value
-        default: percussion = value
+        case "percussion": percussion = value
+        case "composition": composition = value
+        case "vocals": vocals = value
+        default: piano = value
         }
     }
     public func validated() throws -> Self {
@@ -137,7 +146,7 @@ public struct SoundProfile: Identifiable, Codable {
         c.space=0.66;c.movement=0.10;c.pulse=0.28;c.evolution=0.12;c.stability=0.98;c.texture=0;c.character=0.18
         return .init(id:id,title:title,mode:.focus,subtitle:"ORCHESTRE · \(Int(tempo)) BPM",description:description,configuration:c)
     }
-    public static let all: [Self] = [
+    public static let all: [Self] = FocusCompositions.profiles + [
         ensemble("atlas","Atlas","Un ensemble ample : cordes graves, cors et pulsation profonde. Une même partition, sans rupture.",88,6040,0.84,0.68,0.30,0.23,0.57,0.47,0.83,0.35,0.34,0.42),
         ensemble("ostinato","Ostinato","Violoncelles articulés, cordes en réponse et timbales. Le plus entraînant des quatre orchestres.",100,6041,0.56,0.34,0.18,0.35,0.98,0.70,0.85,0.58,0.50,0.53),
         ensemble("aurore","Aurore","Cordes lumineuses, harpe et bois chauds. Un mouvement régulier, plus aérien.",84,6042,0.68,0.15,0.66,0.72,0.36,0.18,0.65,0.21,0.17,0.39),

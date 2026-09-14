@@ -11,16 +11,29 @@ struct GenerativeView: View {
     @State private var advanced = false
     @State private var otherProfiles = false
     var body: some View {
-        PageHeader(eyebrow: "Orchestre vivant · instruments acoustiques", title: "Un ensemble, un même rythme.", subtitle: "Cordes, cors, bois et harpe. Un orchestre génératif sur une pulsation stable.")
+        PageHeader(eyebrow: "Collection Focus · quatre partitions originales", title: "Trouvez votre rythme. Gardez-le.", subtitle: "Quatre univers soignés, sans paroles, sans changement automatique de style.")
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-            ForEach(SoundProfile.all.filter { $0.configuration.orchestra>0 }) { profile in SoundProfileCard(profile: profile) }
+            ForEach(FocusCompositions.profiles) { profile in SoundProfileCard(profile: profile) }
         }
         DisclosureGroup(isExpanded: $otherProfiles) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-                ForEach(SoundProfile.all.filter { $0.configuration.orchestra==0 }) { profile in SoundProfileCard(profile: profile) }
+                ForEach(SoundProfile.all.filter { $0.configuration.composition==0 }) { profile in SoundProfileCard(profile: profile) }
             }.padding(.top,16)
-        } label: { Text("Les neuf autres paysages · Focus, Relax et Méditation").font(.system(size:12,weight:.medium)).foregroundStyle(Theme.muted) }
-        if model.generatorConfiguration.orchestra>0 { orchestraPanel }
+        } label: { Text("Les autres paysages · Focus, Relax et Méditation").font(.system(size:12,weight:.medium)).foregroundStyle(Theme.muted) }
+        if let id = model.generatorConfiguration.profileID, FocusCompositions.ids.contains(id) {
+            Panel {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(FocusCompositions.rationale(id)).font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
+                    if id == "sanctuaire" {
+                        GeneratorControl(key: "vocals", title: "Présence des voix", detail: "Voyelles synthétisées. À zéro : le même accompagnement, sans voix.")
+                    }
+                    if id == "filigrane" {
+                        GeneratorControl(key: "piano", title: "Présence du piano", detail: "Prises de piano acoustique doux ; sans bruit de vinyle ajouté.")
+                    }
+                }
+            }
+        }
+        if model.generatorConfiguration.orchestra>0 && model.generatorConfiguration.composition != 2 && model.generatorConfiguration.composition != 4 { orchestraPanel }
         Panel {
             VStack(alignment: .leading, spacing: 23) {
                 HStack(spacing: 16) {
@@ -40,10 +53,12 @@ struct GenerativeView: View {
                 }
                 Rectangle().fill(Theme.line).frame(height: 1)
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 28), GridItem(.flexible(), spacing: 28)], spacing: 23) {
+                    if model.generatorConfiguration.composition != 2 {
                     GeneratorControl(key: "punch", title: "Impact", detail: "Des attaques graves franches, sans claquement ajouté")
                     GeneratorControl(key: "drive", title: "Entraînement", detail: "Un rebond de basse à la croche, toujours régulier")
                     GeneratorControl(key: "bass", title: "Profondeur des basses", detail: "Un grave rond et centré, sans augmenter le volume général")
                     GeneratorControl(key: "pulse", title: "Présence du rythme", detail: "Une pulsation régulière, sans ruptures aléatoires")
+                    }
                     GeneratorControl(key: "density", title: "Présence des notes", detail: "Du fond minimal au motif feutré plus présent")
                     GeneratorControl(key: "warmth", title: "Douceur", detail: "Arrondir le son et atténuer les contours brillants")
                     TempoControl()
@@ -55,14 +70,20 @@ struct GenerativeView: View {
                         GeneratorControl(key: "movement", title: "Mouvement", detail: "De lentes nuances du timbre et de la stéréo")
                         GeneratorControl(key: "texture", title: "Matière harmonique", detail: "Renforcer la nappe, pas ajouter du grésillement")
                         GeneratorControl(key: "evolution", title: "Évolution", detail: "Nuances lentes, sans changer le tempo")
-                        GeneratorControl(key: "stability", title: "Stabilité harmonique", detail: "Accords maintenus 32 ou 64 mesures")
-                        GeneratorControl(key: "character", title: "Caractère", detail: "Des touches feutrées aux nappes à attaque lente")
+                        if model.generatorConfiguration.composition == 0 {
+                            GeneratorControl(key: "stability", title: "Stabilité harmonique", detail: "Accords maintenus 32 ou 64 mesures")
+                            GeneratorControl(key: "character", title: "Caractère", detail: "Des touches feutrées aux nappes à attaque lente")
+                        }
                     }.padding(.top, 20)
                 } label: { Text("Affiner le timbre").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.muted) }
                 Text("Le tempo est indépendant des autres réglages. Les variations restent en arrière-plan ; le rythme ne se réinvente pas à chaque mesure.")
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
             }
         }
+        DisclosureGroup {
+            Text("La recherche guide le choix sans paroles, la complexité contrôlée et les préférences. Les tempos et les accords sont des choix musicaux. Aucune de ces pièces ne possède de validation clinique ni de garantie de supériorité au silence.")
+                .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4).padding(.top, 12)
+        } label: { Text("Ce que les études permettent de dire").font(.system(size: 11)).foregroundStyle(Theme.muted) }
         if model.mode == .meditation { meditationPanel }
         Panel {
             VStack(alignment: .leading, spacing: 18) {
@@ -71,12 +92,12 @@ struct GenerativeView: View {
                     Spacer()
                     Button("Profil du mode par défaut") { model.resetGeneratorSettings() }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Theme.muted)
                 }
-                Text("La graine choisit le motif de départ. Elle ne provoque aucune omission aléatoire des notes. En lecture, changer la graine change les prochaines notes sans remettre le chronomètre à zéro.")
+                Text("Les quatre partitions gardent leurs motifs composés. La graine renouvelle les nuances de timbre et les prises, sans changer le style ni remettre le chronomètre à zéro.")
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
                 HStack(spacing: 12) {
                     TextField("Graine", text: $seedText).font(.system(size: 12, design: .monospaced)).textFieldStyle(.roundedBorder).frame(width: 170).onSubmit(applySeed)
                     PillButton(title: "Appliquer", symbol: "checkmark", action: applySeed)
-                    PillButton(title: "Autre motif", symbol: "shuffle") { model.setGeneratorSeed(UInt64.random(in: 1...4_294_967_295)); seedError = "" }
+                    PillButton(title: "Autre nuance", symbol: "shuffle") { model.setGeneratorSeed(UInt64.random(in: 1...4_294_967_295)); seedError = "" }
                     Spacer()
                 }
                 if !seedError.isEmpty { Text(seedError).foregroundStyle(.orange).font(.system(size: 11)) }
@@ -105,7 +126,7 @@ struct GenerativeView: View {
                 HStack {
                     VStack(alignment:.leading,spacing:7) {
                         Text("Diriger les pupitres.").font(.system(size:23,design:.serif))
-                        Text("67 prises acoustiques · neuf instruments · banque CC0 incluse").font(.system(size:11)).foregroundStyle(Theme.muted)
+                        Text("Cordes, bois, percussions et piano · prises acoustiques CC0").font(.system(size:11)).foregroundStyle(Theme.muted)
                     }
                     Spacer()
                     Image(systemName:"music.note.list").font(.system(size:26,weight:.light)).foregroundStyle(Theme.accent)
