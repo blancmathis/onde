@@ -15,3 +15,6 @@ Imports/
 Backups/
 Tools/apply_*.py
 Tools/install_living3_verified.py
+
+__pycache__/
+*.pyc

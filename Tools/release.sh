@@ -14,7 +14,7 @@ cross=$(swift build -c release --triple "$other-apple-macosx14.0" --scratch-path
 mkdir -p .build/universal dist
 for name in Onde ondectl; do
   lipo -create ".build/release/$name" "$cross/$name" -output ".build/universal/$name"
-  lipo -verify_arch arm64 x86_64 ".build/universal/$name"
+  lipo ".build/universal/$name" -verify_arch arm64 x86_64
 done
 ONDE_BIN_DIR="$PWD/.build/universal" bash Tools/package.sh
 codesign --verify --deep --strict dist/Onde.app

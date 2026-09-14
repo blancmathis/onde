@@ -101,7 +101,8 @@ final class UpdateManager: ObservableObject {
                     destination = directory.appendingPathComponent("Onde-\(update.tag)-\(index).zip"); index += 1
                 }
                 try FileManager.default.moveItem(at: temp, to: destination)
-                await MainActor.run { self.downloadedPath = destination.path; self.downloading = false; self.error = nil }
+                let completedPath = destination.path
+                await MainActor.run { self.downloadedPath = completedPath; self.downloading = false; self.error = nil }
             } catch {
                 await MainActor.run { self.error = error.localizedDescription; self.downloading = false }
             }

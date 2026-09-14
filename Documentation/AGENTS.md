@@ -93,3 +93,25 @@ New controls: `bass`, `warmth`, `stability`, `character` in 0...1, `tempo` in
 and saved with mixes. `generate render` accepts either mode IDs or profile IDs.
 Current API engine identifier: `onde-living-3`. The noise and granular layers
 are disabled. See `Documentation/MOTIFS-STABLES-1.4.md` for complete semantics.
+
+## Onde 1.5 — Energy and releases
+
+`generate profiles` includes nine profiles. New energetic choices are `elan`,
+`reacteur`, and `traction`. `generate set punch NUMBER` shapes low-frequency
+attacks; `generate set drive NUMBER` shapes the rhythmic bass body (0...1).
+Old configurations decode both new controls as zero. Explicitly choose a new
+profile to hear the new arrangement; changing the app does not overwrite the
+user's saved personal settings.
+
+`update check --wait`: wait for a metadata check and return JSON. `update status`:
+inspect the current build, candidate release, digest and completed download.
+`update download --wait`: wait for a SHA256-verified ZIP download. Requires a
+successful check first, and does not extract, execute or install the app.
+`update automatic on|off`: toggle metadata checks. `ui page updates`: show the
+update page. Raw IPC commands are `updates.check`, `updates.status`,
+`updates.download`, and `updates.automatic` with `enabled: boolean`.
+
+The repository is https://github.com/blancmathis/onde. Releases are built from
+main by GitHub Actions. The updater uses only published non-prerelease builds
+with the exact repository/asset path and a valid SHA-256 digest. No token is
+stored in the distributed application.
