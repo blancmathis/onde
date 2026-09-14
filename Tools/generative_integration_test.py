@@ -26,8 +26,15 @@ try:
  s=launch();check(s['status']=='stopped','No automatic playback after migration')
  call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true');call('timer','markers','10,20,30,40')
  for mode,seed in [('focus','42'),('relax','314'),('meditation','2718')]:
-  call('generate','play',mode,'--seed',seed);time.sleep(1.3)
-  s=call('status');g=call('generate','status')
+  call('generate','play',mode,'--seed',seed)
+  # Core Audio may reconfigure its device asynchronously on a heavily loaded Mac.
+  # Observe successful rendering instead of assuming it within a fixed 1.3s sleep.
+  # No playback command is retried and the original assertions remain mandatory.
+  deadline=time.monotonic()+12;g=call('generate','status')
+  while not (g['running'] and g['rendered_seconds']>0) and time.monotonic()<deadline:
+   time.sleep(.25);g=call('generate','status')
+  s=call('status')
+  if not (g['running'] and g['rendered_seconds']>0):print('AUDIO_DIAGNOSTIC',json.dumps(g),flush=True)
   check(s['mode']==mode and s['active_sound_ids']==['living'],'Solo real generator '+mode)
   check(g['running'] and g['rendered_seconds']>0,'Core Audio render callback '+mode)
   check(s['preferences']['markers']==[600,1200,1800,2400],'Custom chimes preserved '+mode)

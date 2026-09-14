@@ -156,3 +156,34 @@ R16. Haruvi et al., 2022, Measuring and Modeling the Effect of Audio on Human Fo
 R17. Kiss et Linnell, 2024, musique préférée et attention soutenue : https://www.nature.com/articles/s41598-024-60218-z
 
 R18. Nadon et al., 2021, musique/bruit et attention : https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2021.729037/full
+
+
+## 9. Recherche complémentaire : autres banques et limites de redistribution
+
+Vérification complémentaire du 14 septembre 2026. Cette présélection n'est pas une écoute comparative exhaustive. Aucun des instruments ci-dessous n'est ajouté implicitement aux 67 prises déjà intégrées.
+
+| Source complémentaire | Conclusion pour une app publique |
+|---|---|
+| Karoryfer, banques gratuites | L'éditeur annonce désormais CC0, sauf Marie Ork. Il précise que certaines anciennes archives portent encore une licence antérieure. Bonne réserve de violoncelles et basses acoustiques, avec conservation de cette preuve de licence [R19]. |
+| Karoryfer / Bigcat Cello | Le dépôt maintenu indique CC0. Piste pour une voix de violoncelle plus individualisée, pas une raison d'empiler des banques incohérentes [R20]. |
+| University of Iowa MIS | La page universitaire autorise tous projets sans restriction. Des prises possibles, à sélectionner et préparer avant intégration [R21]. |
+| Pianobook | Les compositions commerciales ou non commerciales sont permises, mais la redistribution des banques d'autrui est interdite. Pas de copie automatique dans Onde [R22]. |
+| Sonatina Symphonic Orchestra | Le dépôt indique CC Sampling Plus 1.0, pas CC0. À traiter sous ses propres conditions plutôt que l'assimiler à VSCO [R23]. |
+| FreePats | Plusieurs licences dans le catalogue ; la préférence actuelle du projet pour CC0 ne transforme pas toutes les banques en CC0 [R24]. |
+| Salamander Grand Piano, distribution FreePats | La page contrôlée indique CC BY 3.0. Ne pas attribuer CC0 à cette distribution sans preuve propre à la version. Non intégré ici [R25]. |
+
+La comparaison confirme le choix d'un premier ensemble VSCO cohérent et redistribuable. Philharmonia, Pianobook et les produits Spitfire peuvent servir à composer sous leurs licences ; cela ne donne pas automatiquement le droit d'en faire une nouvelle banque d'instruments publique.
+
+R19. Karoryfer, licences actuelles : https://shop.karoryfer.com/pages/free-samples
+
+R20. Bigcat Cello, dépôt : https://github.com/sfzinstruments/karoryfer-bigcat.cello
+
+R21. University of Iowa MIS : https://theremin.music.uiowa.edu/MIS.html
+
+R22. Pianobook, compositions et redistribution : https://www.pianobook.co.uk/faq/are-pianobook-sample-packs-royalty-free-or-free-for-commercial-use/
+
+R23. Sonatina, dépôt : https://github.com/peastman/sso
+
+R24. FreePats, licences : https://freepats.zenvoid.org/licenses.html
+
+R25. FreePats, Salamander : https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html
