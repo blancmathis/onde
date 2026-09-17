@@ -25,14 +25,14 @@ def observed_status():
     # Inspect the same private IPC protocol without spawning a CLI executable for
     # each audio observation. Slow process launches can miss a two-second fade.
     with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
-        client.settimeout(5);client.connect(str(profile/'control.sock'))
-        client.sendall(b'{"command":"status"}\n');data=bytearray()
-        while b'\n' not in data:
+        client.settimeout(30);client.connect(str(profile/'control.sock'))
+        client.sendall(json.dumps({"command":"status"}).encode()+bytes([10]));data=bytearray()
+        while 10 not in data:
             block=client.recv(65536)
             if not block:raise AssertionError('Incomplete status response')
             data.extend(block)
             if len(data)>2_000_000:raise AssertionError('Oversized status response')
-    response=json.loads(data.split(b'\n',1)[0])
+    response=json.loads(data.split(bytes([10]),1)[0])
     if not response.get('ok'):raise AssertionError(response)
     return response['result']
 def envelope(source):

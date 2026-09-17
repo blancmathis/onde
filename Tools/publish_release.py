@@ -26,8 +26,17 @@ def main():
     local={name:root/'dist'/name for name in names}
     metadata={name:(p.stat().st_size,'sha256:'+hashlib.sha256(p.read_bytes()).hexdigest()) for name,p in local.items()}
     gh('release','create',tag,'-R',repo,'--target',commit,'--draft','--title',f'Onde {info["VERSION"]} · {info["ONDE_BUILD"]}','--notes-file','dist/release-notes.md',timeout=90)
+    # A draft need not have a published tag yet. Resolve its release ID, then
+    # inspect that exact draft throughout the transaction.
+    release_id=None
+    for _ in range(10):
+        created=next((r for r in api(f'repos/{repo}/releases?per_page=100') if r['tag_name']==tag),None)
+        if created:
+            release_id=created['id'];break
+        time.sleep(2)
+    if release_id is None:raise RuntimeError('Created draft was not visible')
     def draft():
-        release=api(f'repos/{repo}/releases/tags/{tag}')
+        release=api(f'repos/{repo}/releases/{release_id}')
         if not release['draft'] or release['target_commitish']!=commit:raise RuntimeError('Refusing to change a published or unrelated release')
         return release
     for name,path in local.items():
