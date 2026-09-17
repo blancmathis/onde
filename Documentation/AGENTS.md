@@ -1,133 +1,115 @@
-# Agent control contract
+# Onde: agent and CLI guide
 
-1. Invoke `~/.local/bin/onde schema` for the complete JSON command schema.
-2. Inspect `status` and `sounds` before modifying a session.
-3. Use `--launch` only when opening the application is intended.
-4. Treat nonzero exit or `ok:false` as a failure. Inspect `last_error` after
-   playback changes; hardware/audio-file failures are also surfaced in the UI.
-5. Do not describe the soundscapes as clinically validated.
-6. Never send private imports to a repository or external service.
+Onde exposes one application state through its native interface and a JSON-lines UNIX socket. The CLI is bundled at `Onde.app/Contents/MacOS/ondectl`. An optional `~/.local/bin/onde` symlink can be created by `Tools/install.sh`. Examples use that shortcut.
 
-Examples of raw JSON protocol via `onde call '<json>'`:
+## Start here
 
-```json
-{"command":"mode","mode":"meditation","play":true,"reset":true}
-{"command":"timer.markers","seconds":[600,1200,1800]}
-{"command":"sound","id":"aube","enabled":true,"volume":0.35}
-{"command":"settings","key":"chimeVolume","value":0.18}
-{"command":"ui","page":"settings","show":true}
-{"command":"ui","quiet":true}
+```sh
+~/.local/bin/onde schema
+~/.local/bin/onde status
+~/.local/bin/onde generate profiles
+~/.local/bin/onde sounds
 ```
 
-`mode` is idempotent for the current mode: it resumes rather than resets unless
-`reset:true`. Changing mode ends the old session and starts elapsed at zero.
-`play/pause` control both audio and stopwatch. `silence` only disables the beds;
-use `settings chimesEnabled false` to silence chimes too. No automatic stop at
-30 minutes. `timer markers` CLI takes minutes unless `--seconds`; raw API always
-uses seconds. Marker edits consume past markers without replaying them.
+Every response is JSON with `ok` and `result`, or `error` containing `code` and `message`. Exit code 0 indicates success, 2 an invalid/failed operation, 3 an app that is not running. `schema`, profile listing and offline renders do not need a running app. `--launch` explicitly opens the app for other commands. No implicit launch occurs otherwise.
 
-For a read-only state stream use `onde watch`. `events` includes emitted chimes
-and their marker_seconds values. The last 100 events are memory-only.
+The IPC socket is owner-only under `~/Library/Application Support/Onde/control.sock`. It is not a TCP service. Requests do not execute shell commands. `onde call '{"command":"status"}'` sends a structured request. `onde watch` emits NDJSON snapshots until stopped.
 
-Security: one JSON line per UNIX-socket connection, same-user processes only.
-No API token is needed or exposed. This interface confers local file import and
-app control, not arbitrary shell execution. Missing IPC doesn't authorize
-launch unless `--launch` was explicitly requested.
+## Modes, playback and layers
 
+```sh
+onde focus --launch
+onde relax
+onde meditate
+onde pause
+onde play
+onde stop
+onde sound rain on --volume 0.25
+onde sound aube off
+onde solo piano
+onde volume 0.4
+onde silence
+```
 
-## Complete Endel sessions
+`silence` disables sound layers, including the generator, but leaves the active session stopwatch and meditation chimes running. Master volume zero also silences chimes. Do not raise a user's volume unexpectedly. Closing the main window does not end playback.
 
-First run `onde endel list` (works even with the app stopped). Choose a known ID,
-then `onde endel play <id> --launch`. Use `--meditation` to retain the configured
-meditation chimes with a complete Endel recording. Read `onde endel status`.
-A queued/opened player is not success: `playback_confirmed` must be true and the
-provider-reported duration must be long. `minutes_approx` is publisher metadata,
-NOT a measured playback duration. Network errors are reported explicitly.
-Do not read, export or manipulate browser/Endel credentials or protected files.
-The player remains visible with its controls and advertising intact.
-Browser fallback: `onde endel browser <id>`. This does NOT synchronize a timer.
+## Generative compositions
 
-## Original living generator (1.2)
+English display names changed in 1.9; IDs did not:
 
-Use `onde generate presets` for default configurations and
-`onde generate play focus|relax|meditation --seed 42 --launch` to activate
-original realtime synthesis. `generate status` returns a flat JSON result with
-`running`, `rendered_seconds`, `scheduled_events`, `output_peak`, `output_rms`,
-`configuration`, `active`, and `last_error`.
+| Display name | Stable ID |
+|---|---|
+| Amber | `ambre` |
+| Canopy | `canopee` |
+| Meridian | `meridien` |
+| Slipstream | `sillage` |
+| Filigree | `filigrane` |
+| Confluence | `confluence` |
+| Sanctuary | `sanctuaire` |
 
-`generate set KEY VALUE`: density, brightness, movement, space, texture,
-pulse, evolution in 0...1; settleMinutes in 0...120 (0 disables simplification).
-`generate seed INTEGER` changes future choices without resetting the stopwatch.
-`generate defaults` restores synthesis settings only, never chime preferences.
-`mix save/load` also stores/restores generator settings. `silence` stops the
-living layer without stopping the meditation timer or chimes.
+Use `generate profiles` for all current profiles and exact default settings. Do not derive an ID by lowercasing an English title.
 
-Offline command, app not required:
-`onde generate render MODE /absolute/new.wav --minutes 10 --seed 42`
-Optional `--seconds` and `--settings '{"density":0.3,"space":0.8}'`.
-WAV export does not overwrite. It uses fresh default settings for MODE unless
-`--settings` is supplied; it does NOT implicitly read the currently playing mix.
-Read `generate status` first when reproducing current settings.
-No Endel samples, network, ML weights, or subscription required.
+```sh
+onde generate profile sanctuaire --launch
+onde generate status
+onde generate set bass 0.8
+onde generate set vocals 0.5
+onde generate set piano 0.7
+onde generate set strings 0.8
+onde generate set brass 0.4
+onde generate transition 10
+onde generate seed 42
+onde mix save 'My soundscape'
+onde mix load 'My soundscape'
+```
 
-### Living Engine II (Onde 1.3)
+Controls are normally 0–1. Tempo is 40–120 BPM; `settleMinutes` is 0–120; `composition` is an integer 0–7. Use `schema` and profile data as the source of truth. Values must be finite; booleans are not numbers. Seeds are exact nonnegative integers up to 2^53−1.
 
-`generate status` reports `engine: onde-living-2`, plus `note_events`,
-`grain_events`, `bars`, `bpm`, `active_voices`, `harmony_index` and
-`arrangement_section`. Existing synthesis controls and commands are unchanged.
-The `texture` control changes both organic air and self-generated grains;
-`movement` affects oscillator drift and grain intensity. Existing personal
-presets retain their numeric values. An old seed does not recreate Engine I's
-music after this engine update; keep a prior export when comparing versions.
+A profile selection prepares the next scene, waits for a bar boundary and crossfades. A successful request means accepted, not necessarily already audible. Poll `generate status` and its `transition` state, `running`, `rendered_seconds`, source/target profiles and `last_error`. Rapid selection resolves to the last request. Switching Focus pieces preserves the session stopwatch. A mode change starts a new session.
 
-## Living III profiles (1.4)
+`generate defaults` restores that mode's sound parameters, not global volume or chimes. Custom mixes preserve generator configuration. Keep user-saved names and imports unchanged.
 
-`generate profiles` is an offline discovery command. `generate profile ID`
-starts `ancrage`, `abysses`, `courant`, `velours`, `rive`, or `immersion`.
-Raw API: `generate.profiles` and `generate.profile` with `id`.
-It preserves master volume, chimes and saved mixes; choosing a profile replaces
-only the active mode's synthesis configuration and selects the living layer.
+## Meditation
 
-New controls: `bass`, `warmth`, `stability`, `character` in 0...1, `tempo` in
-40...120 BPM. Density does not change the tempo. All controls are persisted
-and saved with mixes. `generate render` accepts either mode IDs or profile IDs.
-Current API engine identifier: `onde-living-3`. The noise and granular layers
-are disabled. See `Documentation/MOTIFS-STABLES-1.4.md` for complete semantics.
+```sh
+onde timer markers 10,20,30
+onde settings chimeVolume 0.2
+onde settings chimesEnabled false
+onde chime preview
+onde timer reset
+```
 
-## Onde 1.5 — Energy and releases
+Markers are absolute elapsed-minute positions, not repeating intervals. Defaults are 10, 20 and 30 minutes. After the last one, the stopwatch and soundscape continue. Empty markers disable reminders. Pause time is excluded. Reset permits a new set of markers, but does not erase the daily total.
 
-`generate profiles` includes nine profiles. New energetic choices are `elan`,
-`reacteur`, and `traction`. `generate set punch NUMBER` shapes low-frequency
-attacks; `generate set drive NUMBER` shapes the rhythmic bass body (0...1).
-Old configurations decode both new controls as zero. Explicitly choose a new
-profile to hear the new arrangement; changing the app does not overwrite the
-user's saved personal settings.
+## Daily accounting
 
-`update check --wait`: wait for a metadata check and return JSON. `update status`:
-inspect the current build, candidate release, digest and completed download.
-`update download --wait`: wait for a SHA256-verified ZIP download. Requires a
-successful check first, and does not extract, execute or install the app.
-`update automatic on|off`: toggle metadata checks. `ui page updates`: show the
-update page. Raw IPC commands are `updates.check`, `updates.status`,
-`updates.download`, and `updates.automatic` with `enabled: boolean`.
+`status` exposes `today_seconds`, `today_time_zone`, `daily_history_estimated`, and the independent `elapsed_seconds`. Today uses active intervals in the current local day, not the entire stopwatch. Historical estimates reflect pre-1.9 data lacking pause intervals. Do not treat session time as a measure of attention. [Details](DAILY-ACTIVITY.md).
 
-The repository is https://github.com/blancmathis/onde. Releases are built from
-main by GitHub Actions. The updater uses only published non-prerelease builds
-with the exact repository/asset path and a valid SHA-256 digest. No token is
-stored in the distributed application.
+## Offline export
 
-## Acoustic orchestration (1.6)
+```sh
+onde generate render sanctuaire "$HOME/Desktop/Sanctuary.wav" --minutes 30
+onde generate render sillage "$HOME/Desktop/Slipstream.wav" --seconds 120 --seed 42 --settings '{"bass":0.7}'
+onde generate transition-render ambre sanctuaire "$HOME/Desktop/Transition.wav" --seconds 70 --at 25 --fade 10
+```
 
-New profile IDs: `atlas`, `ostinato`, `aurore`, `chambre`. Choose with
-`onde generate profile ID --launch`. Existing profiles are unchanged.
+The same DSP and bundled bank are used. Renders start fresh from the selected defaults unless custom settings are supplied. They do not implicitly read the active UI mix. WAV exports support up to three hours per file; live generation has no track-length limit. Existing destinations are never overwritten. Provenance sidecars document settings and sources.
 
-New controls in 0...1: `orchestra`, `strings`, `brass`, `woods`, `harp`,
-`ostinato`, `percussion`. The same commands persist and restore these with mixes.
-`generate status` reports `sample_based`, `orchestra_samples`,
-`orchestra_events`, `orchestra_voices` and `orchestra_bank_present`.
-The bank has 67 CC0 note recordings. The real-time callback does not fetch data.
-For source builds, run `bash Tools/prepare_orchestra.sh`. Standalone renders
-find the bank in the app bundle or `Assets/Orchestra` under the project cwd.
-`ONDE_ORCHESTRA_DIR` can explicitly select a validated bank for testing.
-Missing or corrupt bank data causes an explicit error for orchestral profiles.
-Do not call a new recording an Endel recording or claim a verified cognitive effect.
+## Import, navigation and updates
+
+```sh
+onde import '/absolute/path/audio.wav'
+onde ui page generative
+onde ui page history
+onde ui page updates
+onde ui show
+onde update check --wait
+onde update download --wait
+onde update automatic off
+```
+
+Import copies audio into the private local library. Never add a user's imports or state file to the public repository. Update downloads are verified and saved but never auto-installed. Do not disable Gatekeeper or other protections.
+
+## Testing and source development
+
+Use temporary `ONDE_HOME` directories for integration tests. They disable automatic update checking in test instances. Keep output muted. All protocol IDs remain ASCII and stable; English labels are presentation, not a data migration. Do not change musical parameters as a side effect of translation or accounting fixes.

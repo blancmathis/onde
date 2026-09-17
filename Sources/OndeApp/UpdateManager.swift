@@ -53,13 +53,13 @@ final class UpdateManager: ObservableObject {
             guard let self else { return }
             do {
                 let (data, response) = try await self.session.data(for: request)
-                guard let http = response as? HTTPURLResponse else { throw OndeError("invalid_response", "Réponse GitHub invalide.") }
+                guard let http = response as? HTTPURLResponse else { throw OndeError("invalid_response", "Invalid response from GitHub.") }
                 if http.statusCode == 404 {
-                    await MainActor.run { self.candidate = nil; self.available = false; self.error = "Aucune version téléchargeable publiée pour le moment."; self.checking = false; self.lastChecked = Date() }
+                    await MainActor.run { self.candidate = nil; self.available = false; self.error = "No downloadable release has been published yet."; self.checking = false; self.lastChecked = Date() }
                     return
                 }
-                guard http.statusCode == 200 else { throw OndeError("update_http", "GitHub a répondu \(http.statusCode). Réessayez plus tard.") }
-                guard data.count <= 2_000_000 else { throw OndeError("oversized_response", "Réponse de mise à jour trop volumineuse.") }
+                guard http.statusCode == 200 else { throw OndeError("update_http", "GitHub returned HTTP \(http.statusCode). Try again later.") }
+                guard data.count <= 2_000_000 else { throw OndeError("oversized_response", "The update response is too large.") }
                 let release = try JSONDecoder().decode(PublicRelease.self, from: data)
                 let verified = try UpdatePolicy.parse(release)
                 await MainActor.run {
@@ -82,15 +82,15 @@ final class UpdateManager: ObservableObject {
                 let (temp, response) = try await self.session.download(for: request)
                 defer { try? FileManager.default.removeItem(at: temp) }
                 guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                      let scheme = response.url?.scheme, scheme == "https" else { throw OndeError("download_failed", "Le téléchargement GitHub n’a pas abouti.") }
+                      let scheme = response.url?.scheme, scheme == "https" else { throw OndeError("download_failed", "The download from GitHub failed.") }
                 let size = try temp.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                guard Int64(size) == update.bytes else { throw OndeError("size_mismatch", "La taille du téléchargement ne correspond pas à la publication.") }
+                guard Int64(size) == update.bytes else { throw OndeError("size_mismatch", "The download size does not match the published release.") }
                 let handle = try FileHandle(forReadingFrom: temp)
                 defer { try? handle.close() }
                 var hash = SHA256()
                 while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty { hash.update(data: chunk) }
                 let digest = hash.finalize().map { String(format: "%02x", $0) }.joined()
-                guard digest == update.sha256 else { throw OndeError("digest_mismatch", "Vérification SHA-256 échouée. L’archive n’a pas été conservée.") }
+                guard digest == update.sha256 else { throw OndeError("digest_mismatch", "SHA-256 verification failed. The archive was not kept.") }
                 let directory: URL
                 if self.isolated { directory = OndePaths.support.appendingPathComponent("Downloads", isDirectory: true) }
                 else { directory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0] }

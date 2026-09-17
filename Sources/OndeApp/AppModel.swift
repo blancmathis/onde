@@ -8,6 +8,9 @@ final class AppModel: ObservableObject {
     @Published var store = StoredState()
     @Published var clock = SessionClock()
     @Published var elapsed: Double = 0
+    @Published private(set) var todaySeconds: Double = 0
+    private var activity = ActivityTracker()
+    private var lastActivitySave: Double = 0
     @Published var page = "studio"
     @Published var quietView = false
     @Published var errorMessage: String?
@@ -38,9 +41,34 @@ final class AppModel: ObservableObject {
         guard mode == .meditation, store.preferences.chimesEnabled else { return nil }
         return store.preferences.markers.first { $0 > elapsed && !clock.fired.contains($0) }
     }
-    var todaySeconds: Double {
-        store.history.filter { Calendar.current.isDateInToday($0.date) }.reduce(0) { $0 + $1.seconds } + elapsed
+    /// Sample independently of the session stopwatch, which may span midnight.
+    private func refreshActivity(checkpoint: Bool = true) {
+        guard ownsProfile else { return }
+        let wall = Date(), uptime = now
+        if clock.running {
+            if !activity.running { activity.resume(at: wall, uptime: uptime) }
+            activity.sample(at: wall, uptime: uptime)
+        } else if activity.running { activity.pause(at: wall, uptime: uptime) }
+        let value = activity.ledger.seconds(on: wall, until: wall)
+        if value != todaySeconds { todaySeconds = value }
+        if checkpoint && clock.running && uptime - lastActivitySave >= 15 {
+            lastActivitySave = uptime; persist()
+        }
     }
+    private func resumeTiming() {
+        let wall = Date(), uptime = now
+        if sessionStarted == nil { sessionStarted = wall }
+        activity.resume(at: wall, uptime: uptime)
+        clock.resume(at: uptime)
+        refreshActivity()
+    }
+    private func pauseTiming() {
+        let uptime = now
+        activity.pause(at: Date(), uptime: uptime)
+        clock.pause(at: uptime); elapsed = clock.elapsed(at: uptime)
+        refreshActivity(); persist()
+    }
+
 
     init() {
         do {
@@ -51,7 +79,7 @@ final class AppModel: ObservableObject {
                     // Never silently overwrite a malformed profile.
                     let backup = OndePaths.support.appendingPathComponent("state-unreadable-\(Int(Date().timeIntervalSince1970)).json")
                     try FileManager.default.copyItem(at: OndePaths.state, to: backup)
-                    errorMessage = "Les anciens réglages sont illisibles. Une copie a été conservée : \(backup.lastPathComponent)."
+                    errorMessage = "Your previous settings could not be read. A backup was saved as \(backup.lastPathComponent)."
                 }
             }
             store.preferences.masterVolume = clamp(store.preferences.masterVolume)
@@ -65,6 +93,12 @@ final class AppModel: ObservableObject {
             audio.transitionSeconds = min(30, max(2, store.transitionSeconds ?? 10))
             try server.start { [weak self] request in self?.handle(request) ?? ["ok": false] }
             ownsProfile = true
+            let migrated = store.activityLedger == nil
+            activity = ActivityTracker(ledger: store.activityLedger ?? .migrating(store.history, asOf: Date()))
+            store.activityLedger = activity.ledger
+            lastActivitySave = now
+            refreshActivity()
+            if migrated { persist() }
         } catch let e as OndeError where e.code == "already_running" {
             NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == Bundle.main.bundleIdentifier && $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }?.activate()
             DispatchQueue.main.async { NSApp.terminate(nil) }
@@ -72,15 +106,14 @@ final class AppModel: ObservableObject {
         heartbeat = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.tick() }
         if let heartbeat { RunLoop.main.add(heartbeat, forMode: .common) }
         sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
-            guard let self, self.playing else { return }; self.pause(); self.notify("Session en pause pendant la veille.")
+            guard let self, self.playing else { return }; self.pause(); self.notify("Session paused while your Mac sleeps.")
         }
         endel.onState = { [weak self] state in
             guard let self, self.endel.selected != nil else { return }
             if state == "playing" && !self.playing {
-                if self.sessionStarted == nil { self.sessionStarted = Date() }
-                self.clock.resume(at: self.now); self.applyAudio()
+                self.resumeTiming(); self.applyAudio()
             } else if ["paused", "error", "needs_click"].contains(state) && self.playing {
-                self.clock.pause(at: self.now); self.elapsed = self.clock.elapsed(at: self.now); self.applyAudio()
+                self.pauseTiming(); self.applyAudio()
             }
             self.event("endel_state", ["state": state])
         }
@@ -88,6 +121,7 @@ final class AppModel: ObservableObject {
     }
     private func clamp(_ n: Double) -> Double { n.isFinite ? min(1, max(0, n)) : 0 }
     func tick() {
+        refreshActivity()
         let current = clock.elapsed(at: now)
         if current != elapsed { elapsed = current }
         if mode == .meditation && clock.running {
@@ -113,11 +147,12 @@ final class AppModel: ObservableObject {
     }
     func persistNow() {
         guard ownsProfile else { return }
+        store.activityLedger = activity.ledger
         do {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(store).write(to: OndePaths.state, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: OndePaths.state.path)
-        } catch { errorMessage = "Impossible d’enregistrer les réglages : \(error.localizedDescription)" }
+        } catch { errorMessage = "Could not save settings: \(error.localizedDescription)" }
     }
     var transitionSeconds: Double { min(30, max(2, store.transitionSeconds ?? 10)) }
     func setTransitionSeconds(_ seconds: Double) { store.transitionSeconds = min(30, max(2, seconds)); audio.transitionSeconds = transitionSeconds; persist() }
@@ -159,12 +194,13 @@ final class AppModel: ObservableObject {
     func play() {
         if endel.selected != nil { endel.play(); return }
         guard !playing else { return }
-        if sessionStarted == nil { sessionStarted = Date() }
-        clock.resume(at: now); applyAudio(); event("play")
+        resumeTiming(); applyAudio(); event("play")
     }
-    func pause() { if endel.selected != nil { endel.pause() }; guard playing else { return }; clock.pause(at: now); elapsed = clock.elapsed(at: now); applyAudio(); event("pause") }
+    func pause() { if endel.selected != nil { endel.pause() }; guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
     func togglePlayback() { playing ? pause() : play() }
     private func recordSession() {
+        activity.pause(at: Date(), uptime: now)
+        todaySeconds = activity.ledger.seconds(on: Date(), until: Date())
         let duration = clock.elapsed(at: now)
         if duration >= 1 {
             store.history.insert(SessionRecord(date: sessionStarted ?? Date(), mode: mode, seconds: duration), at: 0)
@@ -172,7 +208,13 @@ final class AppModel: ObservableObject {
         }
     }
     func stop() { endel.clear(); recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
-    func resetTimer() { clock.reset(at: now); elapsed = 0; sessionStarted = playing ? Date() : nil; event("timer_reset") }
+    func resetTimer() {
+        let wasRunning = playing
+        recordSession() // A stopwatch reset must not erase already-earned daily time.
+        clock.reset(at: now); elapsed = 0; sessionStarted = wasRunning ? Date() : nil
+        if wasRunning { activity.resume(at: Date(), uptime: now) }
+        persist(); event("timer_reset")
+    }
     func shutdown() { guard ownsProfile, !shuttingDown else { return }; shuttingDown = true; endel.clear(); saveTask?.cancel(); recordSession(); persistNow(); audio.stopImmediately(); if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }; if hasAssertion { IOPMAssertionRelease(assertionID) } }
     func toggle(_ sound: Sound) { setSound(sound.id, enabled: !(store.layers[sound.id]?.enabled ?? false)) }
     func setSound(_ id: String, enabled: Bool? = nil, volume: Double? = nil) {
@@ -189,36 +231,36 @@ final class AppModel: ObservableObject {
     func previewChime() { do { try audio.chime(volume: store.preferences.chimeVolume * store.preferences.masterVolume) } catch { fail(error) } }
     func saveMix(name: String) throws {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name.count <= 80 else { throw OndeError("invalid_name", "Le nom doit contenir entre 1 et 80 caractères.") }
-        guard store.mixes.count < 200 else { throw OndeError("mix_limit", "La limite est de 200 ambiances.") }
-        store.mixes.insert(Mix(name: name, mode: mode, layers: store.layers, generatorSettings: generatorConfiguration), at: 0); persist(); notify("Ambiance enregistrée.")
+        guard !name.isEmpty, name.count <= 80 else { throw OndeError("invalid_name", "Use a name between 1 and 80 characters.") }
+        guard store.mixes.count < 200 else { throw OndeError("mix_limit", "You can save up to 200 mixes.") }
+        store.mixes.insert(Mix(name: name, mode: mode, layers: store.layers, generatorSettings: generatorConfiguration), at: 0); persist(); notify("Mix saved.")
     }
     func loadMix(_ id: String, autostart: Bool = true) throws {
-        guard let mix = store.mixes.first(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Ambiance introuvable.") }
+        guard let mix = store.mixes.first(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Mix not found.") }
         startMode(mix.mode, autostart: false); store.layers = mix.layers
         if let settings = mix.generatorSettings { var all = store.generatorSettings ?? [:]; all[mix.mode.rawValue] = settings; store.generatorSettings = all }
         if autostart { play() }; applyAudio(); persist(); notify(mix.name)
     }
     func importSound(path: String, title: String? = nil) throws -> Sound {
         let url = URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
-        guard ["mp3","m4a","wav","aif","aiff","caf","flac"].contains(url.pathExtension.lowercased()) else { throw OndeError("unsupported_format", "Formats : MP3, M4A, WAV, AIFF, CAF et FLAC.") }
+        guard ["mp3","m4a","wav","aif","aiff","caf","flac"].contains(url.pathExtension.lowercased()) else { throw OndeError("unsupported_format", "Supported formats: MP3, M4A, WAV, AIFF, CAF and FLAC.") }
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
-        guard values.isRegularFile == true, let size = values.fileSize, size > 0, size <= 500_000_000 else { throw OndeError("invalid_file", "Choisis un fichier audio local de moins de 500 Mo.") }
+        guard values.isRegularFile == true, let size = values.fileSize, size > 0, size <= 500_000_000 else { throw OndeError("invalid_file", "Choose a local audio file smaller than 500 MB.") }
         let player = try AVAudioPlayer(contentsOf: url)
-        guard player.duration > 0 else { throw OndeError("invalid_audio", "Le fichier ne contient pas de son lisible.") }
+        guard player.duration > 0 else { throw OndeError("invalid_audio", "The file does not contain playable audio.") }
         let id = "local-" + UUID().uuidString.lowercased()
         let filename = id + "." + url.pathExtension.lowercased()
         try FileManager.default.copyItem(at: url, to: OndePaths.imports.appendingPathComponent(filename))
-        let sound = Sound(id: id, title: String((title ?? url.deletingPathExtension().lastPathComponent).prefix(100)), subtitle: "Import personnel · \(clockText(player.duration))", symbol: "music.note", kind: "Personnel", filename: filename, author: "Fichier personnel", license: "Privé · non redistribué", source: url.lastPathComponent, imported: true)
-        store.imported.append(sound); sounds.append(sound); persist(); notify("Son importé dans ta bibliothèque locale."); return sound
+        let sound = Sound(id: id, title: String((title ?? url.deletingPathExtension().lastPathComponent).prefix(100)), subtitle: "Personal import · \(clockText(player.duration))", symbol: "music.note", kind: "Personal", filename: filename, author: "Personal file", license: "Private · not redistributed", source: url.lastPathComponent, imported: true)
+        store.imported.append(sound); sounds.append(sound); persist(); notify("Sound imported into your local library."); return sound
     }
     func importFromPanel() {
         let panel = NSOpenPanel(); panel.allowsMultipleSelection = true; panel.canChooseDirectories = false
-        panel.message = "Les fichiers restent sur ce Mac. Les imports ne font pas partie du code publié."
+        panel.message = "Files stay on this Mac. Imports are not included in published source or releases."
         if panel.runModal() == .OK { for url in panel.urls { do { _ = try importSound(path: url.path) } catch { fail(error) } } }
     }
     func removeImport(_ id: String) throws {
-        guard let sound = store.imported.first(where: { $0.id == id }) else { throw OndeError("not_imported", "Seuls les imports personnels peuvent être supprimés.") }
+        guard let sound = store.imported.first(where: { $0.id == id }) else { throw OndeError("not_imported", "Only personal imports can be removed.") }
         setSound(id, enabled: false)
         try FileManager.default.removeItem(at: OndePaths.imports.appendingPathComponent(sound.filename))
         store.imported.removeAll { $0.id == id }; sounds.removeAll { $0.id == id }; store.layers.removeValue(forKey: id)
@@ -275,17 +317,17 @@ final class AppModel: ObservableObject {
     }
     func exportGenerator(seconds: Double, path: String) {
         guard !generatorExporting else { return }
-        generatorExporting = true; generatorExportStatus = "Composition du fichier en cours…"
+        generatorExporting = true; generatorExportStatus = "Rendering your soundscape…"
         let mode = self.mode, config = generatorConfiguration
         DispatchQueue.global(qos: .utility).async { [weak self] in
             do {
                 let result = try GenerativeRenderer.render(mode: mode, configuration: config, seconds: seconds, path: path)
                 DispatchQueue.main.async {
-                    self?.generatorExporting = false; self?.generatorExportStatus = "Fichier créé : \(URL(fileURLWithPath: path).lastPathComponent)"
-                    self?.notify("Paysage exporté."); self?.event("generator_export", ["seconds": result["seconds"] ?? 0, "path": path])
+                    self?.generatorExporting = false; self?.generatorExportStatus = "File created: \(URL(fileURLWithPath: path).lastPathComponent)"
+                    self?.notify("Soundscape exported."); self?.event("generator_export", ["seconds": result["seconds"] ?? 0, "path": path])
                 }
             } catch {
-                DispatchQueue.main.async { self?.generatorExporting = false; self?.generatorExportStatus = "Export non terminé."; self?.fail(error) }
+                DispatchQueue.main.async { self?.generatorExporting = false; self?.generatorExportStatus = "Export could not be completed."; self?.fail(error) }
             }
         }
     }
@@ -302,7 +344,8 @@ final class AppModel: ObservableObject {
         NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Onde" })?.makeKeyAndOrderFront(nil)
     }
     func snapshot() -> [String: Any] {
-        ["version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "endel": endel.snapshot(), "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+        refreshActivity(checkpoint: false)
+        return ["today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "endel": endel.snapshot(), "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),
          "preferences": jsonObject(store.preferences), "layers": jsonObject(store.layers),
@@ -405,7 +448,7 @@ final class AppModel: ObservableObject {
                 startEndel(id, meditation: r["meditation"] as? Bool ?? false); result = endel.snapshot()
             case "endel.pause": pause(); result = endel.snapshot()
             case "endel.resume":
-                guard endel.selected != nil else { throw OndeError("not_selected", "Choisissez une session Endel.") }
+                guard endel.selected != nil else { throw OndeError("not_selected", "Choose an Endel session.") }
                 endel.play(); result = endel.snapshot()
             case "endel.stop": stop(); result = endel.snapshot()
             case "endel.seek": try endel.seek(number("seconds", max: 86400)); result = endel.snapshot()
@@ -419,7 +462,7 @@ final class AppModel: ObservableObject {
             case "updates.status": result = updates.snapshot()
             case "updates.check": updates.check(); result = updates.snapshot()
             case "updates.download":
-                guard updates.candidate != nil else { throw OndeError("update_not_checked", "Vérifiez les mises à jour avant de télécharger.") }
+                guard updates.candidate != nil else { throw OndeError("update_not_checked", "Check for updates before downloading.") }
                 updates.download(); result = updates.snapshot()
             case "updates.automatic":
                 guard let n = r["enabled"] as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() else { throw OndeError("invalid_argument", "enabled must be a boolean.") }

@@ -3,7 +3,7 @@ import Foundation
 public enum SessionMode: String, Codable, CaseIterable, Identifiable {
     case focus, relax, meditation
     public var id: String { rawValue }
-    public var title: String { switch self { case .focus: return "Focus"; case .relax: return "Relax"; case .meditation: return "Méditation" } }
+    public var title: String { switch self { case .focus: return "Focus"; case .relax: return "Relax"; case .meditation: return "Meditation" } }
     public var symbol: String { switch self { case .focus: return "scope"; case .relax: return "water.waves"; case .meditation: return "sparkle" } }
 }
 
@@ -44,17 +44,20 @@ public struct Sound: Codable, Identifiable, Equatable {
     public var license: String
     public var source: String
     public var imported: Bool = false
-    public init(id: String, title: String, subtitle: String, symbol: String, kind: String, filename: String, author: String = "Onde · synthèse originale", license: String = "CC0-1.0", source: String = "Généré localement par Tools/Synthesize.swift", imported: Bool = false) {
+    public init(id: String, title: String, subtitle: String, symbol: String, kind: String, filename: String, author: String = "Onde · original synthesis", license: String = "CC0-1.0", source: String = "Generated locally by Tools/Synthesize.swift", imported: Bool = false) {
         self.id = id; self.title = title; self.subtitle = subtitle; self.symbol = symbol; self.kind = kind; self.filename = filename; self.author = author; self.license = license; self.source = source; self.imported = imported
     }
+    public var displaySubtitle: String {
+        imported ? subtitle.replacingOccurrences(of: "Import personnel", with: "Personal import") : subtitle
+    }
     public static let builtins: [Sound] = [
-        Sound(id: "aube", title: "Aube", subtitle: "Nappes chaudes · aériennes", symbol: "sun.horizon", kind: "Musique", filename: "aube.m4a"),
-        Sound(id: "piano", title: "Piano de lune", subtitle: "Notes espacées · veloutées", symbol: "pianokeys", kind: "Musique", filename: "piano.m4a"),
-        Sound(id: "orbit", title: "Orbite", subtitle: "Pulsations lentes · cristallines", symbol: "circle.hexagongrid", kind: "Musique", filename: "orbit.m4a"),
-        Sound(id: "rain", title: "Pluie douce", subtitle: "Texture de pluie · synthétisée", symbol: "cloud.rain", kind: "Texture", filename: "rain.m4a"),
-        Sound(id: "ocean", title: "Marée", subtitle: "Vagues lentes · synthétisées", symbol: "water.waves", kind: "Texture", filename: "ocean.m4a"),
-        Sound(id: "brown", title: "Velours brun", subtitle: "Bruit brun · grave et stable", symbol: "waveform.path", kind: "Bruit", filename: "brown.m4a"),
-        Sound(id: "pink", title: "Air rose", subtitle: "Bruit rose · souffle diffus", symbol: "wind", kind: "Bruit", filename: "pink.m4a"),
+        Sound(id: "aube", title: "Dawn", subtitle: "Warm, airy pads", symbol: "sun.horizon", kind: "Music", filename: "aube.m4a"),
+        Sound(id: "piano", title: "Moonlit piano", subtitle: "Spacious, velvety notes", symbol: "pianokeys", kind: "Music", filename: "piano.m4a"),
+        Sound(id: "orbit", title: "Orbit", subtitle: "Slow, crystalline pulses", symbol: "circle.hexagongrid", kind: "Music", filename: "orbit.m4a"),
+        Sound(id: "rain", title: "Gentle rain", subtitle: "Synthesized rain texture", symbol: "cloud.rain", kind: "Texture", filename: "rain.m4a"),
+        Sound(id: "ocean", title: "Tide", subtitle: "Slow, synthesized waves", symbol: "water.waves", kind: "Texture", filename: "ocean.m4a"),
+        Sound(id: "brown", title: "Brown velvet", subtitle: "Brown noise · deep and steady", symbol: "waveform.path", kind: "Noise", filename: "brown.m4a"),
+        Sound(id: "pink", title: "Pink air", subtitle: "Pink noise · soft and diffuse", symbol: "wind", kind: "Noise", filename: "pink.m4a"),
         Sound(id: "almost", title: "Almost in F", subtitle: "Kevin MacLeod · 32 min", symbol: "music.note", kind: "Composition", filename: "almost.mp3", author: "Kevin MacLeod (incompetech.com)", license: "CC BY 4.0", source: "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100394"),
         Sound(id: "dreams", title: "Dreams Become Real", subtitle: "Kevin MacLeod · piano", symbol: "music.note", kind: "Composition", filename: "dreams.mp3", author: "Kevin MacLeod (incompetech.com)", license: "CC BY 4.0", source: "https://incompetech.com/music/royalty-free/")
     ]
@@ -90,6 +93,7 @@ public struct SessionRecord: Codable, Identifiable {
     public init(date: Date, mode: SessionMode, seconds: Double) { self.date = date; self.mode = mode; self.seconds = seconds }
 }
 public struct StoredState: Codable {
+    public var activityLedger: ActivityLedger?
     public var transitionSeconds: Double?
     public var generatorSettings: [String: GenerativeSettings]?
     public var version = 1

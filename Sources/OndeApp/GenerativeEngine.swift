@@ -45,7 +45,7 @@ final class GenerativeEngine {
     }
     private func prepareGraph() throws {
         guard mixer == nil else { return }
-        guard let mix = onde_scene_mixer_create(sampleRate) else { throw OndeError("generator_init_failed", "Le mixeur n’a pas pu être initialisé.") }
+        guard let mix = onde_scene_mixer_create(sampleRate) else { throw OndeError("generator_init_failed", "Could not initialize the audio mixer.") }
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2)!
         let node = AVAudioSourceNode(format: format) { _, _, count, list -> OSStatus in
             let buffers = UnsafeMutableAudioBufferListPointer(list)
@@ -76,10 +76,10 @@ final class GenerativeEngine {
             var candidate: OpaquePointer?
             do {
                 let valid = try configuration.validated()
-                guard let ptr = onde_dsp_create(rate, mode.dspMode, valid.seed) else { throw OndeError("generator_init_failed", "Impossible de préparer le paysage.") }
+                guard let ptr = onde_dsp_create(rate, mode.dspMode, valid.seed) else { throw OndeError("generator_init_failed", "Could not prepare the soundscape.") }
                 candidate = ptr
                 try OrchestraBank.load(into: ptr, required: valid.orchestra > 0 || valid.piano > 0)
-                if valid.piano > 0 && (onde_dsp_orchestra_families(ptr) & 2048) == 0 { throw OndeError("piano_missing", "La banque de piano complète est requise.") }
+                if valid.piano > 0 && (onde_dsp_orchestra_families(ptr) & 2048) == 0 { throw OndeError("piano_missing", "The complete piano sample bank is required.") }
                 for (i, v) in valid.values.enumerated() { onde_dsp_set(ptr, GenerativeSettings.dspIndex(i), Float(v)) }
                 onde_dsp_set(ptr, Int32(ONDE_GAIN), 1)
                 // Warm the harmonic space silently for one whole bar, before publication.
@@ -91,7 +91,7 @@ final class GenerativeEngine {
                     self.applyControls(ptr, mode: self.selectedMode, configuration: self.config)
                     guard onde_scene_mixer_submit(mixer, ptr, self.transitionSeconds) == 1 else {
                         onde_dsp_destroy(ptr); self.loading = false; self.requestedIdentity = nil
-                        self.lastError = "La transition n’a pas pu être préparée."; return
+                        self.lastError = "Could not prepare the transition."; return
                     }
                     self.targetCore = ptr; self.loading = false
                     onde_scene_mixer_gain(mixer, self.wantedPlaying ? self.wantedGain : 0)
@@ -179,7 +179,7 @@ final class GenerativeEngine {
                 "bpm": core.map(onde_dsp_bpm) ?? 0,
                 "active_voices": core.map(onde_dsp_voices) ?? 0,
                 "harmony_index": core.map(onde_dsp_harmony) ?? 0,
-                "arrangement_section": ["Ouverture", "Courant", "Tissage", "Respiration", "Résonance", "Suspension"][min(5, max(0, Int(core.map(onde_dsp_section) ?? 0)))],
+                "arrangement_section": ["Opening", "Current", "Weave", "Breathing space", "Resonance", "Suspension"][min(5, max(0, Int(core.map(onde_dsp_section) ?? 0)))],
                 "output_peak": mixer.map(onde_scene_mixer_peak) ?? 0,
                 "output_rms": mixer.map(onde_scene_mixer_rms) ?? 0,
                 "actual_gain": mixer.map(onde_scene_mixer_actual_gain) ?? 0,

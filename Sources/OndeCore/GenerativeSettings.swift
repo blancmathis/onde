@@ -73,7 +73,7 @@ public struct GenerativeSettings: Codable, Equatable {
         }
     }
     public static func title(_ mode: SessionMode) -> String {
-        switch mode { case .focus: return "Élan"; case .relax: return "Velours"; case .meditation: return "Immersion" }
+        switch mode { case .focus: return "Momentum"; case .relax: return "Velvet"; case .meditation: return "Immersion" }
     }
     public var displayName: String { profileID.flatMap { SoundProfile.find($0)?.title } ?? "Paysage personnel" }
     /// The first eight ABI slots predate gain (slot 8). New controls start at slot 9.
@@ -137,29 +137,29 @@ public struct SoundProfile: Identifiable, Codable {
         c.brightness=0.30; c.warmth=0.65; c.space=0.38; c.movement=0.17
         c.pulse=0.55; c.texture=0.035; c.evolution=0.1; c.stability=1
         c.character=id == "traction" ? 0.50 : 0.18
-        return .init(id:id, title:title, mode:.focus, subtitle:"FOCUS ÉNERGIQUE · \(Int(tempo)) BPM", description:description, configuration:c)
+        return .init(id:id, title:title, mode:.focus, subtitle:"ENERGETIC FOCUS · \(Int(tempo)) BPM", description:description, configuration:c)
     }
     private static func ensemble(_ id:String,_ title:String,_ description:String,_ tempo:Double,_ seed:UInt64,_ strings:Double,_ brass:Double,_ woods:Double,_ harp:Double,_ ostinato:Double,_ percussion:Double,_ bass:Double,_ drive:Double,_ punch:Double,_ density:Double) -> Self {
         var c=GenerativeSettings();c.profileID=id;c.seed=seed;c.tempo=tempo;c.orchestra=1
         c.strings=strings;c.brass=brass;c.woods=woods;c.harp=harp;c.ostinato=ostinato;c.percussion=percussion
         c.bass=bass;c.drive=drive;c.punch=punch;c.density=density;c.brightness=0.34;c.warmth=0.72
         c.space=0.66;c.movement=0.10;c.pulse=0.28;c.evolution=0.12;c.stability=0.98;c.texture=0;c.character=0.18
-        return .init(id:id,title:title,mode:.focus,subtitle:"ORCHESTRE · \(Int(tempo)) BPM",description:description,configuration:c)
+        return .init(id:id,title:title,mode:.focus,subtitle:"ORCHESTRA · \(Int(tempo)) BPM",description:description,configuration:c)
     }
     public static let all: [Self] = FocusCompositions.profiles + [
-        ensemble("atlas","Atlas","Un ensemble ample : cordes graves, cors et pulsation profonde. Une même partition, sans rupture.",88,6040,0.84,0.68,0.30,0.23,0.57,0.47,0.83,0.35,0.34,0.42),
-        ensemble("ostinato","Ostinato","Violoncelles articulés, cordes en réponse et timbales. Le plus entraînant des quatre orchestres.",100,6041,0.56,0.34,0.18,0.35,0.98,0.70,0.85,0.58,0.50,0.53),
-        ensemble("aurore","Aurore","Cordes lumineuses, harpe et bois chauds. Un mouvement régulier, plus aérien.",84,6042,0.68,0.15,0.66,0.72,0.36,0.18,0.65,0.21,0.17,0.39),
-        ensemble("chambre","Chambre","Un orchestre intime, plus acoustique : cordes et bois liés, quelques touches de harpe.",76,6043,0.88,0.22,0.58,0.43,0.25,0.16,0.54,0.08,0.06,0.28),
-        energetic("elan", "Élan", "Basses rebondissantes et attaques nettes. Un motif stable pour entrer dans l'action.", 88, 0.88, 0.72, 0.65, 0.43, 2042),
-        energetic("reacteur", "Réacteur", "L'impact le plus marqué. Un grave massif, rythmé, avec très peu de mélodie.", 96, 0.98, 0.92, 0.90, 0.10, 3042),
-        energetic("traction", "Traction", "Un mouvement rapide, des basses articulées et des touches régulières.", 104, 0.80, 0.78, 0.60, 0.63, 4083),
-        make("ancrage", "Ancrage", .focus, "FOCUS · 72 BPM", "Une pulsation ronde, une basse profonde et un motif feutré qui reste en place.", 42, 0.30,0.16,0.12,0.54,0.04,0.64,0.12,0, 0.78,72,0.98,0.86,0.20),
-        make("abysses", "Abysses", .focus, "FOCUS PROFOND · 64 BPM", "Le grave au premier plan. Très peu de notes, une continuité dense et enveloppante.", 1042, 0.035,0.07,0.07,0.49,0.01,0.78,0.06,0, 0.98,64,1,0.97,0.86),
-        make("courant", "Courant", .focus, "FOCUS RYTHMÉ · 84 BPM", "Un motif de touches plus présent, régulier et doux, posé sur des basses rondes.", 83, 0.53,0.24,0.12,0.43,0.025,0.55,0.15,0, 0.66,84,0.96,0.78,0.48),
-        make("velours", "Velours", .relax, "RELAX · 56 BPM", "Des touches chaudes et espacées, sans cassure ni bruit de fond ajouté.", 314, 0.22,0.16,0.13,0.76,0.03,0.04,0.12,0, 0.54,56,0.96,0.90,0.15),
-        make("rive", "Rive", .relax, "RELAX · 60 BPM", "Une nappe ample et une respiration très régulière, avec moins de mélodie.", 718, 0.085,0.12,0.18,0.81,0.04,0.22,0.08,0, 0.64,60,1,0.92,0.88),
-        make("immersion", "Immersion", .meditation, "MÉDITATION · SANS BATTEMENT", "Un fond continu et doux. Les détails s'effacent sans interrompre votre pratique.", 2718, 0.08,0.10,0.08,0.82,0.02,0,0.06,30, 0.58,48,1,0.95,0.90)
+        ensemble("atlas","Atlas","A broad ensemble of low strings, horns and a deep pulse. One shared score, without breaks.",88,6040,0.84,0.68,0.30,0.23,0.57,0.47,0.83,0.35,0.34,0.42),
+        ensemble("ostinato","Ostinato","Articulated cellos, answering strings and timpani. The most driving of the four ensembles.",100,6041,0.56,0.34,0.18,0.35,0.98,0.70,0.85,0.58,0.50,0.53),
+        ensemble("aurore","Aurora","Luminous strings, harp and warm woodwinds. A steady, airier flow.",84,6042,0.68,0.15,0.66,0.72,0.36,0.18,0.65,0.21,0.17,0.39),
+        ensemble("chambre","Chamber","An intimate acoustic ensemble: sustained strings, woodwinds and touches of harp.",76,6043,0.88,0.22,0.58,0.43,0.25,0.16,0.54,0.08,0.06,0.28),
+        energetic("elan", "Momentum", "Bouncing bass and defined attacks. A steady motif to get moving.", 88, 0.88, 0.72, 0.65, 0.43, 2042),
+        energetic("reacteur", "Reactor", "The strongest impact. A massive, rhythmic low end with very little melody.", 96, 0.98, 0.92, 0.90, 0.10, 3042),
+        energetic("traction", "Traction", "Faster movement, articulated bass and steady keys.", 104, 0.80, 0.78, 0.60, 0.63, 4083),
+        make("ancrage", "Anchor", .focus, "FOCUS · 72 BPM", "A round pulse, deep bass and a muted motif that holds its place.", 42, 0.30,0.16,0.12,0.54,0.04,0.64,0.12,0, 0.78,72,0.98,0.86,0.20),
+        make("abysses", "Abyss", .focus, "DEEP FOCUS · 64 BPM", "Low end in the foreground. Very few notes, with a dense, enveloping continuity.", 1042, 0.035,0.07,0.07,0.49,0.01,0.78,0.06,0, 0.98,64,1,0.97,0.86),
+        make("courant", "Current", .focus, "RHYTHMIC FOCUS · 84 BPM", "A more present but gentle key motif, resting on round bass.", 83, 0.53,0.24,0.12,0.43,0.025,0.55,0.15,0, 0.66,84,0.96,0.78,0.48),
+        make("velours", "Velvet", .relax, "RELAX · 56 BPM", "Warm, spacious keys without breaks or added background noise.", 314, 0.22,0.16,0.13,0.76,0.03,0.04,0.12,0, 0.54,56,0.96,0.90,0.15),
+        make("rive", "Shore", .relax, "RELAX · 60 BPM", "A broad pad and a steady breathing motion, with less melody.", 718, 0.085,0.12,0.18,0.81,0.04,0.22,0.08,0, 0.64,60,1,0.92,0.88),
+        make("immersion", "Immersion", .meditation, "MEDITATION · NO BEAT", "A soft, continuous bed. Details recede without interrupting your practice.", 2718, 0.08,0.10,0.08,0.82,0.02,0,0.06,30, 0.58,48,1,0.95,0.90)
     ]
     public static func find(_ id: String) -> Self? { all.first { $0.id == id } }
 }
@@ -167,5 +167,5 @@ extension SessionMode {
     public var dspMode: Int32 { switch self { case .focus: return 0; case .relax: return 1; case .meditation: return 2 } }
 }
 extension Sound {
-    public static let living = Sound(id: "living", title: "Paysage vivant", subtitle: "Motifs stables · synthèse en direct", symbol: "waveform.path.ecg", kind: "Génératif", filename: "", author: "Onde · composition procédurale originale", license: "CC0-1.0", source: "Sources/OndeDSP/OndeDSP.c · aucune piste Endel utilisée")
+    public static let living = Sound(id: "living", title: "Living soundscape", subtitle: "Steady motifs · generated live", symbol: "waveform.path.ecg", kind: "Generative", filename: "", author: "Onde · original procedural composition", license: "CC0-1.0", source: "Sources/OndeDSP/OndeDSP.c · no Endel audio used")
 }

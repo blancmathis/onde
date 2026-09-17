@@ -1,0 +1,13 @@
+# Privacy and local storage
+
+Onde's native sound engine runs locally. No account, subscription, cloud-generation service, telemetry or listening-history upload is required.
+
+Your settings, session history, daily activity ledger and imported audio are stored under `~/Library/Application Support/Onde/`, separate from the app and source repository. The activity ledger records session-running time, not screen content, keyboard input, health data or inferred concentration. Imported filenames, custom mix names and personal provenance are preserved rather than translated.
+
+The optional update checker contacts GitHub's public release API. GitHub receives normal network information such as your IP address and the app's User-Agent. Personal history, preferences and imported audio are not sent. Automatic checks can be disabled in Updates. Downloading and installing an update are manual actions; downloads are checked for size and SHA-256 integrity.
+
+The optional Endel section opens official YouTube players or the provider's website. Those services have their own connectivity, cookies, sign-in, advertising and privacy policies. Streaming is separate from offline generation. Onde does not extract their audio or read existing browser credentials.
+
+The CLI communicates over an owner-only UNIX socket, not a network port. Any process running as your macOS user may have the same access as that user; this is local user isolation, not an app-by-app security boundary. Do not run untrusted code as your user.
+
+Public builds contain no private library data. Review screenshots and diagnostic logs before sharing: custom names, file paths and history may be personal. Deleting the app alone leaves your personal library in place. Back it up before manually deleting local data.

@@ -35,7 +35,7 @@ final class AudioEngine {
                     players[sound.id] = player
                 }
                 guard let player = players[sound.id] else { continue }
-                if !player.isPlaying { player.volume = 0; guard player.play() else { throw OndeError("audio_unavailable", "La sortie audio n’est pas disponible.") } }
+                if !player.isPlaying { player.volume = 0; guard player.play() else { throw OndeError("audio_unavailable", "Audio output is unavailable.") } }
                 player.setVolume(Float((layers[sound.id]?.volume ?? 0) * master * normalization), fadeDuration: fade)
             } catch { errors.append("\(sound.title) : \(error.localizedDescription)") }
         }
@@ -56,7 +56,7 @@ final class AudioEngine {
             bell?.prepareToPlay()
         }
         bell?.stop(); bell?.currentTime = 0; bell?.volume = Float(volume)
-        guard bell?.play() == true else { throw OndeError("chime_error", "Le carillon n’a pas pu être lu.") }
+        guard bell?.play() == true else { throw OndeError("chime_error", "The chime could not be played.") }
     }
     func stopImmediately() { living.reset(); for p in players.values { p.stop() }; bell?.stop(); playingIDs = [] }
 }

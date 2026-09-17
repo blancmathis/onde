@@ -5,13 +5,13 @@ import Foundation
 public enum FocusCompositions {
     public static let ids = ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire"]
     public static let profiles: [SoundProfile] = [
-        make(5, "ambre", "Ambre", "CLAVIER ÉLECTRIQUE · 82 BPM", "Accords veloutés, basse souple et réponses de piano. Des phrases longues, sans souffle lo-fi ajouté.", 82),
-        make(6, "canopee", "Canopée", "PERCUSSIONS MÉLODIQUES · 94 BPM", "Résonances de bois, harpe acoustique et cordes graves. Deux motifs qui se répondent, sans improvisation aléatoire.", 94),
-        make(7, "meridien", "Méridien", "HOUSE MINIMALE · 108 BPM", "Un grave entraînant, des accords larges et des contretemps réguliers. L'arrangement évolue, jamais de drop.", 108),
-        make(1, "sillage", "Sillage", "ÉLECTRONIQUE PROFONDE · 92 BPM", "Une basse articulée et un thème sombre. Questions, réponses et renversements, sans casser le rythme.", 92),
-        make(2, "filigrane", "Filigrane", "PIANO ACOUSTIQUE · 78 BPM", "Un piano doux développe des phrases de huit mesures. La main gauche reste un repère, les réponses évoluent.", 78),
-        make(3, "confluence", "Confluence", "ORCHESTRE HYBRIDE · 88 BPM", "Violoncelles rythmiques, cordes liées et pupitres qui changent lentement de place dans l'ensemble.", 88),
-        make(4, "sanctuaire", "Sanctuaire", "VOCALISES SYNTHÉTISÉES · 86 BPM", "Des voyelles tenues, une harpe qui répond et une basse régulière. L'harmonie respire sans mots.", 86)
+        make(5, "ambre", "Amber", "ELECTRIC KEYS · 82 BPM", "Velvety chords, supple bass and piano responses. Long phrases without added lo-fi hiss.", 82),
+        make(6, "canopee", "Canopy", "MELODIC PERCUSSION · 94 BPM", "Wooden resonances, acoustic harp and low strings. Two answering motifs, without random improvisation.", 94),
+        make(7, "meridien", "Meridian", "MINIMAL HOUSE · 108 BPM", "Driving bass, broad chords and steady offbeats. An evolving arrangement without drops.", 108),
+        make(1, "sillage", "Slipstream", "DEEP ELECTRONIC · 92 BPM", "Articulated bass and a dark theme. Questions, answers and inversions without breaking the rhythm.", 92),
+        make(2, "filigrane", "Filigree", "ACOUSTIC PIANO · 78 BPM", "Soft piano unfolds in eight-bar phrases. The left hand anchors the rhythm as the answers develop.", 78),
+        make(3, "confluence", "Confluence", "HYBRID ORCHESTRA · 88 BPM", "Rhythmic cellos, sustained strings and sections that gradually shift their place in the ensemble.", 88),
+        make(4, "sanctuaire", "Sanctuary", "SYNTHESIZED VOCALS · 86 BPM", "Sustained vowels, answering harp and a steady bass. Harmony that breathes without words.", 86)
     ]
     private static func make(_ score: Double, _ id: String, _ title: String, _ subtitle: String, _ description: String, _ tempo: Double) -> SoundProfile {
         var c = GenerativeSettings()
@@ -50,13 +50,13 @@ public enum FocusCompositions {
     }
     public static func rationale(_ id: String) -> String {
         switch id {
-        case "ambre": return "Un clavier électrique synthétisé et quelques réponses de piano enregistré. Huit mesures pour poser, développer puis résoudre une idée, sans solos envahissants."
-        case "canopee": return "Des résonateurs de bois synthétisés et une harpe enregistrée. Une écriture entrelacée qui évolue par phrases, pas par suppression aléatoire des temps."
-        case "meridien": return "Une assise house stable, des contretemps écrits et une progression longue. Aucun break ou drop destiné à ramener l'attention sur la musique."
-        case "sillage": return "Le grave garde son repère, tandis que le thème développe une réponse sur huit mesures. Les choix évoluent à l'intérieur du même univers."
-        case "filigrane": return "Le piano acoustique conserve son toucher doux, mais développe des réponses et des renversements plutôt qu'une seule cellule en boucle."
-        case "confluence": return "Les pupitres restent coordonnés. Leur équilibre se transforme lentement sur plusieurs minutes, sans que tous changent d'idée à chaque temps."
-        case "sanctuaire": return "Chœur synthétisé, pas chanteurs enregistrés. Des notes communes relient les accords ; la harpe développe les réponses. Les voix restent désactivables."
+        case "ambre": return "Synthesized electric keys with recorded piano responses. Eight bars to introduce, develop and resolve an idea, without intrusive solos."
+        case "canopee": return "Synthesized wooden resonators and recorded harp. Interwoven parts develop by phrase, not by randomly dropping beats."
+        case "meridien": return "A steady house foundation, composed offbeats and a long-form progression. No breaks or drops designed to pull attention back to the music."
+        case "sillage": return "Bass keeps its anchor while the theme develops an eight-bar response. Musical choices evolve within the same soundscape."
+        case "filigrane": return "The acoustic piano keeps its soft touch while developing responses and inversions instead of looping a single cell."
+        case "confluence": return "Instrument sections stay coordinated. Their balance changes slowly over minutes, rather than each part changing direction on every beat."
+        case "sanctuaire": return "A synthesized choir, not recorded singers. Common notes connect the chords as the harp develops its answers. Vocals can be turned off."
         default: return ""
         }
     }

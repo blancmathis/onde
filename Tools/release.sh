@@ -5,6 +5,7 @@ export ONDE_BUILD="${ONDE_BUILD:-$(date -u +%Y%m%d%H%M%S)}"
 export ONDE_COMMIT="${GITHUB_SHA:-$(git rev-parse HEAD)}"
 VERSION=$(cat VERSION)
 TAG="build-$ONDE_BUILD-${ONDE_COMMIT:0:8}"
+python3 Tools/check_english.py
 bash Tools/prepare_orchestra.sh
 # Tests run natively. The other architecture is cross-compiled against the macOS SDK.
 swift test -c release -j 3
@@ -45,9 +46,12 @@ Personal settings, saved soundscapes and imports are stored separately and are p
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
-Four authored Focus compositions: Sillage, Filigrane, Confluence and Sanctuaire.
+English interface and corrected local-day accounting (including midnight, pause, reset and DST).
+Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
 Twelve-minute audition recordings use this exact engine and its defaults.
-Filigrane uses recorded soft piano; Sanctuaire uses original synthesized nonverbal vowels, not recordings of singers.
+Filigree uses recorded soft piano; Sanctuary uses original synthesized nonverbal vowels, not recordings of singers.
+Stable CLI IDs, existing mixes, personal imports and chime settings are preserved.
+Pre-1.9 historical day allocations are estimates because exact pause times were not saved.
 The source is evidence-informed; these individual tracks have not been clinically validated.
 Pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No Endel audio or personal imports.
 EOF

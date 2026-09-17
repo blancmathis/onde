@@ -1,163 +1,136 @@
-# Onde — Focus, Relax, Méditation sur macOS
-
-## Nouveauté 1.6 : orchestre acoustique génératif
-
-**Atlas, Ostinato, Aurore et Chambre** : 67 prises CC0 de violons, altos,
-violoncelles, cors, basson, clarinette, harpe et percussion. La partition est
-calculée en direct sur la même pulsation que les basses électroniques.
-Les neuf profils précédents et les réglages personnels sont conservés.
-
-- [Recherche complète et choix d’orchestration](Documentation/ORCHESTRE-1.6.md)
-- [Application universelle macOS 14+](https://github.com/blancmathis/onde/releases/latest/download/Onde-macOS-universal.zip)
-- [Versions et quatre écoutes de cinq minutes](https://github.com/blancmathis/onde/releases/latest)
-
-La banque est incluse dans la version publiée. Pour compiler :
-`bash Tools/prepare_orchestra.sh && bash Tools/build.sh`.
-Le code reste MIT, la banque acoustique est CC0. Les sons Endel et les imports
-personnels ne sont pas publiés. Ce n’est pas une preuve d’efficacité équivalente
-à Endel. La Community Build n’est pas notarisée par Apple.
-
-```sh
-~/.local/bin/onde generate profile atlas --launch
-~/.local/bin/onde generate set strings 0.8
-~/.local/bin/onde generate status
-```
-
----
-
 # Onde
 
-**A native macOS sound studio. Original generative music, a local JSON CLI, and open-ended meditation.**
+**A free, open-source macOS sound studio for focus, relaxation and meditation.**
 
-Focus, relax, or meditate. Shape the sound while it plays. No subscription, no account, no cloud audio engine.
+Generative music that keeps unfolding, an adjustable sound mixer, gentle meditation chimes, and a native JSON CLI for humans and agents. Runs locally. No account or subscription.
 
-[Download the latest macOS app](https://github.com/blancmathis/onde/releases/latest) · [Agent guide](Documentation/AGENTS.md) · [MIT license](LICENSE)
+[**Download for macOS**](https://github.com/blancmathis/onde/releases/latest/download/Onde-macOS-universal.zip) · [Listen first](#listen-first) · [Documentation](Documentation/README.md) · [Releases](https://github.com/blancmathis/onde/releases) · [Report a bug](https://github.com/blancmathis/onde/issues/new?template=bug_report.yml)
 
-## Sound
+**Requires macOS 14 or later.** The download is universal: Apple Silicon and Intel. Community builds are ad-hoc signed and **not notarized by Apple**, so macOS may require explicit approval to open the app. Onde does not change Gatekeeper or your security settings.
 
-Nine procedural profiles, including **Élan (88 BPM)**, **Réacteur (96 BPM)** and **Traction (104 BPM)** for energetic focus. The new Impact and Drive controls shape beat-locked low-frequency attacks and an eighth-note bass line, rather than only increasing a continuous sub-bass tone.
+## What it does
 
-The six calmer profiles remain available: Ancrage, Abysses, Courant, Velours, Rive and Immersion. Tempo stays independent of note density. There are no random missing beats, synthetic hiss layer or recycled Endel samples. Each seed determines an original composition; settings and seeds can be saved with a mix. The same C11 engine powers live Core Audio playback and deterministic WAV exports.
+- **Focus, Relax and Meditation:** choose a mode and keep the musical style you like.
+- **Long-form generation:** seven featured compositions, plus earlier soundscapes. Eight-bar phrases, gradual harmonic movement and slower orchestration changes, rather than a whole track on repeat.
+- **Smooth scene changes:** prepare the next scene off the audio thread, then crossfade at a bar boundary. Adjustable from 2 to 30 seconds. This is a musical handover, not DJ beatmatching between different tempos.
+- **Make the sound your own:** control bass, impact, note density, warmth, instrument sections, piano and wordless vocals. Save mixes and import personal audio.
+- **Open-ended meditation:** a count-up stopwatch. By default, a gentle glass chime at 10, 20 and 30 minutes, then no more reminders. The session continues. Chime times and levels are configurable.
+- **Daily activity that actually resets:** count running-session intervals within your current local day, excluding pauses. A session can span midnight without its full duration being added to Today.
+- **Agent-friendly control:** the UI and CLI share one state through a private UNIX socket. Commands return JSON; `watch` streams NDJSON.
 
-These are original compositions. Perceptual similarity or cognitive effects equivalent to another product have **not** been established. This is not a medical device.
+No telemetry or cloud audio engine. The optional update checker contacts GitHub. The separate Endel section uses official online players and is not needed for local generation.
 
-## Listen before choosing
+## Listen first
 
-Continuous five-minute renders from the same release build:
-[Élan — 88 BPM](https://github.com/blancmathis/onde/releases/latest/download/elan-5min.m4a) ·
-[Réacteur — 96 BPM](https://github.com/blancmathis/onde/releases/latest/download/reacteur-5min.m4a) ·
-[Traction — 104 BPM](https://github.com/blancmathis/onde/releases/latest/download/traction-5min.m4a).
-These original files are regenerated by CI, not copied from a reference catalog.
+These are continuous twelve-minute renders of the same engine and defaults used in the app. In-app generation does not restart these files. The English display names changed in 1.9; **CLI IDs and asset filenames remain stable**.
 
-## Meditation
+| Soundscape | Character | Audition |
+|---|---|---|
+| **Amber** (`ambre`) | Electric keys, soft bass, recorded piano responses · 82 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/ambre-12min.m4a) |
+| **Canopy** (`canopee`) | Synthesized wooden resonances, acoustic harp and low strings · 94 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/canopee-12min.m4a) |
+| **Meridian** (`meridien`) | Minimal house, driving bass and steady offbeats · 108 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/meridien-12min.m4a) |
+| **Slipstream** (`sillage`) | Deep electronic bass and developing dark motifs · 92 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/sillage-12min.m4a) |
+| **Filigree** (`filigrane`) | Recorded soft piano with a steady left-hand anchor · 78 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/filigrane-12min.m4a) |
+| **Confluence** (`confluence`) | Hybrid orchestra, rhythmic cellos and sustained strings · 88 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/confluence-12min.m4a) |
+| **Sanctuary** (`sanctuaire`) | Synthesized, wordless vowel choir, harp and steady bass · 86 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/sanctuaire-12min.m4a) |
 
-The stopwatch counts up without a time limit. Default soft chimes occur at **10, 20 and 30 minutes**, then no more. The soundscape and stopwatch continue. Chime times and volume are configurable; an empty list disables all chimes. Paused time is excluded. Immersion can independently reduce musical details over time.
+[Hear an Amber → Sanctuary transition](https://github.com/blancmathis/onde/releases/latest/download/transition-ambre-sanctuaire.m4a).
 
-Existing personal chime settings are preserved on upgrade. Master volume also controls chime volume: use `onde silence` to remove music while keeping the timer and chimes.
+The music is **evidence-informed, not clinically validated**. These compositions are not proven to improve everyone's concentration or to match another product's effects. Tempo, key and frequency balance are artistic choices, not a medical protocol. See [music, research and limitations](Documentation/MUSIC.md).
 
 ## Install
 
-Download `Onde-macOS-universal.zip` from Releases, unzip it, and move `Onde.app` to `~/Applications` or `/Applications`. It contains both Apple Silicon and Intel executables and requires macOS 14 or later.
+1. Download and unzip `Onde-macOS-universal.zip` from the link above.
+2. Move `Onde.app` into `~/Applications` or `/Applications` and open it.
+3. Choose **Living soundscapes**, select a composition and adjust the sound at a comfortable volume.
 
-**Community Build:** ad-hoc signed, not notarized by Apple. macOS may request explicit approval to open it. Onde does not disable Gatekeeper or change security settings. For a source build, use the commands below.
+The acoustic bank is bundled. No plugins, audio accounts, API keys or instrument downloads are required during a session. Closing the main window leaves the menu-bar player running. Pause before leaving; the daily total measures **running session time**, not verified human attention.
 
-The CLI is embedded at `Onde.app/Contents/MacOS/ondectl`. The optional source installer creates `~/.local/bin/onde` without changing your shell profile.
+### Optional CLI shortcut
 
-## Updates from main
-
-Every push to `main` triggers a GitHub Actions build. It runs unit tests, compiles Apple Silicon and Intel binaries, packages a universal app, and publishes a release **only after all assets are ready**. Superseded builds are not published as latest.
-
-Onde checks the public GitHub release API at launch, on returning to the app, and approximately every five minutes while running. A new build displays a **Download** button. The archive is size-checked and SHA-256-verified using GitHub's asset digest. It is saved in Downloads; it is **not executed or installed automatically**. Quit Onde and replace the app when convenient.
-
-Automatic metadata checks can be disabled in **Mises à jour**. No account token, listening history, settings or personal audio is transmitted. GitHub necessarily receives the normal network request (including IP address and app user agent). Failed or still-running builds do not trigger an update prompt.
-
-## CLI for humans and agents
+The CLI is inside the app. It works without a shell installation:
 
 ```sh
-~/.local/bin/onde schema
+~/Applications/Onde.app/Contents/MacOS/ondectl schema
+~/Applications/Onde.app/Contents/MacOS/ondectl generate profile sanctuaire --launch
+```
+
+For `/Applications`, use that path instead. The optional source installer creates `~/.local/bin/onde` without editing your shell profile. The commands below assume that shortcut exists.
+
+## CLI examples
+
+```sh
 ~/.local/bin/onde generate profiles
-~/.local/bin/onde generate profile reacteur --launch
-~/.local/bin/onde generate set punch 0.85
-~/.local/bin/onde generate set drive 0.80
-~/.local/bin/onde generate set bass 0.90
-~/.local/bin/onde generate status
+~/.local/bin/onde generate profile meridien --launch
+~/.local/bin/onde generate set bass 0.8
+~/.local/bin/onde generate transition 10
+~/.local/bin/onde mix save 'My focus mix'
 ~/.local/bin/onde pause
 ~/.local/bin/onde play
-~/.local/bin/onde mix save 'My focused morning'
-~/.local/bin/onde update check --wait
-~/.local/bin/onde update download --wait
-~/.local/bin/onde update automatic off
+~/.local/bin/onde meditate
+~/.local/bin/onde timer markers 10,20,30
+~/.local/bin/onde status
+~/.local/bin/onde watch
+~/.local/bin/onde schema
 ```
 
-Replies are JSON. `watch` streams NDJSON. A private, owner-only UNIX socket connects the UI and CLI; no TCP listener is opened and no shell command is evaluated from an IPC request. Run `schema` to discover the full protocol. `--launch` explicitly opens the app when needed.
+`status` includes `today_seconds`, `today_time_zone` and the independent `elapsed_seconds` stopwatch. No TCP listener is opened. IPC requests do not execute shell code. `--launch` explicitly opens the app when necessary; without it, the CLI does not open the app implicitly.
 
-Standalone export, app not required:
+Standalone WAV export, without the app running:
 
 ```sh
-~/Applications/Onde.app/Contents/MacOS/ondectl generate render reacteur "$HOME/Desktop/Reactor.wav" --minutes 10
+~/Applications/Onde.app/Contents/MacOS/ondectl generate render sanctuaire \
+  "$HOME/Desktop/Sanctuary.wav" --minutes 30
 ```
 
-Exports use a fresh instance of the same synthesis core and never overwrite an existing destination. Reproducing customized live settings requires passing those settings explicitly. Outputs include a JSON provenance sidecar.
+The exporter uses a fresh instance of the same render core, writes a JSON provenance sidecar and refuses to overwrite an existing destination. To reproduce a customized mix, supply its settings explicitly. [Full CLI guide](Documentation/AGENTS.md).
 
-## Build and test
+## Updates
 
-Install Apple's Xcode command-line tools (Swift 5.9 or later) and Python 3, then:
+A successful push to `main` runs tests, builds Intel and Apple Silicon executables and publishes a complete release. The app can check the public GitHub release API at launch, when returning to the app, and approximately every five minutes. A new build shows a **Download** button, even if its semantic version is unchanged.
+
+Downloads are size-checked and SHA-256-verified, then saved to Downloads. **Installation is manual:** quit Onde and replace the app. Your settings, history and imported audio live outside the app bundle. Automatic checks can be disabled in **Updates**. GitHub receives ordinary network metadata, not listening history or imports.
+
+## Daily time: what changed in 1.9
+
+Previously, Today incorrectly added the entire current session, including hours from yesterday. The new ledger records only active intervals, splits them at local calendar-day boundaries, and merges overlaps so duplicated records cannot inflate a day. Pauses and time while the app is closed are not counted. Resetting the session stopwatch does not erase daily activity.
+
+Calendar days use the current time zone, including daylight-saving transitions. An actual day can be 23 or 25 hours; no fixed 24-hour clamp hides errors. Existing history is preserved. **Pre-1.9 day allocations are estimates**, because those files contain no exact pause intervals. New activity is checkpointed every 15 seconds; abrupt termination may lose the last unflushed interval, but never invents time while the app was closed. [Implementation and tests](Documentation/DAILY-ACTIVITY.md).
+
+## Build from source
+
+Requires macOS 14+, a Swift 5.9+ toolchain/Apple command-line tools, and Python 3. GitHub release builds use Xcode on macOS runners.
 
 ```sh
 git clone https://github.com/blancmathis/onde.git
 cd onde
-ONDE_SKIP_DOWNLOADS=1 ONDE_ORIGINALS_ONLY=1 ./Tools/build.sh
-./Tools/install.sh
+bash Tools/prepare_orchestra.sh
+ONDE_SKIP_DOWNLOADS=1 ONDE_ORIGINALS_ONLY=1 bash Tools/build.sh
+bash Tools/install.sh
 open ~/Applications/Onde.app
 ```
 
-The build generates the original audio beds and chime locally. Optional CC BY music downloads are disabled above. Public automated builds contain only original audio. No private reference audio is required to build or run the generator.
+Preparing the bank downloads pinned, checksum-verified CC0 notes. The build generates the original sound beds and chime locally. The flags above exclude optional third-party composition downloads, not the acoustic CC0 bank.
 
 ```sh
 swift test -c release -j 3
+python3 Tools/check_english.py
+python3 Tools/daily_activity_integration_test.py
 python3 Tools/generative_integration_test.py
 python3 Tools/profile_integration_test.py
+python3 Tools/transition_integration_test.py
 ```
 
-Integration tests require an interactive macOS session and use isolated temporary profiles with muted output. Pure unit tests run in CI. `ONDE_HOME` supplies a separate local profile and disables automatic update checks in test instances.
+Integration tests require an interactive macOS session. They use muted output and isolated temporary profiles. `ONDE_HOME` selects an isolated local profile and disables automatic update checks in test instances. Do not point tests at your personal library.
 
-## Privacy and licenses
+## Privacy and licensing
 
-User data lives in `~/Library/Application Support/Onde/`, outside this repository and the app bundle. Personal imports are never automatically uploaded or included in release builds. Keep your own imports out of Git. Update download preferences are stored in macOS UserDefaults.
+User data: `~/Library/Application Support/Onde/`. Imports, mixes and history are not automatically uploaded. The repository and release bundle contain no personal imports or Endel/Brain.fm recordings. The optional streaming player follows the provider's own availability, account and advertising rules.
 
-Code: **MIT**. Original procedurally generated audio: **CC0-1.0**. Optional third-party compositions have separate credits in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No audio from Endel or Brain.fm is redistributed. The optional Endel section links to public official players; streaming is distinct from local synthesis and is not required by Onde.
+**Code: MIT. Original generated audio and VSCO 2 CE instrument bank: CC0-1.0.** Optional CC BY tracks retain their separate credits. [Third-party notices](THIRD_PARTY_NOTICES.md) · [Privacy](Documentation/PRIVACY.md) · [Contributing](CONTRIBUTING.md).
 
 ## Architecture
 
-`OndeDSP` (C11): preallocated render core, stable musical clock, oscillator voices and diffuse reverb. `OndeCore`: state, export, local IPC, release validation. `OndeApp`: SwiftUI, Core Audio and verified opt-in downloads. `onde`: native command-line interface. GitHub release workflow: `.github/workflows/release.yml`.
+`OndeDSP`: preallocated C11 synthesis, acoustic-note sampler, vowel choir, phrase planner and two-scene crossfade mixer. `OndeCore`: settings, daily accounting, renderers, IPC and release verification. `OndeApp`: SwiftUI and Core Audio. `onde`: native CLI. Music generation works offline and does not require machine-learning weights.
 
-For contributors: preserve timer semantics, backwards-compatible settings, private imports and no-autoplay behavior. Keep the release asset name and build-tag format synchronized with `UpdatePolicy.swift`. Changing a fork's update source requires explicitly updating `AppBuild.repository` and the package metadata.
-
-## Focus collection — Onde 1.7
-
-Four authored scores are now at the front of the library, rather than a growing
-wall of similar presets: **Sillage** (deep electronic, 92 BPM), **Filigrane**
-(recorded soft piano, 78 BPM), **Confluence** (hybrid orchestra, 88 BPM) and
-**Sanctuaire** (original synthesized nonverbal vowels, 86 BPM).
-
-The selected identity stays stable; rhythmic events are composed, not randomly
-omitted. Common-tone voice leading, sustained-instrument crossfades and separate
-piano/choir controls are implemented in the live engine and offline renderer.
-All thirteen earlier profiles and saved personal configurations remain available.
-
-Research informs the design; these compositions have not been clinically tested
-and do not claim a universal optimum or superiority to silence. Detailed rationale,
-limitations, sources and commands: [Focus compositions](Documentation/FOCUS-SIGNATURES-1.7.md).
-
-## 1.8 — Long-form development and scene transitions
-
-Ambre, Canopée and Méridien join the four revised signature compositions.
-Eight-bar questions and answers, common-tone harmonic routes and gradual
-64-bar orchestration replace the previous one/two-bar-only writing.
-No automatic genre changes or claim of clinically optimal music.
-
-Selecting a new profile prepares it off the audio thread and performs a
-bar-boundary crossfade with rhythmic handover (10 seconds by default).
-Use `onde generate transition 2...30` to change its duration. The same production
-mixer can export a transition with `onde generate transition-render`.
-See [the long-form guide](Documentation/FORMES-LONGUES-1.8.md).
+Reports about audibility, repetition, transitions, accessibility and bugs are welcome. Include the profile ID, version, macOS version and steps to reproduce—never private audio or account credentials.

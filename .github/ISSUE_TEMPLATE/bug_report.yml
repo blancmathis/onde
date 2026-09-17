@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible problem in Onde.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Please remove private audio, custom names, history and credentials from logs or screenshots before posting."
+  - type: input
+    id: version
+    attributes:
+      label: Onde version / build
+      description: Find this in Updates, or run `onde status`.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: macOS version and hardware
+      placeholder: "macOS 15, Apple Silicon"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open...\n2. Select...\n3. Observe..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional context
+      description: "For audio: profile ID and settings. For time counters: time zone, whether the session crossed midnight, and pause/reset steps. No personal library is needed."
