@@ -6,6 +6,7 @@ published releases are never overwritten. Credentials stay in gh's environment.
 """
 import hashlib,json,os,pathlib,re,subprocess,time
 from urllib.parse import urlsplit, urlencode
+from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 def gh(*args,timeout=60):
     p=subprocess.run(['gh',*args],capture_output=True,text=True,timeout=timeout)
@@ -13,6 +14,33 @@ def gh(*args,timeout=60):
     return p.stdout
 
 def api(path):return json.loads(gh('api',path))
+
+class NoUploadRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RuntimeError('Upload redirects are not allowed')
+
+def upload_asset(endpoint, name, path, media):
+    # The official raw-binary upload endpoint uses HTTP/1.1 here. This avoids
+    # CLI upload stalls and keeps the token out of command arguments and logs.
+    token = os.environ.get('GH_TOKEN')
+    if not token:
+        raise RuntimeError('GH_TOKEN is required for this CI publisher')
+    body = path.read_bytes()
+    request = Request(endpoint + '?' + urlencode({'name': name}), data=body, method='POST', headers={
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'Onde-release-publisher',
+        'Content-Type': media,
+        'Content-Length': str(len(body)),
+    })
+    with build_opener(NoUploadRedirect()).open(request, timeout=300) as response:
+        if response.status != 201:
+            raise RuntimeError('Release upload did not return HTTP 201')
+        result = json.loads(response.read(2_000_000))
+    if result.get('name') != name or result.get('size') != len(body):
+        raise RuntimeError('Upload response did not match the requested asset')
+    return result
 
 def main():
     root=pathlib.Path(__file__).resolve().parents[1];os.chdir(root)
@@ -60,15 +88,14 @@ def main():
                     draft()  # Never delete assets from a published release.
                     gh('api', '--method', 'DELETE', f'repos/{repo}/releases/assets/{existing["id"]}')
                 media = 'application/zip' if name.endswith('.zip') else 'audio/mp4' if name.endswith('.m4a') else 'text/plain'
-                gh('api', '--method', 'POST', endpoint + '?' + urlencode({'name': name}),
-                   '-H', 'Content-Type: ' + media, '--input', str(path), timeout=300)
+                upload_asset(endpoint, name, path, media)
                 for _ in range(12):
                     a=next((a for a in draft()['assets'] if a['name']==name),None)
                     if a and a['state']=='uploaded' and a['size']==size and a.get('digest')==digest:break
                     time.sleep(2)
                 else:raise RuntimeError('Uploaded asset has no matching digest')
                 print(f'Verified {name}: {size} bytes',flush=True);break
-            except (RuntimeError,subprocess.TimeoutExpired) as error:
+            except (RuntimeError,subprocess.TimeoutExpired,OSError) as error:
                 print(f'Upload attempt {attempt+1}/3 for {name}: {type(error).__name__}',flush=True)
                 if attempt==2:raise
                 time.sleep(3*(attempt+1))
