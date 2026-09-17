@@ -243,7 +243,7 @@ struct ListeningControls: View {
                     SmallTimeSlider(title: "Gentle start", seconds: Binding(get: { model.store.preferences.startFadeSeconds }, set: {
                         _ = model.handle(["command":"settings", "key":"startFadeSeconds", "value":$0])
                     }), range: 0...20)
-                    SmallTimeSlider(title: "Between music", seconds: Binding(get: { model.transitionSeconds }, set: model.setTransitionSeconds), range: 2...30)
+                    SmallTimeSlider(title: "Music crossfade", seconds: Binding(get: { model.transitionSeconds }, set: model.setTransitionSeconds), range: 2...30)
                     Text("New music fades in from silence after a pause. During playback, music blends together.")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted).lineSpacing(3)
                 }.padding(21).background(Theme.panel, in: RoundedRectangle(cornerRadius: 20))

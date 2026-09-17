@@ -142,33 +142,7 @@ struct HistoryView: View {
 
 struct CLIGuideView: View {
     @EnvironmentObject var model: AppModel
-    let examples = """
-    onde focus --launch
-    onde relax
-    onde meditate
-    onde pause
-    onde play
-    onde stop
-
-    onde sounds
-    onde sound rain on --volume 0.25
-    onde sound aube off
-    onde solo piano
-    onde volume 0.4
-    onde silence
-
-    onde timer markers 10,20,30
-    onde settings chimeVolume 0.2
-    onde chime preview
-    onde settings chimesEnabled false
-
-    onde mix save \"Morning writing\"
-    onde mix load \"Morning writing\"
-    onde import \"/path/to/my-sound.wav\"
-    onde status
-    onde watch
-    onde schema
-    """
+    let examples = AgentExamples.commands
     var body: some View {
         PageHeader(eyebrow: "Agent-ready", title: "The same control. No clicking.", subtitle: "The native CLI controls the running app. Every response is a JSON object.")
         Panel {

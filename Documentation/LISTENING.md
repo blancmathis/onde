@@ -29,7 +29,7 @@ The right-hand panel stays visible beside the music:
   Ocean. **Amount** adjusts that background. Only one is enabled by this picker;
   changing music preserves it. The choice and amount are remembered per mode.
 - **Gentle start** controls the entrance from silence (0–20 seconds).
-- **Between music** controls the live crossfade (2–30 seconds).
+- **Music crossfade** controls the live crossfade (2–30 seconds).
 
 The master volume in the bottom player affects the whole output, including
 chimes. Adding noise does not restart the music. Editing a background while

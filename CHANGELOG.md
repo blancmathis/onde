@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.10.1 — Listening polish
+
+- Refresh the in-app CLI guide for music choices, independent defaults and background sound.
+- Fix shell quoting when copying saved-mix examples.
+- Clarify the main-screen Music crossfade control.
+- Preserve the 1.10 listening model, musical scores, saved preferences and transport behavior.
+
 ## 1.10.0 — One screen for listening
 
 - Replace the sidebar, separate library and duplicated music pages with a single mode-aware music picker and a persistent player.
