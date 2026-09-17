@@ -59,8 +59,10 @@ def observe(source,seconds,label,edit=False):
         if p>=1 and g==1:break
         time.sleep(.08)
     check(values[-1][0]==1 and values[-1][1]==1,label+' reaches full envelope')
-    check(any(0<g<.15 for g,p,d in values),label+' begins quietly')
-    check(len([p for g,p,d in values if 0<p<1])>=3,label+' progresses through intermediate levels')
+    audit=s['generator']['entrance'] if source=='living' else s['playback']['recorded_layers'][source]
+    check(audit['first_gain']<.15,label+' begins quietly (persistent audio-clock audit)')
+    count=audit['intermediate_frames'] if source=='living' else audit['intermediate_ticks']
+    check(count>=3,label+' progresses through intermediate levels (not UI polling cadence)')
     check(all(b[0]+.00001>=a[0] and b[1]+.00001>=a[1] for a,b in zip(values,values[1:])),label+' never restarts or jumps backward')
     check(all(abs(g-(p*p*(3-2*p))**2)<.0001 for g,p,d in values),label+' follows the shared smooth curve')
     check(all(abs(d-seconds)<.001 for g,p,d in values),label+' reports the intended duration')

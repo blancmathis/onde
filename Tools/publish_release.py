@@ -5,6 +5,7 @@ Network retries apply only to assets of this run's unpublished draft. Existing
 published releases are never overwritten. Credentials stay in gh's environment.
 """
 import hashlib,json,os,pathlib,re,subprocess,time
+from urllib.parse import urlsplit, urlencode
 
 def gh(*args,timeout=60):
     p=subprocess.run(['gh',*args],capture_output=True,text=True,timeout=timeout)
@@ -47,7 +48,20 @@ def main():
             try:
                 # Sequential transfer avoids saturating the archive upload while
                 # seven large previews compete. Timeout instead of hanging a job.
-                gh('release','upload',tag,str(path),'-R',repo,'--clobber',timeout=150)
+                # Upload to this numeric release ID directly. CLI tag resolution
+                # can stall for a draft whose tag does not exist yet.
+                endpoint = r['upload_url'].split('{', 1)[0]
+                parsed = urlsplit(endpoint)
+                expected_path = f'/repos/{repo}/releases/{release_id}/assets'
+                if (parsed.scheme != 'https' or parsed.netloc != 'uploads.github.com'
+                        or parsed.path != expected_path or parsed.query or parsed.fragment):
+                    raise RuntimeError('Unexpected release upload endpoint')
+                if existing:
+                    draft()  # Never delete assets from a published release.
+                    gh('api', '--method', 'DELETE', f'repos/{repo}/releases/assets/{existing["id"]}')
+                media = 'application/zip' if name.endswith('.zip') else 'audio/mp4' if name.endswith('.m4a') else 'text/plain'
+                gh('api', '--method', 'POST', endpoint + '?' + urlencode({'name': name}),
+                   '-H', 'Content-Type: ' + media, '--input', str(path), timeout=300)
                 for _ in range(12):
                     a=next((a for a in draft()['assets'] if a['name']==name),None)
                     if a and a['state']=='uploaded' and a['size']==size and a.get('digest')==digest:break

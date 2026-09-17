@@ -2,6 +2,9 @@
 
 ## 1.9.4 — Fresh selection after pause
 
+- Retain audio-thread entrance measurements so fade-in regressions can be verified even if status polling is delayed.
+- Upload release files to the exact unpublished release ID, with size and SHA-256 verification before publication.
+
 - Selecting a composition, mode, saved mix or solo library sound while paused starts that music from its beginning with the full gentle entrance. No previous scene fades back in.
 - The ordinary Play button resumes the existing music with its shorter resume fade, including a paused crossfade.
 - Discard pending preparation and both old crossfade scenes on explicit fresh selection. Rewind recorded layers explicitly.

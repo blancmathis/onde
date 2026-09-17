@@ -7,6 +7,9 @@ import OndeDSP
 final class RecordedLayer {
     let player: AVAudioPlayer
     private var envelope = OndePlaybackEnvelope()
+    private var firstGain: Float = 0
+    private var intermediateTicks: UInt64 = 0
+    private var entranceSerial: UInt64 = 0
     private var audioTime: TimeInterval = 0
     private var level: Float = 0
     private var target: Float = 0
@@ -37,6 +40,7 @@ final class RecordedLayer {
             }
             audioTime = player.deviceCurrentTime
             entranceSeconds = entrance
+            firstGain = envelope.value; intermediateTicks = 0; entranceSerial &+= 1
             onde_envelope_to(&envelope, 1, max(0.015, entrance))
             hasPlayed = true
         } else if !enabled && selected {
@@ -50,6 +54,7 @@ final class RecordedLayer {
         let dt = max(0, now - audioTime)
         audioTime = now
         _ = onde_envelope_step(&envelope, dt)
+        if selected && envelope.value > 0 && envelope.value < 1 { intermediateTicks &+= 1 }
         level += Float(1 - exp(-dt / adjustmentSeconds)) * (target - level)
         if abs(level-target) < 0.000001 { level = target }
         outputGain = level * envelope.value
@@ -65,7 +70,7 @@ final class RecordedLayer {
     }
     var snapshot: [String: Any] {
         ["playing": player.isPlaying && selected, "position_seconds": player.currentTime,
-         "duration_seconds": player.duration, "entrance_gain": envelope.value,
+         "duration_seconds": player.duration, "first_gain": firstGain, "intermediate_ticks": intermediateTicks, "entrance_serial": entranceSerial, "entrance_gain": envelope.value,
          "entrance_progress": onde_envelope_progress(&envelope), "entrance_seconds": entranceSeconds,
          "output_gain": outputGain, "target_gain": target]
     }

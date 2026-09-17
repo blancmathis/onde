@@ -11,6 +11,11 @@ void onde_scene_mixer_collect(OndeSceneMixer *m);
 /* Arm a transport envelope. The rising clock waits for an active scene.
    Call on start/pause/resume, NEVER on routine volume/parameter changes. */
 void onde_scene_mixer_playback(OndeSceneMixer *m,int playing,double seconds);
+uint64_t onde_scene_mixer_entrance_frames(const OndeSceneMixer *m);
+uint64_t onde_scene_mixer_entrance_intermediate(const OndeSceneMixer *m);
+uint64_t onde_scene_mixer_entrance_serial(const OndeSceneMixer *m);
+float onde_scene_mixer_entrance_first_gain(const OndeSceneMixer *m);
+int onde_scene_mixer_entrance_pending(const OndeSceneMixer *m);
 float onde_scene_mixer_entrance_gain(const OndeSceneMixer *m);
 float onde_scene_mixer_entrance_progress(const OndeSceneMixer *m);
 void onde_scene_mixer_gain(OndeSceneMixer *m,float gain);

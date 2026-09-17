@@ -158,7 +158,12 @@ final class GenerativeEngine {
         let entranceProgress: Float = mixer.map { onde_scene_mixer_entrance_progress($0) } ?? 0
         let entrance: [String: Any] = ["gain": entranceGain, "progress": entranceProgress,
                                       "seconds": entranceSeconds, "curve": "squared_smoothstep",
-                                      "waiting_for_audio": wantedPlaying && core == nil]
+                                      "waiting_for_audio": wantedPlaying && core == nil,
+                             "first_gain": Double(mixer.map(onde_scene_mixer_entrance_first_gain) ?? 0),
+                             "audited_frames": mixer.map(onde_scene_mixer_entrance_frames) ?? 0,
+                             "intermediate_frames": mixer.map(onde_scene_mixer_entrance_intermediate) ?? 0,
+                             "serial": mixer.map(onde_scene_mixer_entrance_serial) ?? 0,
+                             "request_pending": (mixer.map(onde_scene_mixer_entrance_pending) ?? 0) != 0]
         return ["engine": "onde-living-7", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
                 "loading": loading,
                 "entrance": entrance,
