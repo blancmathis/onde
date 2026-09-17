@@ -46,6 +46,7 @@ Personal settings, saved soundscapes and imports are stored separately and are p
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
+Local audio only: no embedded external streaming player.
 Gentle start: eight-second configurable fade-in, two-second resume, unchanged scene crossfades and chimes.
 English interface and corrected local-day accounting (including midnight, pause, reset and DST).
 Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
@@ -54,5 +55,5 @@ Filigree uses recorded soft piano; Sanctuary uses original synthesized nonverbal
 Stable CLI IDs, existing mixes, personal imports and chime settings are preserved.
 Pre-1.9 historical day allocations are estimates because exact pause times were not saved.
 The source is evidence-informed; these individual tracks have not been clinically validated.
-Pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No Endel audio or personal imports.
+Pinned, checksum-verified CC0 acoustic instrument bank (VSCO 2 CE). No commercial streaming recordings or personal imports.
 EOF

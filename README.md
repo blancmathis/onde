@@ -19,7 +19,7 @@ Generative music that keeps unfolding, an adjustable sound mixer, gentle meditat
 - **Daily activity that actually resets:** count running-session intervals within your current local day, excluding pauses. A session can span midnight without its full duration being added to Today.
 - **Agent-friendly control:** the UI and CLI share one state through a private UNIX socket. Commands return JSON; `watch` streams NDJSON.
 
-No telemetry or cloud audio engine. The optional update checker contacts GitHub. The separate Endel section uses official online players and is not needed for local generation.
+No telemetry or cloud audio engine. The optional update checker contacts GitHub. Sound playback does not use external streaming players.
 
 ## Listen first
 
@@ -126,7 +126,7 @@ Integration tests require an interactive macOS session. They use muted output an
 
 ## Privacy and licensing
 
-User data: `~/Library/Application Support/Onde/`. Imports, mixes and history are not automatically uploaded. The repository and release bundle contain no personal imports or Endel/Brain.fm recordings. The optional streaming player follows the provider's own availability, account and advertising rules.
+User data: `~/Library/Application Support/Onde/`. Imports, mixes and history are not automatically uploaded. The repository and release bundle contain no personal imports or commercial streaming recordings. Playback is local; there is no embedded streaming player.
 
 **Code: MIT. Original generated audio and VSCO 2 CE instrument bank: CC0-1.0.** Optional CC BY tracks retain their separate credits. [Third-party notices](THIRD_PARTY_NOTICES.md) · [Privacy](Documentation/PRIVACY.md) · [Contributing](CONTRIBUTING.md).
 

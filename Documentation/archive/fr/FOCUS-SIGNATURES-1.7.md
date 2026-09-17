@@ -51,7 +51,7 @@ Le grave électronique reste présent, mais ne doit pas effacer tout le spectre 
 
 **Intention :** proposer la couleur mystique demandée sans paroles, sans chant soliste et sans transformer nécessairement la séance en relaxation.
 
-Le chœur est une synthèse originale de voyelles. Ce ne sont pas des voix humaines enregistrées, ni une imitation d'un chanteur ou d'une banque Endel. Trois couleurs, proches de ah, oh et ou, sont produites par des spectres harmoniques façonnés par des formants. Quatre parties harmoniques sont doublées par de petites différences de phase et d'accordage.
+Le chœur est une synthèse originale de voyelles. Ce ne sont pas des voix humaines enregistrées, ni une imitation d'un chanteur ou d'une banque commerciale. Trois couleurs, proches de ah, oh et ou, sont produites par des spectres harmoniques façonnés par des formants. Quatre parties harmoniques sont doublées par de petites différences de phase et d'accordage.
 
 Les notes communes restent tenues ; seules les parties qui changent se fondent progressivement dans les suivantes. Il n'y a pas de nouvelle syllabe sur chaque temps, pas de respiration amplifiée, de cri ou d'improvisation vocale. Une basse et quelques touches de harpe maintiennent le mouvement.
 
@@ -94,7 +94,7 @@ Une évaluation de l'efficacité devra comparer chaque pièce à une ambiance pe
 
 ## Provenance et distribution
 
-Code original MIT ; synthèses et nouveaux rendus CC0. Les 76 prises acoustiques (67 orchestrales et 9 de piano) proviennent d'un commit figé de VSCO 2 CE, avec SHA-256. Aucun extrait Endel, import personnel ou fichier de voix propriétaire n'est publié. La banque piano est redistribuée selon la licence de VSCO 2 CE, avec crédit à Simon Dalzell / Ivy Audio et Versilian Studios.
+Code original MIT ; synthèses et nouveaux rendus CC0. Les 76 prises acoustiques (67 orchestrales et 9 de piano) proviennent d'un commit figé de VSCO 2 CE, avec SHA-256. Aucun extrait commercial, import personnel ou fichier de voix propriétaire n'est publié. La banque piano est redistribuée selon la licence de VSCO 2 CE, avec crédit à Simon Dalzell / Ivy Audio et Versilian Studios.
 
 Le moteur de voyelles ne nécessite aucun fichier de voix, modèle entraîné ou connexion. Le réseau est utilisé pour les mises à jour uniquement si celles-ci sont activées et pour les services externes explicitement sélectionnés.
 

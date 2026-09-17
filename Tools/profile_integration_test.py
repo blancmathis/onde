@@ -65,7 +65,7 @@ try:
  wav=profile/'abysses.wav';r=call('generate','render','abysses',str(wav),'--seconds','2')
  check(r['configuration']['profileID']=='abysses' and r['configuration']['tempo']==64 and r['engine']=='onde-living-7','Offline named-profile render')
  with wave.open(str(wav)) as f:check(f.getnframes()==88200 and f.getnchannels()==2,'Rendered WAV duration and channels')
- check(r['peak']>0 and not r['uses_endel_audio'],'Original audible PCM, no Endel source')
+ check(r['peak']>0 and r['audio_origin']=='local_generation','Original audible PCM with local generation provenance')
  print(json.dumps({'ok':True,'passed':len(checks),'audio_muted':True,'checks':checks},indent=2),flush=True)
 finally:
  if process and process.poll()==None:

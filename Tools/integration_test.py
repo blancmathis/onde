@@ -26,10 +26,6 @@ try:
  s=launch();check(s['status']=='stopped','No autoplay on launch');check(s['preferences']['markers']==[600,1200,1800],'Default markers 10/20/30 minutes')
  check(stat.S_IMODE((profile/'control.sock').stat().st_mode)==0o600,'Socket owner-only');check(stat.S_IMODE(profile.stat().st_mode)==0o700,'Profile owner-only')
  call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true')
- check(len(call('endel','list'))==8,'Complete Endel reference catalog')
- check(call('endel','status')['state']=='idle','No Endel network player on launch')
- check(call('endel','play','unknown',expected=2)['code']=='not_found','Reject unknown Endel source')
- check(call('endel','seek','30',expected=2)['code']=='player_not_ready','Do not seek an unready external player')
  sounds=call('sounds');check(len(sounds)>=7,'Sound library available')
  for sound in sounds:
   call('solo',sound['id']);s=call('play');check(sound['id'] in s['audio_playing_ids'] and s['last_error']==None,'Playback '+sound['id'])
@@ -55,7 +51,7 @@ try:
  check(call('call','{"command":"volume","value":true}',expected=2)['code']=='invalid_argument','Reject boolean numeric volume')
  with socket.socket(socket.AF_UNIX) as sock:
   sock.settimeout(5);sock.connect(str(profile/'control.sock'));sock.sendall(b'not valid json\n');check(json.loads(sock.recv(65536))['ok']==False,'Malformed IPC does not crash')
- for page in ['studio','library','mixes','settings','cli','history','credits','endel']:check(call('ui','page',page)['page']==page,'CLI page '+page)
+ for page in ['studio','library','mixes','settings','cli','history','credits']:check(call('ui','page',page)['page']==page,'CLI page '+page)
  check(call('ui','quiet','on')['quiet_view'],'Quiet view on');check(not call('ui','quiet','off')['quiet_view'],'Quiet view off')
  call('chime','preview');check(call('status')['last_error']==None,'No audio errors')
  call('stop');check(len(call('history'))>0,'History recorded');call('timer','markers','10,20,30');print('PRE_QUIT',json.dumps(call('status')['preferences']),flush=True);call('quit');process.wait(timeout=10);print('DISK_AFTER_QUIT',json.dumps(json.loads((profile/'state.json').read_text())['preferences']),flush=True)

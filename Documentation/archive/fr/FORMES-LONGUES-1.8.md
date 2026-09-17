@@ -62,4 +62,4 @@ onde generate transition-render ambre sanctuaire /absolute/Transition.wav --seco
 
 Le statut expose l'indice de phrase, le chapitre, la variante, l'empreinte des notes planifiées et l'avancement de la transition. L'empreinte décrit une structure musicale : ce n'est pas un score de concentration. Le temps rendu d'une scène est distinct du chronomètre global de session.
 
-Code MIT. Prises acoustiques VSCO 2 CE sous CC0, inchangées par cette mise à jour. Rendus originaux CC0. Aucun son Endel, import personnel ou signal biologique n'est ajouté au dépôt. Aucun nouvel accès aux capteurs ou à l'historique informatique n'est activé.
+Code MIT. Prises acoustiques VSCO 2 CE sous CC0, inchangées par cette mise à jour. Rendus originaux CC0. Aucun son commercial, import personnel ou signal biologique n'est ajouté au dépôt. Aucun nouvel accès aux capteurs ou à l'historique informatique n'est activé.

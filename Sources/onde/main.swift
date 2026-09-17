@@ -44,7 +44,7 @@ MEDITATION
   onde chime preview
   onde settings <key> <value>
   onde settings startFadeSeconds 8     Gentle entrance 0...20s; resume up to 2s
-    keys: chimeVolume, fadeSeconds, chimesEnabled, preventSleep, reducedMotion
+    keys: chimeVolume, fadeSeconds, startFadeSeconds, chimesEnabled, preventSleep, reducedMotion
 
 MIXES & DATA
   onde mixes
@@ -71,16 +71,6 @@ ORIGINAL GENERATIVE MUSIC (OFFLINE, VERIFIED ACOUSTIC BANK)
   Render runs without opening the app. WAV + JSON provenance; never overwrites.
   Other controls: density, movement, texture, pulse, evolution (all 0...1).
 
-ENDEL · COMPLETE OFFICIAL SESSIONS (STREAMING, NOT AUDIO FILES)
-  onde endel list                      Complete 1-to-8-hour recordings
-  onde endel play deep-focus --launch  Open the official visible player
-  onde endel play relax --meditation   Meditation clock/chimes with Relax
-  onde endel status                    Actual player state, duration, errors
-  onde endel pause|resume|stop
-  onde endel seek <seconds>
-  onde endel browser <id>              Browser fallback, no timer sync
-  onde endel web                       Endel's own web player with your account
-
 UPDATES
   onde update check [--wait]           Query the latest published main build
   onde update status                  Inspect availability and download state
@@ -89,7 +79,7 @@ UPDATES
 
 UI & AGENTS
   onde ui show
-  onde ui page studio|library|mixes|settings|cli|history|credits|endel|generative|updates
+  onde ui page studio|library|mixes|settings|cli|history|credits|generative|updates
   onde ui quiet on|off
   onde schema                         Full machine-readable command schema
   onde call '<JSON object>'            Raw protocol, no shell evaluated by app
@@ -109,8 +99,8 @@ let commandSpecs: [[String: Any]] = [
     ["command":"updates.check","arguments":[:],"effect":"Asynchronously check the fixed official GitHub repository"],
     ["command":"updates.download","arguments":[:],"effect":"Download and verify candidate into Downloads; no execution or installation"],
     ["command":"updates.automatic","arguments":["enabled":"boolean"],"effect":"Enable/disable periodic metadata checks; never auto-download"],
-    ["command":"generate.profiles","arguments":[:],"effect":"List six original, curated profiles; available offline via generate profiles"],
-    ["command":"generate.profile","arguments":["id":"ancrage|abysses|courant|velours|rive|immersion"],"effect":"Start profile; preserve global volume, chimes and saved mixes"],
+    ["command":"generate.profiles","arguments":[:],"effect":"List available original sound profiles; available offline via generate profiles"],
+    ["command":"generate.profile","arguments":["id":"stable profile ID from generate profiles"],"effect":"Start profile; preserve global volume, chimes and saved mixes"],
 
     ["command":"generate.status","arguments":[:],"effect":"Live original synthesis state, seed, controls, render time, output level"],
     ["command":"generate.play","arguments":["mode":"focus|relax|meditation","seed":"optional integer 0...2^53-1","reset":"optional boolean"],"effect":"Solo the living layer, start mode, preserve chime preferences"],
@@ -119,15 +109,6 @@ let commandSpecs: [[String: Any]] = [
     ["command":"generate.seed","arguments":["value":"integer 0...2^53-1"],"effect":"Change future generative choices smoothly, no timer reset"],
     ["command":"generate.defaults","arguments":[:],"effect":"Restore current mode synthesis defaults, not chimes or layer volumes"],
 
-    ["command":"endel.sessions","arguments":[:],"effect":"List complete official recordings; streams, not local downloads"],
-    ["command":"endel.status","arguments":[:],"effect":"Read player state; playback_confirmed is true only during confirmed playback"],
-    ["command":"endel.play","arguments":["id":"session id","meditation":"optional boolean"],"effect":"Open visible official YouTube player; timer starts when playback is confirmed"],
-    ["command":"endel.pause","arguments":[:],"effect":"Pause player and session clock"],
-    ["command":"endel.resume","arguments":[:],"effect":"Resume selected player"],
-    ["command":"endel.stop","arguments":[:],"effect":"Stop external player and session"],
-    ["command":"endel.seek","arguments":["seconds":"nonnegative number less than duration"],"effect":"Seek the video, without seeking the meditation stopwatch"],
-    ["command":"endel.browser","arguments":["id":"session id"],"effect":"Open full official session in browser; does not confirm playback or sync timer"],
-    ["command":"endel.web","arguments":[:],"effect":"Open Endel web player; requires user's own account for premium soundscapes"],
     ["command":"status","arguments":[:],"effect":"Read session, preferences, layers and errors"],
     ["command":"mode","arguments":["mode":"focus|relax|meditation","play":"boolean; default true","reset":"boolean; default false"],"effect":"Select mode; changing mode resets elapsed and restores that mode's mix"],
     ["command":"play","arguments":[:],"effect":"Start or resume audio and stopwatch; idempotent"],
@@ -151,7 +132,7 @@ let commandSpecs: [[String: Any]] = [
     ["command":"history","arguments":[:],"effect":"Read completed sessions"],
     ["command":"history.clear","arguments":[:],"effect":"Clear local completed session records"],
     ["command":"events","arguments":[:],"effect":"Read last 100 in-memory events, including actual chimes"],
-    ["command":"ui","arguments":["page":"optional studio|library|mixes|settings|cli|history|credits|endel|generative|updates","quiet":"optional boolean","show":"optional boolean"],"effect":"Control window navigation and quiet view"],
+    ["command":"ui","arguments":["page":"optional studio|library|mixes|settings|cli|history|credits|generative|updates","quiet":"optional boolean","show":"optional boolean"],"effect":"Control window navigation and quiet view"],
     ["command":"errors.clear","arguments":[:],"effect":"Dismiss current error"],
     ["command":"quit","arguments":[:],"effect":"Save, stop audio, quit app"]
 ]
@@ -168,7 +149,6 @@ var args = Array(CommandLine.arguments.dropFirst())
 let launch = args.contains("--launch")
 args.removeAll { $0 == "--launch" || $0 == "--json" }
 if args.isEmpty || args == ["help"] || args.contains("--help") { print(help); exit(0) }
-if args == ["endel", "list"] { emit(["ok":true,"result":EndelSession.all.map(\.descriptor)]); exit(0) }
 if args == ["generate", "profiles"] { emit(["ok":true,"result":jsonObject(SoundProfile.all)]); exit(0) }
 if args == ["generate", "presets"] { emit(["ok":true,"result":SessionMode.allCases.map { ["mode":$0.rawValue,"title":GenerativeSettings.title($0),"configuration":jsonObject(GenerativeSettings.preset($0))] }]); exit(0) }
 if args.first == "schema" {
@@ -255,15 +235,6 @@ do {
         case "set": request = ["command":"generate.set","key":try argument(2),"value":try value(argument(3))]
         case "seed": request = ["command":"generate.seed","value":try value(argument(2))]
         default: throw OndeError("unknown_command", "Use generate presets, play, set, seed, defaults, status, or render.")
-        }
-    case "endel":
-        switch try argument(1) {
-        case "list": request = ["command":"endel.sessions"]
-        case "play": request = ["command":"endel.play","id":try argument(2),"meditation":args.contains("--meditation")]
-        case "status", "pause", "resume", "stop", "web": request = ["command":"endel." + (try argument(1))]
-        case "seek": request = ["command":"endel.seek","seconds":try value(argument(2))]
-        case "browser": request = ["command":"endel.browser","id":try argument(2)]
-        default: throw OndeError("unknown_command", "Use endel list, play, status, pause, resume, stop, seek, browser, or web.")
         }
     case "volume": request = ["command":"volume","value":try value(argument(1))]
     case "sound":

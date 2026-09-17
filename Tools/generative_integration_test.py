@@ -64,7 +64,7 @@ try:
  with wave.open(str(a)) as w:check(w.getnframes()==88200 and w.getnchannels()==2 and w.getsampwidth()==2,'WAV PCM format and duration');pcmA=w.readframes(w.getnframes())
  with wave.open(str(b)) as w:pcmB=w.readframes(w.getnframes())
  check(pcmA==pcmB,'CLI deterministic PCM export')
- check(ra['peak']>.001 and ra['uses_endel_audio']==False,'Original non-silent export with no Endel input')
+ check(ra['peak']>.001 and ra['audio_origin']=='local_generation','Original non-silent export reports local origin')
  before=hashlib.sha256(a.read_bytes()).hexdigest();check(call('generate','render','focus',str(a),'--seconds','2',expected=2)['code']=='file_exists','Export refuses overwrite');check(before==hashlib.sha256(a.read_bytes()).hexdigest(),'Existing export untouched')
  check(a.with_suffix('.wav.json').exists(),'Export provenance sidecar')
  check(call('generate','render','focus',str(profile/'bad.wav'),'--seconds','0',expected=2)['code']=='invalid_duration','Reject invalid duration')

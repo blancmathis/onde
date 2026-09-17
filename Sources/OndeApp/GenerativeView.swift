@@ -46,7 +46,7 @@ struct GenerativeView: View {
                     VStack(alignment: .trailing, spacing: 7) {
                         Label(model.generatorActive && model.playing ? "Continuous rhythm" : "Ready to play", systemImage: "waveform.path")
                             .font(.system(size: 11)).foregroundStyle(Theme.accent(model.mode))
-                        Text("100% local · no Endel audio").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                        Text("100% local · original music").font(.system(size: 10)).foregroundStyle(Theme.muted)
                     }
                     PillButton(title: model.generatorActive && model.playing ? "Pause" : "Listen", symbol: model.generatorActive && model.playing ? "pause.fill" : "play.fill", primary: true) {
                         if model.generatorActive && model.playing { model.pause() } else { model.startGenerator(model.mode) }
@@ -116,7 +116,7 @@ struct GenerativeView: View {
                 PillButton(title: model.generatorExporting ? "Rendering…" : "Export", symbol: "square.and.arrow.up", primary: true, action: export).disabled(model.generatorExporting)
             }
         }
-        Text("Original compositions. No Endel audio. Selecting a profile does not change your chimes or master volume.")
+        Text("Original compositions. Selecting a profile does not change your chimes or master volume.")
             .font(.system(size: 10)).foregroundStyle(Theme.muted).lineSpacing(4)
             .onAppear { seedText = String(model.generatorConfiguration.seed) }
             .onChange(of: model.generatorConfiguration.seed) { _, value in seedText = String(value) }

@@ -15,7 +15,6 @@ struct RootView: View {
                             VStack(alignment: .leading, spacing: 25) {
                                 switch model.page {
                                 case "updates": UpdatesView(updates: model.updates)
-                                case "endel": EndelSessionsView()
                                 case "generative": GenerativeView()
                                 case "library": LibraryView()
                                 case "mixes": MixesView()
@@ -263,7 +262,7 @@ struct PlayerBar: View {
         HStack(spacing: 14) {
             Button { model.togglePlayback() } label: { Image(systemName: model.playing ? "pause.fill" : "play.fill").font(.system(size: 11)).foregroundStyle(Theme.sidebar).frame(width: 35, height: 35).background(Theme.accent(model.mode), in: Circle()) }.buttonStyle(.plain).accessibilityLabel(model.playing ? "Pause" : "Play")
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.endel.selected.map { "Endel · " + $0.title } ?? (model.activeSounds.isEmpty ? "Silence" : model.activeSounds.map(\.title).joined(separator: " + "))).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                Text(model.activeSounds.isEmpty ? "Silence" : model.activeSounds.map(\.title).joined(separator: " + ")).font(.system(size: 11, weight: .medium)).lineLimit(1)
                 HStack(spacing: 6) { Text(model.mode.title); Text("·"); Text(model.playing ? "Playing" : "Paused"); Text("·"); Text(clockText(model.elapsed)).monospacedDigit() }.font(.system(size: 9)).foregroundStyle(Theme.muted)
             }
             Spacer(minLength: 20)
@@ -494,7 +493,7 @@ struct CreditsView: View {
         Panel {
             VStack(alignment: .leading, spacing: 15) {
                 Text("A sound studio, not a medical claim.").font(.system(size: 21, design: .serif))
-                Text("Onde offers a customizable sound environment. Cognitive benefits and equivalence to Brain.fm or Endel have not been established. No proprietary audio or engine from either service is included.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
+                Text("Onde offers a customizable sound environment. These compositions have not been clinically validated. No universal improvement in concentration, relaxation or meditation is guaranteed.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
                 Text("Code: MIT. Original compositions and VSCO 2 CE instruments: CC0. Personal imports remain private and are never included in public builds.").font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
                 Link("MIT license", destination: URL(string: "https://opensource.org/license/mit")!).font(.system(size: 11)).tint(Theme.accent)
             }

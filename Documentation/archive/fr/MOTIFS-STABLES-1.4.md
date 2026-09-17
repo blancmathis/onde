@@ -1,6 +1,6 @@
 # Onde 1.4 — Motifs stables, basses profondes
 
-Living III répond aux retours sur les ruptures de rythme, le caractère aléatoire et le fond numérique de Living II. Les sons restent des compositions originales ; aucun sample ou moteur Endel n'est intégré.
+Living III répond aux retours sur les ruptures de rythme, le caractère aléatoire et le fond numérique de Living II. Les sons restent des compositions originales ; aucun sample ou moteur propriétaire n'est intégré.
 
 ## Six profils
 
@@ -53,6 +53,6 @@ Les volumes, les imports, les ambiances sauvegardées et les horaires de carillo
 
 Le délai du client IPC est de 30 secondes pour supporter une initialisation audio à froid. La lecture initiale d'une requête côté serveur conserve sa limite de 5 secondes. Le CLI ne rejoue pas automatiquement une mutation dont la réponse s'est perdue.
 
-Tests : `swift test -c release -j 2`, `python3 Tools/generative_integration_test.py` et `python3 Tools/profile_integration_test.py`. Les suites d'intégration utilisent un profil temporaire et le volume zéro. Les tests techniques ne prouvent ni l'agrément subjectif ni une efficacité cognitive équivalente à Endel.
+Tests : `swift test -c release -j 2`, `python3 Tools/generative_integration_test.py` et `python3 Tools/profile_integration_test.py`. Les suites d'intégration utilisent un profil temporaire et le volume zéro. Les tests techniques ne prouvent ni l'agrément subjectif ni une efficacité cognitive équivalente à un autre service.
 
 Code original MIT ; nouveaux rendus CC0-1.0. Les imports privés restent hors des archives publiques.

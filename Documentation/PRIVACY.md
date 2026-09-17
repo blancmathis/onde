@@ -6,7 +6,7 @@ Your settings, session history, daily activity ledger and imported audio are sto
 
 The optional update checker contacts GitHub's public release API. GitHub receives normal network information such as your IP address and the app's User-Agent. Personal history, preferences and imported audio are not sent. Automatic checks can be disabled in Updates. Downloading and installing an update are manual actions; downloads are checked for size and SHA-256 integrity.
 
-The optional Endel section opens official YouTube players or the provider's website. Those services have their own connectivity, cookies, sign-in, advertising and privacy policies. Streaming is separate from offline generation. Onde does not extract their audio or read existing browser credentials.
+Onde has no embedded online audio or video player. Local sound generation and personal audio imports do not contact streaming services.
 
 The CLI communicates over an owner-only UNIX socket, not a network port. Any process running as your macOS user may have the same access as that user; this is local user isolation, not an app-by-app security boundary. Do not run untrusted code as your user.
 

@@ -6,7 +6,7 @@ Onde offers different musical identities rather than one supposedly universal fo
 
 The render engine is not a player looping the twelve-minute preview files. A phrase planner develops authored material over eight-bar questions and answers, common-tone harmony, and slower 64-bar orchestration chapters. Recurrence is intentional: the system is not a claim of mathematically unique music forever. Its working voice counts and audio buffers are bounded.
 
-Acoustic notes are from a pinned, checksum-verified VSCO 2 Community Edition bank: 76 recordings, including soft piano. The arrangement is computed in real time. Electronic tones and vowel-like choir textures are generated locally. Sanctuary's voice layer is synthesized, not sampled from human singers or Endel.
+Acoustic notes are from a pinned, checksum-verified VSCO 2 Community Edition bank: 76 recordings, including soft piano. The arrangement is computed in real time. Electronic tones and vowel-like choir textures are generated locally. Sanctuary's voice layer is synthesized, not sampled from human singers or commercial recordings.
 
 ## Switching soundscapes
 
@@ -28,7 +28,7 @@ Selected research discussed in the historical design notes:
 
 These studies differ in populations, tasks, comparisons and conflicts of interest. Groove experiments measure musical pleasure/movement, not professional productivity. Vigilance-task benefits are not automatically reading-comprehension benefits. Modulation experiments do not establish a universal frequency rule. **Onde does not currently add a Brain.fm-like modulation protocol to these compositions.**
 
-No controlled listener study has established that any Onde piece outperforms silence, another preferred track, Endel or Brain.fm. Numerical checks for finite audio, headroom, beat timing and transition continuity are engineering tests, not cognitive-effect measurements. Prefer an enjoyable, comfortable volume and change or disable music that distracts you.
+No controlled listener study has established that any Onde piece outperforms silence, another preferred track or a commercial service. Numerical checks for finite audio, headroom, beat timing and transition continuity are engineering tests, not cognitive-effect measurements. Prefer an enjoyable, comfortable volume and change or disable music that distracts you.
 
 ## Sound sources and rights
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.3 — Independent local sound studio
+
+- Remove the unused external streaming player, catalog, UI routes and CLI commands.
+- Remove comparison-service branding from the interface, current and archived documentation, and release copy.
+- Report standalone export provenance as `audio_origin: local_generation`.
+- Preserve the music engine, gentle starts, scene transitions, daily activity and meditation settings.
+
 ## 1.9.2 — Gentle start
 
 - Start local music with an adjustable eight-second fade from silence; resume over up to two seconds.
@@ -11,7 +18,7 @@
 
 ## 1.9.1 — Simpler navigation
 
-- Remove the Endel streams entry from the sidebar.
+- Remove the external streams entry from the sidebar.
 
 ## 1.9.0 — English interface and correct daily activity
 

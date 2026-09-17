@@ -1,12 +1,12 @@
 # Onde 1.6 — recherche et réalisation d'un focus orchestral
 
-Recherche du 14 septembre 2026. Ce document distingue les sources consultées, les choix artistiques d'Onde et les limites des validations. Les éléments d'Endel ne sont ni extraits ni embarqués. Les nouvelles compositions utilisent une banque acoustique CC0 et le moteur de basse original d'Onde.
+Recherche du 14 septembre 2026. Ce document distingue les sources consultées, les choix artistiques d'Onde et les limites des validations. Les éléments des catalogues commerciaux ne sont ni extraits ni embarqués. Les nouvelles compositions utilisent une banque acoustique CC0 et le moteur de basse original d'Onde.
 
 ## 1. Ce qu'il fallait changer
 
 Les versions précédentes travaillaient surtout des oscillateurs, une nappe, des notes synthétiques et le grave. Modifier leur égalisation ne pouvait pas ajouter les articulations, les résonances et les interactions réellement présentes dans un ensemble enregistré. La nouvelle direction est un **orchestre de chambre hybride** : des prises d'instruments pour le timbre, une partition procédurale stable pour l'organisation, une basse électronique pour l'assise.
 
-« Proche d'Endel » n'est pas synonyme d'orchestre symphonique dramatique. Endel explique que ses équipes préparent les éléments et la logique sonore avant l'adaptation en direct [R1]. Deeper Focus est présenté comme une collaboration de techno minimale avec Plastikman, pas comme une œuvre orchestrale [R2]. Nous reprenons le principe d'éléments travaillés et coordonnés, sans prétendre avoir reconstruit leurs fichiers, leur moteur ni leur protocole d'efficacité.
+L'objectif est un orchestre hybride régulier et enveloppant, pas une bande originale dramatique. Les pupitres suivent une partition commune ; nous ne prétendons reproduire ni un catalogue commercial ni un protocole d'efficacité.
 
 L'objectif artistique propre à Onde est donc : une matière instrumentale riche, une pulsation qui ne change pas au hasard, des accords liés, et aucun crescendo spectaculaire imposé pour surprendre l'auditeur. Ajouter des instruments ne doit pas signifier ajouter des événements qui réclament tous l'attention.
 
@@ -90,13 +90,13 @@ Si la banque manque ou échoue à la vérification, un profil orchestral signale
 
 ## 7. Ce que la recherche permet de dire sur la concentration
 
-L'étude sur les ambiances personnalisées d'Endel utilise notamment un indicateur de concentration dérivé de l'EEG ; ses liens avec Arctop et Endel doivent être pris en compte [R16]. Elle ne valide pas toutes les musiques qui se rapprochent de leurs timbres.
+Une étude sur des ambiances personnalisées utilise un indicateur dérivé de l'EEG ; le financement par les fournisseurs concernés doit être pris en compte [R16]. Elle ne valide pas d'autres compositions partageant certains timbres.
 
 Des expériences sur les musiques préférées montrent que préférence, tâche et distraction doivent être distinguées [R17]. D'autres expériences ne trouvent pas une amélioration uniforme de l'attention avec de la musique [R18]. Il serait donc incorrect de traduire « plus d'orchestre », « plus de grave » ou « plus d'énergie » en un gain garanti de productivité.
 
 La sélection finale doit se faire sur deux axes séparés : plaisir et confort d'écoute, puis capacité à maintenir une tâche. Une comparaison utile emploie un niveau perçu proche et une tâche comparable. Les mesures de spectre, de niveaux ou de régularité du moteur ne remplacent pas cette évaluation.
 
-**Limites de cette réalisation :** une sélection légère de prises, pas une banque symphonique exhaustive ; pas d'articulations de vrai legato entre chaque paire de notes ; pas de test d'indiscernabilité avec Endel ; pas de validation clinique. La recherche sur leur logique publique n'est pas présentée comme une écoute analytique de toutes leurs intégrales YouTube.
+**Limites de cette réalisation :** une sélection légère de prises, pas une banque symphonique exhaustive ; pas d'articulations de vrai legato entre chaque paire de notes ; pas de test d'indiscernabilité avec un autre service ; pas de validation clinique. La recherche sur leur logique publique n'est pas présentée comme une écoute analytique de toutes leurs intégrales YouTube.
 
 ## 8. CLI et compilation
 
@@ -121,9 +121,7 @@ Les versions GitHub sont construites pour Apple Silicon et Intel. Le mécanisme 
 
 ## Sources primaires
 
-R1. Endel, technologie et éléments préconçus : https://endel.io/technology
 
-R2. Endel / Plastikman, Deeper Focus : https://deeper.endel.io/
 
 R3. Versilian Studios, VSCO 2 Community Edition et conditions CC0 : https://versilian-studios.com/vsco-community/
 

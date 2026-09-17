@@ -20,7 +20,6 @@ final class AppModel: ObservableObject {
     @Published var generatorExporting = false
     @Published var generatorExportStatus: String?
     let updates = UpdateManager()
-    let endel = EndelPlayer()
     private var ownsProfile = false
     private let audio = AudioEngine()
     private let server = CommandServer()
@@ -109,15 +108,6 @@ final class AppModel: ObservableObject {
         sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self, self.playing else { return }; self.pause(); self.notify("Session paused while your Mac sleeps.")
         }
-        endel.onState = { [weak self] state in
-            guard let self, self.endel.selected != nil else { return }
-            if state == "playing" && !self.playing {
-                self.resumeTiming(); self.applyAudio()
-            } else if ["paused", "error", "needs_click"].contains(state) && self.playing {
-                self.pauseTiming(); self.applyAudio()
-            }
-            self.event("endel_state", ["state": state])
-        }
         event("app_ready")
     }
     private func clamp(_ n: Double) -> Double { n.isFinite ? min(1, max(0, n)) : 0 }
@@ -159,7 +149,7 @@ final class AppModel: ObservableObject {
     func setTransitionSeconds(_ seconds: Double) { store.transitionSeconds = min(30, max(2, seconds)); audio.transitionSeconds = transitionSeconds; persist() }
     func applyAudio(freshStart: Bool = false) {
         audio.transitionSeconds = transitionSeconds;
-        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing && endel.selected == nil, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
+        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
         catch { fail(error) }
         updateSleepAssertion()
     }
@@ -182,7 +172,6 @@ final class AppModel: ObservableObject {
         }
     }
     func startMode(_ newMode: SessionMode, autostart: Bool = true, reset: Bool = false) {
-        if endel.selected != nil { endel.clear() }
         if newMode != mode {
             recordSession(); store.modeMixes[mode.rawValue] = store.layers
             store.mode = newMode; store.layers = store.modeMixes[newMode.rawValue] ?? defaults(for: newMode)
@@ -193,12 +182,11 @@ final class AppModel: ObservableObject {
         persist(); event("mode", ["mode": newMode.rawValue])
     }
     func play() {
-        if endel.selected != nil { endel.play(); return }
         guard !playing else { return }
         let fresh = clock.elapsed(at: now) == 0
         resumeTiming(); applyAudio(freshStart: fresh); event("play")
     }
-    func pause() { if endel.selected != nil { endel.pause() }; guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
+    func pause() { guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
     func togglePlayback() { playing ? pause() : play() }
     private func recordSession() {
         activity.pause(at: Date(), uptime: now)
@@ -209,7 +197,7 @@ final class AppModel: ObservableObject {
             if store.history.count > 200 { store.history = Array(store.history.prefix(200)) }
         }
     }
-    func stop() { endel.clear(); recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
+    func stop() { recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
     func resetTimer() {
         let wasRunning = playing
         recordSession() // A stopwatch reset must not erase already-earned daily time.
@@ -217,14 +205,14 @@ final class AppModel: ObservableObject {
         if wasRunning { activity.resume(at: Date(), uptime: now) }
         persist(); event("timer_reset")
     }
-    func shutdown() { guard ownsProfile, !shuttingDown else { return }; shuttingDown = true; endel.clear(); saveTask?.cancel(); recordSession(); persistNow(); audio.stopImmediately(); if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }; if hasAssertion { IOPMAssertionRelease(assertionID) } }
+    func shutdown() { guard ownsProfile, !shuttingDown else { return }; shuttingDown = true; saveTask?.cancel(); recordSession(); persistNow(); audio.stopImmediately(); if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }; if hasAssertion { IOPMAssertionRelease(assertionID) } }
     func toggle(_ sound: Sound) { setSound(sound.id, enabled: !(store.layers[sound.id]?.enabled ?? false)) }
     func setSound(_ id: String, enabled: Bool? = nil, volume: Double? = nil) {
         var layer = store.layers[id] ?? Layer()
         if let enabled { layer.enabled = enabled }; if let volume { layer.volume = clamp(volume) }
         store.layers[id] = layer; applyAudio(); persist()
     }
-    func setMaster(_ n: Double) { store.preferences.masterVolume = clamp(n); endel.setVolume(store.preferences.masterVolume); applyAudio(); persist() }
+    func setMaster(_ n: Double) { store.preferences.masterVolume = clamp(n); applyAudio(); persist() }
     func setChime(_ n: Double) { store.preferences.chimeVolume = clamp(n); persist() }
     func setMarkers(_ values: [Double]) throws {
         store.preferences.markers = try validMarkers(values)
@@ -272,7 +260,7 @@ final class AppModel: ObservableObject {
     }
 
     var generatorConfiguration: GenerativeSettings { store.generatorSettings?[mode.rawValue] ?? .preset(mode) }
-    var generatorActive: Bool { store.layers["living"]?.enabled == true && endel.selected == nil }
+    var generatorActive: Bool { store.layers["living"]?.enabled == true }
     var generatorSnapshot: [String: Any] {
         var state = audio.generatorStatus
         state["configuration"] = jsonObject(generatorConfiguration)
@@ -334,20 +322,13 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func startEndel(_ id: String, meditation: Bool = false) {
-        guard let session = EndelSession.find(id) else { return }
-        startMode(meditation ? .meditation : session.mode, autostart: false, reset: true)
-        endel.load(session, volume: store.preferences.masterVolume)
-        page = "endel"; applyAudio()
-        event("endel_selected", ["session": id, "offline": false])
-    }
     func showWindow() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Onde" })?.makeKeyAndOrderFront(nil)
     }
     func snapshot() -> [String: Any] {
         refreshActivity(checkpoint: false)
-        return ["playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "endel": endel.snapshot(), "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+        return ["playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),
          "preferences": jsonObject(store.preferences), "layers": jsonObject(store.layers),
@@ -418,7 +399,7 @@ final class AppModel: ObservableObject {
             case "history.clear": store.history = []; persist()
             case "events": result = events
             case "ui":
-                if let p = r["page"] as? String { guard ["studio","library","mixes","settings","cli","history","credits","endel","generative","updates"].contains(p) else { throw OndeError("invalid_page", "Unknown page.") }; page = p }
+                if let p = r["page"] as? String { guard ["studio","library","mixes","settings","cli","history","credits","generative","updates"].contains(p) else { throw OndeError("invalid_page", "Unknown page.") }; page = p }
                 if let q = r["quiet"] as? Bool { quietView = q }
                 if r["show"] as? Bool == true { showWindow() }
 
@@ -443,25 +424,6 @@ final class AppModel: ObservableObject {
                 let n = try number("value", max: 9_007_199_254_740_991); guard n.rounded(.down) == n else { throw OndeError("invalid_seed", "Seed must be an integer.") }
                 setGeneratorSeed(UInt64(n)); result = generatorSnapshot
             case "generate.defaults": resetGeneratorSettings(); result = generatorSnapshot
-            case "endel.sessions": result = EndelSession.all.map(\.descriptor)
-            case "endel.status": result = endel.snapshot()
-            case "endel.play":
-                let id = try string("id")
-                guard EndelSession.find(id) != nil else { throw OndeError("not_found", "Session Endel inconnue. Utilisez onde endel list.") }
-                startEndel(id, meditation: r["meditation"] as? Bool ?? false); result = endel.snapshot()
-            case "endel.pause": pause(); result = endel.snapshot()
-            case "endel.resume":
-                guard endel.selected != nil else { throw OndeError("not_selected", "Choose an Endel session.") }
-                endel.play(); result = endel.snapshot()
-            case "endel.stop": stop(); result = endel.snapshot()
-            case "endel.seek": try endel.seek(number("seconds", max: 86400)); result = endel.snapshot()
-            case "endel.browser":
-                let id = try string("id")
-                guard let session = EndelSession.find(id), let url = URL(string: session.url), NSWorkspace.shared.open(url) else { throw OndeError("open_failed", "Impossible d’ouvrir cette session officielle.") }
-                result = ["opened_url": session.url, "playback_confirmed": false, "timer_started": false]
-            case "endel.web":
-                guard NSWorkspace.shared.open(URL(string:"https://play.endel.io/")!) else { throw OndeError("open_failed", "Impossible d’ouvrir Endel.") }
-                result = ["opened_url":"https://play.endel.io/", "playback_confirmed":false]
             case "updates.status": result = updates.snapshot()
             case "updates.check": updates.check(); result = updates.snapshot()
             case "updates.download":

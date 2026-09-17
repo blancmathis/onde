@@ -1,10 +1,10 @@
 # Onde 1.2 — Paysages vivants
 
-Trois compositions procédurales originales : **Prisme (Focus)**, **Dérive (Relax)** et **Immersion (Méditation)**. Le moteur synthétise le son en direct, sans fichiers audio, sans serveur, sans modèle d'IA et sans extraits Endel. Les anciens sons et ambiances restent disponibles.
+Trois compositions procédurales originales : **Prisme (Focus)**, **Dérive (Relax)** et **Immersion (Méditation)**. Le moteur synthétise le son en direct, sans fichiers audio, sans serveur, sans modèle d'IA et sans extraits commerciaux. Les anciens sons et ambiances restent disponibles.
 
 ## Références étudiées
 
-L'analyse spectrale porte uniquement sur les trois extraits publics Kx5 × Endel déjà présents dans la bibliothèque privée, environ 25, 30 et 24 secondes. Elle ne représente pas le catalogue Endel complet. La FFT de 8192 points, les niveaux RMS et les mesures de stéréo ont guidé le timbre, sans transcription mélodique ni réemploi des fichiers.
+L'analyse spectrale porte uniquement sur les trois extraits publics de référence déjà présents dans la bibliothèque privée, environ 25, 30 et 24 secondes. Elle ne représente pas le catalogue de référence complet. La FFT de 8192 points, les niveaux RMS et les mesures de stéréo ont guidé le timbre, sans transcription mélodique ni réemploi des fichiers.
 
 | Mesure | Focus | Relax | Sleep |
 |---|---:|---:|---:|
@@ -16,7 +16,7 @@ L'analyse spectrale porte uniquement sur les trois extraits publics Kx5 × Endel
 
 Les fondus des extraits influencent leur dynamique et ne sont pas des cibles à copier pour une session continue. Une ressemblance spectrale n'est pas une preuve de confusion perceptive ni d'efficacité cognitive équivalente. Aucun essai clinique ni comparaison auditive à l'aveugle n'a été réalisé.
 
-Documentation officielle consultée pour le contexte : https://endel.io/technology et https://endel.io/science. Endel décrit des éléments et une logique préparés, adaptés en temps réel ; Onde utilise son propre moteur et ses propres compositions.
+Le moteur utilise ses propres règles musicales et ses propres compositions, adaptées en temps réel.
 
 ## Contrôle depuis l'app
 
@@ -68,4 +68,4 @@ L'export utilise le même moteur, nouvellement initialisé. WAV stéréo 44.1 kH
 
 `GenerativeEngine.swift` : AVAudioSourceNode / Core Audio. `GenerativeRenderer.swift` : export avec le même cœur. `GenerativeSettings.swift` : paramètres par mode. `GenerativeView.swift` : interface native. Le CLI partage le modèle et expose des réponses JSON.
 
-Code MIT ; nouveaux rendus CC0-1.0. Les sons Endel de référence restent privés et ne sont jamais incorporés au moteur ou aux archives publiques. Les compositions ne promettent pas les mêmes effets qu'Endel.
+Code MIT ; nouveaux rendus CC0-1.0. Les sons commerciaux de référence restent privés et ne sont jamais incorporés au moteur ou aux archives publiques. Les compositions ne promettent pas les mêmes effets que les références commerciales.

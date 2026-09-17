@@ -1,5 +1,5 @@
 /* Onde Living Engine 4 — stable pulse / clean low end — original procedural composition.
- * MIT code, original renders CC0. No recorded or learned Endel material.
+ * MIT code, original renders CC0. Locally generated music with an optional CC0 acoustic bank.
  * One render thread per instance. UI controls and meters use lock-free atomics.
  * All voices, wavetables and delay memory are allocated by create(), never render().
  */

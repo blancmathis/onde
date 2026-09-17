@@ -13,7 +13,7 @@ Les états sont Ouverture, Courant, Tissage, Respiration, Résonance et Suspensi
 Les timbres comprennent piano feutré synthétique, cordes pincées, résonances
 vitreuses, nappes modulées, frappes brossées, graves et air filtré. Des grains
 sont tirés exclusivement du propre signal original du moteur : aucun fichier,
-échantillon Endel ou modèle entraîné n'est utilisé. Les échos sont croisés et
+échantillon commercial ou modèle entraîné n'est utilisé. Les échos sont croisés et
 filtrés, la réverbération est diffuse, les oscillateurs des nappes varient
 indépendamment dans l'espace. La basse directe reste centrée.
 
@@ -24,17 +24,15 @@ Le retrait des détails est indépendant des carillons de méditation.
 
 ## Références et portée
 
-Les démos publiques Kx5 × Endel ont servi de références acoustiques. Focus et
+Des extraits de démonstration publics ont servi de références acoustiques. Focus et
 Relax ont été remesurés avec l'analyseur spectral local existant. Les fondus et
 la brièveté des extraits rendent leur dynamique peu représentative d'une longue
 session. Aucune mélodie ni portion de leur enregistrement n'est réutilisée.
 
-Documentation originale : https://endel.io/technology
-Démonstrations publiques : https://endel.io/streaming
 Les références vidéo Deep Focus, Smart Focus et Relax ont été retrouvées,
 mais l'accès audio YouTube échoue dans l'environnement de travail. Il ne faut
 pas présenter ce développement comme une analyse de ces bandes-son intégrales.
-Ni l'indiscernabilité d'Endel, ni des effets cognitifs équivalents ne sont établis.
+Ni l'indiscernabilité avec une référence commerciale, ni des effets cognitifs équivalents ne sont établis.
 
 ## Utilisation
 

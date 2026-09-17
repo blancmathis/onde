@@ -38,4 +38,4 @@ API references:
 - https://developer.apple.com/documentation/avfaudio/avaudioplayer/setvolume(_:fadeduration:)
 - https://developer.apple.com/documentation/avfaudio/avaudioplayer/devicecurrenttime
 
-The eight-second duration and curve are design choices, not a measured replica of Endel's proprietary implementation or a claim of cognitive efficacy.
+The eight-second duration and curve are design choices, not a measured replica of a third-party implementation or a claim of cognitive efficacy.

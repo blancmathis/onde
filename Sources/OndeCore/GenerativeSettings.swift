@@ -167,5 +167,5 @@ extension SessionMode {
     public var dspMode: Int32 { switch self { case .focus: return 0; case .relax: return 1; case .meditation: return 2 } }
 }
 extension Sound {
-    public static let living = Sound(id: "living", title: "Living soundscape", subtitle: "Steady motifs · generated live", symbol: "waveform.path.ecg", kind: "Generative", filename: "", author: "Onde · original procedural composition", license: "CC0-1.0", source: "Sources/OndeDSP/OndeDSP.c · no Endel audio used")
+    public static let living = Sound(id: "living", title: "Living soundscape", subtitle: "Steady motifs · generated live", symbol: "waveform.path.ecg", kind: "Generative", filename: "", author: "Onde · original procedural composition", license: "CC0-1.0", source: "Sources/OndeDSP/OndeDSP.c · original local generation")
 }
