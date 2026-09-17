@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1 — Simpler navigation
+
+- Remove the Endel streams entry from the sidebar.
+
 ## 1.9.0 — English interface and correct daily activity
 
 - Translate native UI, menu-bar player, profiles, accessibility labels, tooltips, alerts, streaming-player wrapper, update flow and CLI-facing errors into English.

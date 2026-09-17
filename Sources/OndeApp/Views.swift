@@ -62,7 +62,6 @@ struct Sidebar: View {
                 nav("studio", "Sound studio", "circle.hexagongrid")
                 nav("generative", "Living soundscapes", "waveform.path.ecg")
                 nav("library", "Library", "square.grid.2x2")
-                nav("endel", "Endel · streams", "play.rectangle")
                 nav("mixes", "Saved mixes", "slider.horizontal.3")
                 nav("history", "Session history", "clock")
             }.padding(.horizontal, 13).padding(.top, 26)
