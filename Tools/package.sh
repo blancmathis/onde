@@ -11,6 +11,7 @@ if [[ ! -f Assets/.synth-v1 ]]; then
   done
   touch Assets/.synth-v1
 fi
+python3 Tools/white_noise.py "$ROOT/Assets/white.wav"
 if [[ "${ONDE_SKIP_DOWNLOADS:-0}" != "1" ]]; then
   python3 Tools/fetch_music.py "$ROOT/Assets"
 fi
@@ -30,6 +31,7 @@ fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Sounds"
 cp "${ONDE_BIN_DIR:-.build/release}/Onde" "$APP/Contents/MacOS/Onde"
 cp "${ONDE_BIN_DIR:-.build/release}/ondectl" "$APP/Contents/MacOS/ondectl"
+cp Assets/white.wav "$APP/Contents/Resources/Sounds/"
 for name in aube piano orbit rain ocean brown pink chime; do cp "Assets/$name.m4a" "$APP/Contents/Resources/Sounds/"; done
 if [[ "${ONDE_ORIGINALS_ONLY:-0}" != "1" ]]; then
   for name in almost dreams; do f="Assets/$name.mp3"; [[ ! -f "$f" ]] || cp "$f" "$APP/Contents/Resources/Sounds/"; done

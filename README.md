@@ -1,12 +1,26 @@
 # Onde
 
-**A free, open-source macOS sound studio for focus, relaxation and meditation.**
+**Free, open-source music for focus, relaxation and meditation. Native to your Mac.**
 
-Generative music that keeps unfolding, an adjustable sound mixer, gentle meditation chimes, and a native JSON CLI for humans and agents. Runs locally. No account or subscription.
+Choose a mode, pick your music, and make it yours. Continuously generated audio, optional background noise and gentle meditation chimes, all on one screen. Runs locally, with a JSON CLI for humans and agents. No account or subscription.
 
 [**Download for macOS**](https://github.com/blancmathis/onde/releases/latest/download/Onde-macOS-universal.zip) · [Listen first](#listen-first) · [Documentation](Documentation/README.md) · [Releases](https://github.com/blancmathis/onde/releases) · [Report a bug](https://github.com/blancmathis/onde/issues/new?template=bug_report.yml)
 
 **Requires macOS 14 or later.** The download is universal: Apple Silicon and Intel. Community builds are ad-hoc signed and **not notarized by Apple**, so macOS may require explicit approval to open the app. Onde does not change Gatekeeper or your security settings.
+
+## A simpler way to listen
+
+**Focus, Relax, Meditation. One screen, no library to figure out.** Each mode
+shows its default music. Click a card to listen now; use its star to set what
+starts next time. Meditation uses the same music as Relax, with its own default,
+stopwatch and chimes.
+
+Music level, optional white/pink/brown noise or nature sounds, gentle starts and
+crossfades stay beside the picker. Detailed instrument controls, imports, saved
+mixes and other tools are available when needed, not in the way of listening.
+All existing user data and audio profiles are preserved.
+
+[Listening guide](Documentation/LISTENING.md)
 
 ## What it does
 
@@ -43,7 +57,7 @@ The music is **evidence-informed, not clinically validated**. These compositions
 
 1. Download and unzip `Onde-macOS-universal.zip` from the link above.
 2. Move `Onde.app` into `~/Applications` or `/Applications` and open it.
-3. Choose **Living soundscapes**, select a composition and adjust the sound at a comfortable volume.
+3. Choose **Focus**, **Relax** or **Meditation**, then select music and adjust the volume.
 
 The acoustic bank is bundled. No plugins, audio accounts, API keys or instrument downloads are required during a session. Closing the main window leaves the menu-bar player running. Pause before leaving; the daily total measures **running session time**, not verified human attention.
 

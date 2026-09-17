@@ -49,6 +49,10 @@ The app checks public GitHub releases and offers a SHA-256-verified download; in
 Local audio only: no embedded external streaming player.
 Fresh selection after pause starts only the chosen music; ordinary Play resumes.
 Gentle start: eight-second configurable fade-in, two-second resume, unchanged live scene crossfades and chimes.
+One listening screen with Focus, Relax and Meditation; independent default music for each.
+Relax and Meditation share the same musical catalog. Optional white/pink/brown noise,
+rain and ocean have independent levels. Backgrounds and music choices preserve timers.
+Detailed sound controls and personal tools open only when requested.
 English interface and corrected local-day accounting (including midnight, pause, reset and DST).
 Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
 Twelve-minute audition recordings use this exact engine and its defaults.

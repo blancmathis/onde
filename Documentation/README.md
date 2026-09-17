@@ -11,3 +11,5 @@ Current documentation is in English. Stable CLI IDs retain their original spelli
 - [Release changes](../CHANGELOG.md)
 
 Earlier French research and design notes are retained, unmodified, in [the historical archive](archive/fr/). They describe earlier versions and are not the current installation guide or a guarantee of cognitive benefit.
+
+[One-screen listening, mode defaults and background sound](LISTENING.md)

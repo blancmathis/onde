@@ -127,3 +127,13 @@ the same profile restarts it too. `solo` still preserves paused/running state;
 use `play` afterwards to hear it. Plain `play` without a selection resumes.
 A live profile change still crossfades. Music restarts do not reset daily activity
 or a same-mode stopwatch. Recorded layer status includes `position_seconds`.
+
+## Listening UI and defaults (1.10)
+
+See [the listening guide](LISTENING.md). `onde focus`, `onde relax` and
+`onde meditate` now start their explicit mode defaults. `music play ID --mode
+meditation` preserves meditation intent with a Relax-catalog piece. Setting a
+`music default MODE ID` never starts playback. `background KIND AMOUNT` selects
+one optional noise/nature layer and preserves music; `background off` removes
+only that layer. `music volume VALUE` is independent of the master volume.
+The original lower-level generate/mix/import commands remain available.

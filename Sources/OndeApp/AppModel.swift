@@ -11,7 +11,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var todaySeconds: Double = 0
     private var activity = ActivityTracker()
     private var lastActivitySave: Double = 0
-    @Published var page = "studio"
+    @Published var page = "studio" {
+        didSet { sheet = ListeningSheet.legacyPage(page) }
+    }
+    @Published var sheet: ListeningSheet?
     @Published var quietView = false
     @Published var errorMessage: String?
     @Published var toast: String?
@@ -73,7 +76,8 @@ final class AppModel: ObservableObject {
     init() {
         do {
             try OndePaths.prepare()
-            if FileManager.default.fileExists(atPath: OndePaths.state.path) {
+            let existingProfile = FileManager.default.fileExists(atPath: OndePaths.state.path)
+            if existingProfile {
                 do { store = try JSONDecoder().decode(StoredState.self, from: Data(contentsOf: OndePaths.state)) }
                 catch {
                     // Never silently overwrite a malformed profile.
@@ -99,7 +103,15 @@ final class AppModel: ObservableObject {
             store.activityLedger = activity.ledger
             lastActivitySave = now
             refreshActivity()
-            if migrated { persist() }
+            let listeningMigrated = store.listening == nil
+            if listeningMigrated { store.listening = .migrating(store) }
+            if !existingProfile {
+                let id = MusicCatalog.fallback(for: .focus)
+                store.generatorSettings = ["focus": SoundProfile.find(id)!.configuration]
+                store.layers = ["living": Layer(true, 0.65)]
+                store.listening?.backgrounds = Dictionary(uniqueKeysWithValues: SessionMode.allCases.map { ($0.rawValue, BackgroundMix()) })
+            }
+            if migrated || listeningMigrated { persist() }
         } catch let e as OndeError where e.code == "already_running" {
             NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == Bundle.main.bundleIdentifier && $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }?.activate()
             DispatchQueue.main.async { NSApp.terminate(nil) }
@@ -150,7 +162,7 @@ final class AppModel: ObservableObject {
     func setTransitionSeconds(_ seconds: Double) { store.transitionSeconds = min(30, max(2, seconds)); audio.transitionSeconds = transitionSeconds; persist() }
     func applyAudio(freshStart: Bool = false) {
         audio.transitionSeconds = transitionSeconds;
-        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
+        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing, fade: store.preferences.fadeSeconds, mode: musicRenderMode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
         catch { fail(error) }
         updateSleepAssertion()
     }
@@ -172,7 +184,7 @@ final class AppModel: ObservableObject {
         case .meditation: return ["aube": Layer(true, 0.32), "pink": Layer(true, 0.08)]
         }
     }
-    func startMode(_ newMode: SessionMode, autostart: Bool = true, reset: Bool = false) {
+    func startMode(_ newMode: SessionMode, autostart: Bool = true, reset: Bool = false, deferAudio: Bool = false) {
         playbackSelection.select(whilePlaying: playing)
         if newMode != mode {
             recordSession(); store.modeMixes[mode.rawValue] = store.layers
@@ -180,7 +192,9 @@ final class AppModel: ObservableObject {
             clock.stop(); elapsed = 0; sessionStarted = nil
         } else if reset { recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil }
         page = "studio"
-        if autostart { if playing { applyAudio() } else { play() } } else { applyAudio() }
+        if !deferAudio {
+            if autostart { if playing { applyAudio() } else { play() } } else { applyAudio() }
+        }
         persist(); event("mode", ["mode": newMode.rawValue])
     }
     func play() {
@@ -302,14 +316,14 @@ final class AppModel: ObservableObject {
         do {
             var config = generatorConfiguration; try config.set(key, value)
             var all = store.generatorSettings ?? [:]; all[mode.rawValue] = config; store.generatorSettings = all
-            applyAudio(); persist()
+            rememberCurrentMusic(); applyAudio(); persist()
         } catch { fail(error) }
     }
     func setGeneratorSeed(_ seed: UInt64) {
         var config = generatorConfiguration; config.seed = seed
         do { _ = try config.validated() } catch { fail(error); return }
         var all = store.generatorSettings ?? [:]; all[mode.rawValue] = config; store.generatorSettings = all
-        applyAudio(); persist(); event("generator_seed", ["seed": seed])
+        rememberCurrentMusic(); applyAudio(); persist(); event("generator_seed", ["seed": seed])
     }
     func resetGeneratorSettings() {
         playbackSelection.select(whilePlaying: playing)
@@ -319,7 +333,7 @@ final class AppModel: ObservableObject {
     func exportGenerator(seconds: Double, path: String) {
         guard !generatorExporting else { return }
         generatorExporting = true; generatorExportStatus = "Rendering your soundscape…"
-        let mode = self.mode, config = generatorConfiguration
+        let mode = self.musicRenderMode, config = generatorConfiguration
         DispatchQueue.global(qos: .utility).async { [weak self] in
             do {
                 let result = try GenerativeRenderer.render(mode: mode, configuration: config, seconds: seconds, path: path)
@@ -339,7 +353,7 @@ final class AppModel: ObservableObject {
     }
     func snapshot() -> [String: Any] {
         refreshActivity(checkpoint: false)
-        return ["playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+        return ["listening": listeningSnapshot, "playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),
          "preferences": jsonObject(store.preferences), "layers": jsonObject(store.layers),
@@ -357,11 +371,43 @@ final class AppModel: ObservableObject {
             func string(_ key: String) throws -> String {
                 guard let s = r[key] as? String, !s.isEmpty else { throw OndeError("invalid_argument", "Missing string: \(key).") }; return s
             }
+            if ["music.list", "music.select", "music.default"].contains(cmd) {
+                if let raw = r["mode"] {
+                    guard let name = raw as? String, SessionMode(rawValue: name) != nil else {
+                        throw OndeError("invalid_mode", "Use focus, relax or meditation.")
+                    }
+                }
+                if let raw = r["play"] {
+                    guard let n = raw as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() else {
+                        throw OndeError("invalid_argument", "play must be a JSON boolean.")
+                    }
+                }
+            }
             switch cmd {
+            case "music.list":
+                let selected = try r["mode"].map { value -> SessionMode in
+                    guard let name = value as? String, let mode = SessionMode(rawValue: name) else { throw OndeError("invalid_mode", "Use focus, relax or meditation.") }; return mode
+                } ?? mode
+                result = jsonObject(MusicCatalog.profiles(for: selected))
+            case "music.select":
+                let selected: SessionMode
+                if let name = r["mode"] as? String {
+                    guard let value = SessionMode(rawValue: name) else { throw OndeError("invalid_mode", "Use focus, relax or meditation.") }; selected = value
+                } else { selected = mode }
+                try selectMusic(string("id"), in: selected, autostart: r["play"] as? Bool ?? true)
+            case "music.defaults": result = listeningSnapshot["defaults"] ?? [:]
+            case "music.default":
+                guard let selected = SessionMode(rawValue: try string("mode")) else { throw OndeError("invalid_mode", "Use focus, relax or meditation.") }
+                try setDefaultMusic(string("id"), for: selected); result = listeningSnapshot
+            case "music.volume": setMusicLevel(try number("value"))
+            case "background":
+                guard let kind = BackgroundKind(rawValue: try string("kind")) else { throw OndeError("invalid_argument", "Use off, white, pink, brown, rain or ocean.") }
+                let volume = r["volume"] == nil ? nil : try number("volume")
+                try setBackground(kind, volume: volume)
             case "status": result = snapshot()
             case "mode":
                 guard let m = SessionMode(rawValue: try string("mode")) else { throw OndeError("invalid_mode", "Use focus, relax, or meditation.") }
-                startMode(m, autostart: r["play"] as? Bool ?? true, reset: r["reset"] as? Bool ?? false)
+                startDefaultMode(m, autostart: r["play"] as? Bool ?? true, reset: r["reset"] as? Bool ?? false)
             case "play": play()
             case "pause": pause()
             case "stop": stop()

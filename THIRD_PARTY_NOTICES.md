@@ -92,3 +92,9 @@ The existing VSCO 2 CE CC0 license applies; no proprietary piano plugin is used.
 Sanctuaire's ah/oh/oo-like sounds are original additive/formant synthesis in
 VowelChoir.c. No recording of a person, external vocal bank or trained model
 is used. This is a synthesized vowel ensemble, not an acoustic choir recording.
+
+## White-noise background (1.10)
+
+`Tools/white_noise.py` generates an original stationary stereo white-noise bed
+without external samples. Code MIT; generated recording CC0 1.0. It is optional
+and separate from pink/brown noise and the musical synthesis.

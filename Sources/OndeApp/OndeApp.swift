@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Window("Onde", id: "main") {
             RootView().environmentObject(model).environment(\.locale, Locale(identifier: "en")).onAppear { delegate.model = model }
         }
-        .defaultSize(width: 1220, height: 840)
+        .defaultSize(width: 1120, height: 820)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
@@ -29,12 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Button(model.playing ? "Pause" : "Play") { model.togglePlayback() }.keyboardShortcut("p", modifiers: .command)
                 Button("End session") { model.stop() }.keyboardShortcut(".", modifiers: .command)
                 Divider()
-                Button("Focus") { model.startMode(.focus) }.keyboardShortcut("1", modifiers: .command)
-                Button("Relax") { model.startMode(.relax) }.keyboardShortcut("2", modifiers: .command)
-                Button("Meditation") { model.startMode(.meditation) }.keyboardShortcut("3", modifiers: .command)
+                Button("Focus") { model.startDefaultMode(.focus) }.keyboardShortcut("1", modifiers: .command)
+                Button("Relax") { model.startDefaultMode(.relax) }.keyboardShortcut("2", modifiers: .command)
+                Button("Meditation") { model.startDefaultMode(.meditation) }.keyboardShortcut("3", modifiers: .command)
                 Divider()
                 Button("Quiet view") { model.quietView.toggle() }.keyboardShortcut("f", modifiers: [.command, .shift])
-                Button("Import Audio…") { model.importFromPanel() }.keyboardShortcut("o", modifiers: .command)
+                Button("Import Audio…") { model.sheet = .personal; model.importFromPanel() }.keyboardShortcut("o", modifiers: .command)
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { model.page = "settings"; model.showWindow() }.keyboardShortcut(",", modifiers: .command)
@@ -54,8 +54,9 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
             HStack { Text("onde").font(.system(size: 28, design: .serif)); Spacer(); Text(model.mode.title).font(.system(size: 11)).foregroundStyle(Theme.accent(model.mode)) }
+            Text(model.currentMusicTitle).font(.system(size: 12)).foregroundStyle(Theme.muted)
             Text(clockText(model.elapsed)).font(.system(size: 39, weight: .light, design: .rounded)).monospacedDigit()
-            HStack(spacing: 8) { ForEach(SessionMode.allCases) { mode in Button { model.startMode(mode) } label: { Text(mode.title).font(.system(size: 10)).padding(9).background(model.mode == mode ? Theme.raised : .clear, in: Capsule()) }.buttonStyle(.plain) } }
+            HStack(spacing: 8) { ForEach(SessionMode.allCases) { mode in Button { model.startDefaultMode(mode) } label: { Text(mode.title).font(.system(size: 10)).padding(9).background(model.mode == mode ? Theme.raised : .clear, in: Capsule()) }.buttonStyle(.plain) } }
             HStack { PillButton(title: model.playing ? "Pause" : "Play", symbol: model.playing ? "pause.fill" : "play.fill", primary: true) { model.togglePlayback() }; Spacer(); Button("End session") { model.stop() }.font(.system(size: 11)).buttonStyle(.plain) }
             Slider(value: Binding(get: { model.store.preferences.masterVolume }, set: model.setMaster), in: 0...1).tint(Theme.accent).accessibilityLabel("Master volume")
             Divider()

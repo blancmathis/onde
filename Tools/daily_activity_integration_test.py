@@ -53,7 +53,7 @@ try:
     (profile/'state.json').write_text(json.dumps(state([])))
     s = launch(); check(s['today_seconds']==0, 'Fresh ledger starts at zero')
     check(not s['daily_history_estimated'], 'New sessions do not claim estimated historical data')
-    prefs = s['preferences']; call('focus'); time.sleep(1.3); a = call('pause')
+    prefs = s['preferences']; call('focus'); call('silence'); time.sleep(1.3); a = call('pause')
     check(a['today_seconds']>=1, 'Running-session time is recorded even in intentional silence')
     check(abs(a['today_seconds']-a['elapsed_seconds'])<.15, 'Fresh session and daily time agree before midnight')
     time.sleep(1.2); b = call('status'); check(abs(b['today_seconds']-a['today_seconds'])<.02, 'Paused wall time is excluded')

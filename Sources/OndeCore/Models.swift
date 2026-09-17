@@ -56,6 +56,7 @@ public struct Sound: Codable, Identifiable, Equatable {
         Sound(id: "orbit", title: "Orbit", subtitle: "Slow, crystalline pulses", symbol: "circle.hexagongrid", kind: "Music", filename: "orbit.m4a"),
         Sound(id: "rain", title: "Gentle rain", subtitle: "Synthesized rain texture", symbol: "cloud.rain", kind: "Texture", filename: "rain.m4a"),
         Sound(id: "ocean", title: "Tide", subtitle: "Slow, synthesized waves", symbol: "water.waves", kind: "Texture", filename: "ocean.m4a"),
+        Sound(id: "white", title: "White noise", subtitle: "Even, continuous noise", symbol: "waveform", kind: "Noise", filename: "white.wav", source: "Generated locally by Tools/white_noise.py"),
         Sound(id: "brown", title: "Brown velvet", subtitle: "Brown noise · deep and steady", symbol: "waveform.path", kind: "Noise", filename: "brown.m4a"),
         Sound(id: "pink", title: "Pink air", subtitle: "Pink noise · soft and diffuse", symbol: "wind", kind: "Noise", filename: "pink.m4a"),
         Sound(id: "almost", title: "Almost in F", subtitle: "Kevin MacLeod · 32 min", symbol: "music.note", kind: "Composition", filename: "almost.mp3", author: "Kevin MacLeod (incompetech.com)", license: "CC BY 4.0", source: "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100394"),
@@ -108,6 +109,7 @@ public struct SessionRecord: Codable, Identifiable {
     public init(date: Date, mode: SessionMode, seconds: Double) { self.date = date; self.mode = mode; self.seconds = seconds }
 }
 public struct StoredState: Codable {
+    public var listening: ListeningPreferences?
     public var activityLedger: ActivityLedger?
     public var transitionSeconds: Double?
     public var generatorSettings: [String: GenerativeSettings]?

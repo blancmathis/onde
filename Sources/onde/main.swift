@@ -7,6 +7,17 @@ let help = """
 onde \(AppBuild.version) — native local controller for Onde.app
 Every successful response: {"ok":true,"result":...}. Errors: nonzero exit + JSON.
 
+LISTEN · ONE SCREEN
+  onde focus|relax|meditate --launch    Start the default music for this mode
+  onde music list focus                List Focus choices (also relax, meditation)
+  onde music play rive --mode meditation
+  onde music default focus ambre        Choose a default without starting playback
+  onde music default meditation immersion
+  onde music defaults                  Read all three independent defaults
+  onde music volume 0.65               Adjust music, not background or master level
+  onde background white 0.15           Optional background: off, white, pink, brown, rain, ocean
+  onde background off                  Remove background only; keep the music and timer
+
 PROFILES · ORIGINAL CONTINUOUS MUSIC
   onde generate profile atlas --launch   Acoustic orchestral focus
   onde generate set strings 0.8          Per-section control (also brass, woods, harp, ostinato, percussion)
@@ -18,7 +29,7 @@ PROFILES · ORIGINAL CONTINUOUS MUSIC
   onde generate set warmth 0.9         Rounder high frequencies, 0...1
   onde generate set stability 1        Long held harmonies; never random note skips
   onde generate render abysses /absolute/new.wav --minutes 10
-  Profiles: ancrage, abysses, courant, velours, rive, immersion.
+  Use onde music list or onde generate profiles for the full catalog.
   Extra controls: bass, tempo, stability, warmth, character.
 
 SESSION
@@ -95,6 +106,12 @@ The timer continues after its final meditation chime. Pauses don't count.
 Closing the main window keeps the app in the menu bar. Quitting stops audio.
 """
 let commandSpecs: [[String: Any]] = [
+    ["command":"music.list","arguments":["mode":"optional focus|relax|meditation"],"effect":"Catalog for this session. Relax and Meditation share the exact catalog"],
+    ["command":"music.select","arguments":["id":"music ID", "mode":"optional focus|relax|meditation; current mode by default", "play":"optional boolean, default true"],"effect":"Choose music for now, preserving default, background and same-mode timer; restart after pause, crossfade during playback"],
+    ["command":"music.defaults","arguments":[:],"effect":"Read the default music ID for each mode"],
+    ["command":"music.default","arguments":["mode":"focus|relax|meditation", "id":"compatible music ID"],"effect":"Set a mode default without switching music or starting playback"],
+    ["command":"music.volume","arguments":["value":"number 0...1"],"effect":"Set music layer level without changing master volume or background"],
+    ["command":"background","arguments":["kind":"off|white|pink|brown|rain|ocean", "volume":"optional number 0...1"],"effect":"One optional background layer, remembered per mode; never auto-starts playback"],
     ["command":"updates.status","arguments":[:],"effect":"Read current build, candidate, SHA256 and downloaded file"],
     ["command":"updates.check","arguments":[:],"effect":"Asynchronously check the fixed official GitHub repository"],
     ["command":"updates.download","arguments":[:],"effect":"Download and verify candidate into Downloads; no execution or installation"],
@@ -110,7 +127,7 @@ let commandSpecs: [[String: Any]] = [
     ["command":"generate.defaults","arguments":[:],"effect":"Restore current mode synthesis defaults, not chimes or layer volumes"],
 
     ["command":"status","arguments":[:],"effect":"Read session, preferences, layers and errors"],
-    ["command":"mode","arguments":["mode":"focus|relax|meditation","play":"boolean; default true","reset":"boolean; default false"],"effect":"Select mode; changing mode resets elapsed and restores that mode's mix"],
+    ["command":"mode","arguments":["mode":"focus|relax|meditation","play":"boolean; default true","reset":"boolean; default false"],"effect":"Start this mode's explicit default music and saved background; changing mode resets only the session stopwatch"],
     ["command":"play","arguments":[:],"effect":"Start or resume audio and stopwatch; idempotent"],
     ["command":"pause","arguments":[:],"effect":"Pause audio and stopwatch"],
     ["command":"stop","arguments":[:],"effect":"Record session, stop audio, reset stopwatch"],
@@ -149,6 +166,10 @@ var args = Array(CommandLine.arguments.dropFirst())
 let launch = args.contains("--launch")
 args.removeAll { $0 == "--launch" || $0 == "--json" }
 if args.isEmpty || args == ["help"] || args.contains("--help") { print(help); exit(0) }
+if args.count >= 2 && args[0] == "music" && args[1] == "list" {
+    guard args.count <= 3, let mode = SessionMode(rawValue: args.count == 3 ? args[2] : "focus") else { fail(OndeError("invalid_mode", "Use music list focus, relax or meditation.")) }
+    emit(["ok":true, "result":jsonObject(MusicCatalog.profiles(for: mode))]); exit(0)
+}
 if args == ["generate", "profiles"] { emit(["ok":true,"result":jsonObject(SoundProfile.all)]); exit(0) }
 if args == ["generate", "presets"] { emit(["ok":true,"result":SessionMode.allCases.map { ["mode":$0.rawValue,"title":GenerativeSettings.title($0),"configuration":jsonObject(GenerativeSettings.preset($0))] }]); exit(0) }
 if args.first == "schema" {
@@ -218,6 +239,19 @@ do {
     case "focus", "relax", "meditate", "meditation": request = ["command":"mode","mode":args[0] == "meditate" ? "meditation" : args[0],"reset":args.contains("--reset")]
     case "play", "pause", "stop", "status", "sounds", "silence", "mixes", "events", "quit": request = ["command":args[0]]
 
+    case "music":
+        switch try argument(1) {
+        case "play", "select":
+            request = ["command":"music.select", "id":try argument(2), "play":!args.contains("--no-play")]
+            if let mode = try option("--mode") { request["mode"] = mode }
+        case "default": request = ["command":"music.default", "mode":try argument(2), "id":try argument(3)]
+        case "defaults": request = ["command":"music.defaults"]
+        case "volume": request = ["command":"music.volume", "value":try value(argument(2))]
+        default: throw OndeError("unknown_command", "Use music list, play, default, defaults or volume.")
+        }
+    case "background":
+        request = ["command":"background", "kind":try argument(1)]
+        if args.count > 2 { request["volume"] = try value(argument(2)) }
     case "update":
         let action = try argument(1)
         guard ["check","status","download","automatic"].contains(action) else { throw OndeError("unknown_command", "Use update check, status, download, or automatic.") }

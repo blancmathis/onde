@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.10.0 — One screen for listening
+
+- Replace the sidebar, separate library and duplicated music pages with a single mode-aware music picker and a persistent player.
+- Independent explicit defaults for Focus, Relax and Meditation; star any compatible music without changing playback. Trying a piece never overwrites the default.
+- Relax and Meditation share the exact music catalog; selecting relaxing music during meditation preserves the mode, stopwatch and chimes.
+- Keep music volume, background type/amount and gentle start/crossfade durations next to the picker. Remember background and music levels per mode.
+- Add genuine original white noise alongside pink/brown noise, rain and ocean. Background changes neither restart music nor start a paused session.
+- Move tone controls, imports, saved mixes, history, CLI help and credits into optional sheets. Remember sound shaping per music and mode.
+- Preserve existing data, music, private imports, CLI IDs, gentle-start behavior and daily accounting. Keep legacy UI command routes as aliases.
+- Add catalog/default/migration unit tests and a muted native listening-flow integration suite.
+
 ## 1.9.4 — Fresh selection after pause
 
 - Retain audio-thread entrance measurements so fade-in regressions can be verified even if status polling is delayed.
