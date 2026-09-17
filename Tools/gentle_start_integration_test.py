@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Native playback/CLI regression; isolated profile, physically muted master volume."""
-import json, os, pathlib, shutil, subprocess, sys, tempfile, time
+import json, os, pathlib, shutil, socket, subprocess, sys, tempfile, time
 app=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else 'dist/Onde.app').resolve()
 cli=app/'Contents/MacOS/ondectl'; profile=pathlib.Path(tempfile.mkdtemp(prefix='onde-start-',dir='/tmp'))
 env=dict(os.environ,ONDE_HOME=str(profile)); checks=[]; process=None; log=(profile/'application.log').open('w')
@@ -21,8 +21,22 @@ def launch():
             if process.poll() is not None:raise AssertionError('App exited')
             time.sleep(.2)
     raise AssertionError('App not ready')
+def observed_status():
+    # Inspect the same private IPC protocol without spawning a CLI executable for
+    # each audio observation. Slow process launches can miss a two-second fade.
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
+        client.settimeout(5);client.connect(str(profile/'control.sock'))
+        client.sendall(b'{"command":"status"}\n');data=bytearray()
+        while b'\n' not in data:
+            block=client.recv(65536)
+            if not block:raise AssertionError('Incomplete status response')
+            data.extend(block)
+            if len(data)>2_000_000:raise AssertionError('Oversized status response')
+    response=json.loads(data.split(b'\n',1)[0])
+    if not response.get('ok'):raise AssertionError(response)
+    return response['result']
 def envelope(source):
-    s=call('status')
+    s=observed_status()
     if source=='living':
         g=s['generator'];e=g['entrance'];return s,e['gain'],e['progress'],e['seconds'],g['actual_gain']
     e=s['playback']['recorded_layers'][source]
@@ -30,7 +44,12 @@ def envelope(source):
 def observe(source,seconds,label,edit=False):
     values=[];edited=False;deadline=time.monotonic()+seconds+35
     while time.monotonic()<deadline:
-        s,g,p,d,out=envelope(source);values.append((g,p,d))
+        s,g,p,d,out=envelope(source)
+        # A paused envelope may be published until the render thread consumes
+        # Play. Wait for an actual entrance observation, never fabricate one.
+        if g==0 and p==1 and not values:
+            time.sleep(.02);continue
+        values.append((g,p,d))
         check(out==0 and s['preferences']['masterVolume']==0,label+' remains muted') if len(values)==1 else None
         if out!=0: raise AssertionError('Test must not emit audio')
         if .04<p<.55 and edit and not edited:

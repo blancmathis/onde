@@ -48,7 +48,17 @@ def assert_fresh(id,score,label):
     return s
 try:
     process=subprocess.Popen([str(app/'Contents/MacOS/Onde')],env=env,stdout=log,stderr=log)
-    s=until(lambda s:s['status']=='stopped')
+    # Process creation does not imply that the native IPC socket is ready.
+    startup_deadline=time.monotonic()+45
+    while time.monotonic()<startup_deadline:
+        if process.poll() is not None:raise AssertionError('App exited during launch')
+        response=subprocess.run([str(cli),'status'],env=env,capture_output=True,text=True,timeout=15)
+        if response.returncode==0:
+            s=json.loads(response.stdout)['result'];break
+        if response.returncode!=3:raise AssertionError(('Startup failed',response.stdout,response.stderr))
+        time.sleep(.2)
+    else:raise AssertionError('App socket did not become ready')
+    check(s['status']=='stopped','Launch does not autoplay')
     check(s['preferences']['startFadeSeconds']==8,'Existing eight-second default retained')
     call('volume','0');call('settings','preventSleep','false');call('settings','reducedMotion','true');call('settings','startFadeSeconds','4')
     prefs=call('status')['preferences']
