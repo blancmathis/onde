@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.2 — Gentle start
+
+- Start local music with an adjustable eight-second fade from silence; resume over up to two seconds.
+- Wait until the generated scene is ready before advancing the entrance envelope.
+- Apply the same gentle curve to recorded layers and personal imports without overriding volume changes.
+- Keep ongoing scene crossfades, meditation chimes, stored volumes and daily activity independent.
+- Expose `startFadeSeconds` in Settings and the CLI, with backward-compatible defaults.
+- Add regression tests for delayed preparation, pause/resume, new sessions, live gain changes and scene switching.
+
 ## 1.9.1 — Simpler navigation
 
 - Remove the Endel streams entry from the sidebar.

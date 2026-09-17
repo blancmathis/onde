@@ -25,6 +25,7 @@ final class GenerativeEngine {
     private(set) var loading = false
     private(set) var lastError: String?
     var transitionSeconds: Double = 10
+    private var entranceSeconds: Double = 8
 
     init() {
         collector = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
@@ -106,9 +107,11 @@ final class GenerativeEngine {
             }
         }
     }
-    func apply(mode: SessionMode, config: GenerativeSettings, gain: Double, playing: Bool) throws {
+    func apply(mode: SessionMode, config: GenerativeSettings, gain: Double, playing: Bool, startFadeSeconds: Double = 8, freshStart: Bool = false) throws {
         let identity = mode.rawValue + ":" + (config.profileID ?? "custom") + ":" + String(Int(config.composition))
         let previousName = self.config.displayName
+        let wasPlaying = wantedPlaying, hadMixer = mixer != nil
+        let sameScene = requestedIdentity == identity && targetCore != nil
         self.config = config; selectedMode = mode; wantedPlaying = playing
         wantedGain = Float(max(0, min(1, gain)))
         fadeTicket += 1; let ticket = fadeTicket
@@ -119,6 +122,10 @@ final class GenerativeEngine {
             prepareScene(mode: mode, configuration: config, identity: identity)
         } else if !loading, identity == requestedIdentity, let targetCore {
             applyControls(targetCore, mode: mode, configuration: config)
+        }
+        if !hadMixer || wasPlaying != playing {
+            entranceSeconds = playing ? ((freshStart || !sameScene) ? startFadeSeconds : min(2, startFadeSeconds)) : 0.20
+            onde_scene_mixer_playback(mixer, playing ? 1 : 0, max(0.015, entranceSeconds))
         }
         onde_scene_mixer_gain(mixer, playing ? wantedGain : 0)
         if playing {
@@ -147,8 +154,14 @@ final class GenerativeEngine {
     func snapshot() -> [String: Any] {
         let core = mixer.flatMap { onde_scene_mixer_visible($0) }
         let frames = core.map(onde_dsp_frames) ?? 0
+        let entranceGain: Float = mixer.map { onde_scene_mixer_entrance_gain($0) } ?? 0
+        let entranceProgress: Float = mixer.map { onde_scene_mixer_entrance_progress($0) } ?? 0
+        let entrance: [String: Any] = ["gain": entranceGain, "progress": entranceProgress,
+                                      "seconds": entranceSeconds, "curve": "squared_smoothstep",
+                                      "waiting_for_audio": wantedPlaying && core == nil]
         return ["engine": "onde-living-7", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
                 "loading": loading,
+                "entrance": entrance,
                 "transition": transitionSnapshot,
                 "phrase_index": core.map(onde_dsp_phrase) ?? 0,
                 "chapter_index": core.map(onde_dsp_chapter) ?? 0,

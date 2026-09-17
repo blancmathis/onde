@@ -373,7 +373,22 @@ struct SettingsView: View {
         Panel {
             VStack(alignment: .leading, spacing: 23) {
                 Text("Sound without interruptions").font(.system(size: 21, design: .serif))
-                HStack { VStack(alignment: .leading, spacing: 5) { Text("Layer fade duration").font(.system(size: 12, weight: .medium)); Text("For recorded layers when playback or levels change. Living soundscapes have a separate crossfade setting.").font(.system(size: 10)).foregroundStyle(Theme.muted) }; Spacer(); Slider(value: Binding(get: { model.store.preferences.fadeSeconds }, set: { model.store.preferences.fadeSeconds = $0; model.persist() }), in: 0...10, step: 0.5).frame(width: 180).tint(Theme.accent); Text(String(format: "%.1f s", model.store.preferences.fadeSeconds)).font(.system(size: 11, design: .monospaced)).frame(width: 45) }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Label("Gentle start", systemImage: "sun.horizon").font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        Text(model.store.preferences.startFadeSeconds == 0 ? "Off" : "\(Int(model.store.preferences.startFadeSeconds)) s")
+                            .font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.muted)
+                    }
+                    Text("Let music emerge from silence instead of arriving at full volume. Resuming fades in over up to two seconds. Your chosen volume and meditation chimes stay unchanged.")
+                        .font(.system(size: 10)).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
+                    Slider(value: Binding(get: { model.store.preferences.startFadeSeconds }, set: {
+                        _ = model.handle(["command": "settings", "key": "startFadeSeconds", "value": $0])
+                    }), in: 0...20, step: 1).tint(Theme.accent).accessibilityLabel("Gentle start duration in seconds")
+                    HStack { Text("Off"); Spacer(); Text("20 seconds") }.font(.system(size: 9)).foregroundStyle(Theme.muted)
+                }
+                Divider().overlay(Theme.line)
+                HStack { VStack(alignment: .leading, spacing: 5) { Text("Layer fade duration").font(.system(size: 12, weight: .medium)); Text("For level adjustments to recorded layers. Living soundscapes have a separate crossfade setting.").font(.system(size: 10)).foregroundStyle(Theme.muted) }; Spacer(); Slider(value: Binding(get: { model.store.preferences.fadeSeconds }, set: { model.store.preferences.fadeSeconds = $0; model.persist() }), in: 0...10, step: 0.5).frame(width: 180).tint(Theme.accent); Text(String(format: "%.1f s", model.store.preferences.fadeSeconds)).font(.system(size: 11, design: .monospaced)).frame(width: 45) }
                 Toggle(isOn: Binding(get: { model.store.preferences.preventSleep }, set: { _ = model.handle(["command":"settings","key":"preventSleep","value":$0]) })) { VStack(alignment: .leading, spacing: 5) { Text("Keep playing with the display off").font(.system(size: 12, weight: .medium)); Text("Prevents automatic system sleep. Closing the lid or putting your Mac to sleep pauses the session.").font(.system(size: 10)).foregroundStyle(Theme.muted) } }.toggleStyle(.switch).tint(Theme.accent)
                 Toggle(isOn: Binding(get: { model.store.preferences.reducedMotion }, set: { model.store.preferences.reducedMotion = $0; model.persist() })) { VStack(alignment: .leading, spacing: 5) { Text("Reduce motion").font(.system(size: 12, weight: .medium)); Text("Keep the visual soundscape still.").font(.system(size: 10)).foregroundStyle(Theme.muted) } }.toggleStyle(.switch).tint(Theme.accent)
             }

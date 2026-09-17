@@ -85,6 +85,7 @@ final class AppModel: ObservableObject {
             store.preferences.masterVolume = clamp(store.preferences.masterVolume)
             store.preferences.chimeVolume = clamp(store.preferences.chimeVolume)
             store.preferences.fadeSeconds = min(10, max(0, store.preferences.fadeSeconds))
+            store.preferences.startFadeSeconds = min(20, max(0, store.preferences.startFadeSeconds))
             store.preferences.markers = try validMarkers(store.preferences.markers)
             // Imported paths must be leaf filenames even when loading an edited state file.
             store.imported = store.imported.filter { $0.filename == URL(fileURLWithPath: $0.filename).lastPathComponent && !$0.filename.hasPrefix(".") }
@@ -156,9 +157,9 @@ final class AppModel: ObservableObject {
     }
     var transitionSeconds: Double { min(30, max(2, store.transitionSeconds ?? 10)) }
     func setTransitionSeconds(_ seconds: Double) { store.transitionSeconds = min(30, max(2, seconds)); audio.transitionSeconds = transitionSeconds; persist() }
-    func applyAudio() {
+    func applyAudio(freshStart: Bool = false) {
         audio.transitionSeconds = transitionSeconds;
-        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing && endel.selected == nil, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration) }
+        do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing && endel.selected == nil, fade: store.preferences.fadeSeconds, mode: mode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
         catch { fail(error) }
         updateSleepAssertion()
     }
@@ -194,7 +195,8 @@ final class AppModel: ObservableObject {
     func play() {
         if endel.selected != nil { endel.play(); return }
         guard !playing else { return }
-        resumeTiming(); applyAudio(); event("play")
+        let fresh = clock.elapsed(at: now) == 0
+        resumeTiming(); applyAudio(freshStart: fresh); event("play")
     }
     func pause() { if endel.selected != nil { endel.pause() }; guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
     func togglePlayback() { playing ? pause() : play() }
@@ -345,7 +347,7 @@ final class AppModel: ObservableObject {
     }
     func snapshot() -> [String: Any] {
         refreshActivity(checkpoint: false)
-        return ["today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "endel": endel.snapshot(), "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+        return ["playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "endel": endel.snapshot(), "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),
          "preferences": jsonObject(store.preferences), "layers": jsonObject(store.layers),
@@ -395,12 +397,13 @@ final class AppModel: ObservableObject {
                 switch key {
                 case "chimeVolume": setChime(try number("value"))
                 case "fadeSeconds": store.preferences.fadeSeconds = try number("value", max: 10)
+                case "startFadeSeconds": store.preferences.startFadeSeconds = try number("value", max: 20)
                 case "chimesEnabled", "preventSleep", "reducedMotion":
                     guard let value = r["value"] as? Bool else { throw OndeError("invalid_argument", "value must be boolean.") }
                     if key == "chimesEnabled" { store.preferences.chimesEnabled = value; clock.skipPastMarkers(store.preferences.markers, at: now) }
                     if key == "preventSleep" { store.preferences.preventSleep = value }
                     if key == "reducedMotion" { store.preferences.reducedMotion = value }
-                default: throw OndeError("invalid_key", "Keys: chimeVolume, fadeSeconds, chimesEnabled, preventSleep, reducedMotion.")
+                default: throw OndeError("invalid_key", "Keys: chimeVolume, fadeSeconds, startFadeSeconds, chimesEnabled, preventSleep, reducedMotion.")
                 }
                 updateSleepAssertion(); persist()
             case "mixes": result = jsonObject(store.mixes)

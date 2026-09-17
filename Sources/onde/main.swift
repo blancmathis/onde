@@ -43,6 +43,7 @@ MEDITATION
   onde timer reset
   onde chime preview
   onde settings <key> <value>
+  onde settings startFadeSeconds 8     Gentle entrance 0...20s; resume up to 2s
     keys: chimeVolume, fadeSeconds, chimesEnabled, preventSleep, reducedMotion
 
 MIXES & DATA
@@ -140,7 +141,7 @@ let commandSpecs: [[String: Any]] = [
     ["command":"timer.reset","arguments":[:],"effect":"Reset stopwatch and fired markers, preserve running/paused state"],
     ["command":"timer.markers","arguments":["seconds":"array of <=32 positive numbers <=86400; [] disables all"],"effect":"Set sorted absolute times. Past markers won't replay. No repeating alert after the last."],
     ["command":"chime.preview","arguments":[:],"effect":"Play the soft glass chime once"],
-    ["command":"settings","arguments":["key":"chimeVolume|fadeSeconds|chimesEnabled|preventSleep|reducedMotion","value":"number 0...1 for chimeVolume, number 0...10 for fadeSeconds; otherwise boolean"],"effect":"Persist preference"],
+    ["command":"settings","arguments":["key":"chimeVolume|fadeSeconds|startFadeSeconds|chimesEnabled|preventSleep|reducedMotion","value":"number 0...1 for chimeVolume, number 0...10 for fadeSeconds; 0...20 for startFadeSeconds; otherwise boolean"],"effect":"Persist preference"],
     ["command":"mixes","arguments":[:],"effect":"List saved mixes"],
     ["command":"mix.save","arguments":["name":"1...80 characters"],"effect":"Save current mode and layers"],
     ["command":"mix.load","arguments":["id":"mix id or name","play":"optional boolean, default true"],"effect":"Restore mix"],

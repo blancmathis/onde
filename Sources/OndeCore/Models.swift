@@ -71,11 +71,26 @@ public struct Preferences: Codable {
     public var masterVolume: Double = 0.55
     public var chimeVolume: Double = 0.25
     public var fadeSeconds: Double = 2.0
+    public var startFadeSeconds: Double = 8.0
     public var markers: [Double] = [600, 1200, 1800]
     public var chimesEnabled = true
     public var preventSleep = true
     public var reducedMotion = false
     public init() {}
+    private enum CodingKeys: String, CodingKey {
+        case masterVolume, chimeVolume, fadeSeconds, startFadeSeconds, markers, chimesEnabled, preventSleep, reducedMotion
+    }
+    public init(from decoder: Decoder) throws {
+        self.init(); let c = try decoder.container(keyedBy: CodingKeys.self)
+        masterVolume = try c.decodeIfPresent(Double.self, forKey: .masterVolume) ?? masterVolume
+        chimeVolume = try c.decodeIfPresent(Double.self, forKey: .chimeVolume) ?? chimeVolume
+        fadeSeconds = try c.decodeIfPresent(Double.self, forKey: .fadeSeconds) ?? fadeSeconds
+        startFadeSeconds = try c.decodeIfPresent(Double.self, forKey: .startFadeSeconds) ?? startFadeSeconds
+        markers = try c.decodeIfPresent([Double].self, forKey: .markers) ?? markers
+        chimesEnabled = try c.decodeIfPresent(Bool.self, forKey: .chimesEnabled) ?? chimesEnabled
+        preventSleep = try c.decodeIfPresent(Bool.self, forKey: .preventSleep) ?? preventSleep
+        reducedMotion = try c.decodeIfPresent(Bool.self, forKey: .reducedMotion) ?? reducedMotion
+    }
 }
 public struct Mix: Codable, Identifiable {
     public var generatorSettings: GenerativeSettings?

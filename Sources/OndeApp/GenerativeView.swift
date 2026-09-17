@@ -241,10 +241,12 @@ struct GenerativeContinuityPanel: View {
             let status = model.generatorSnapshot
             let transition = status["transition"] as? [String: Any] ?? [:]
             let state = transition["state"] as? String ?? "idle"
+            let entrance = status["entrance"] as? [String: Any] ?? [:]
+            let easingIn = model.playing && (entrance["progress"] as? Float ?? 1) < 1 && !((status["loading"] as? Bool) ?? false)
             Panel {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        Label(state == "idle" ? "Music that keeps unfolding" : state == "preparing" ? "Preparing soundscape…" : "Smooth transition", systemImage: "waveform.path")
+                        Label(state == "idle" ? (easingIn ? "Easing in…" : "Music that keeps unfolding") : state == "preparing" ? "Preparing soundscape…" : "Smooth transition", systemImage: "waveform.path")
                             .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accent)
                         Spacer()
                         Text("Crossfade: \(Int(model.transitionSeconds)) s").font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.muted)

@@ -13,6 +13,11 @@ struct OndeSceneMixer {
  _Atomic(Scene*) pending;_Atomic(Scene*) retired;_Atomic(Scene*) visible;
  _Atomic float targetGain,progress,peak,rms,actualGain;_Atomic int state;
  uint64_t wait,at,length;float master;
+ OndePlaybackEnvelope entrance;
+ _Atomic int transportTarget;
+ _Atomic float transportSeconds,entranceGain,entranceProgress;
+ _Atomic uint64_t transportSerial;
+ uint64_t appliedTransportSerial;
  float al[BLOCK],ar[BLOCK],bl[BLOCK],br[BLOCK];
 };
 static float smooth(float x){if(x<0)x=0;if(x>1)x=1;return x*x*(3-2*x);}
@@ -21,6 +26,10 @@ OndeSceneMixer*onde_scene_mixer_create(double rate){
  if(!isfinite(rate)||rate<8000||rate>96000)return NULL;
  OndeSceneMixer*m=calloc(1,sizeof(*m));if(!m)return NULL;m->rate=rate;
  atomic_init(&m->pending,NULL);atomic_init(&m->retired,NULL);atomic_init(&m->visible,NULL);
+ atomic_init(&m->transportTarget,1);atomic_init(&m->transportSeconds,0);
+ atomic_init(&m->entranceGain,0);atomic_init(&m->entranceProgress,0);
+ atomic_init(&m->transportSerial,0);m->appliedTransportSerial=UINT64_MAX;
+ onde_envelope_reset(&m->entrance,0);
  atomic_init(&m->targetGain,0);atomic_init(&m->actualGain,0);atomic_init(&m->progress,1);atomic_init(&m->peak,0);atomic_init(&m->rms,0);atomic_init(&m->state,0);
  if(!atomic_is_lock_free(&m->pending)||!atomic_is_lock_free(&m->targetGain)){free(m);return NULL;}return m;
 }
@@ -33,6 +42,14 @@ int onde_scene_mixer_submit(OndeSceneMixer*m,OndeDSP*core,double seconds){
  Scene*s=malloc(sizeof(*s));if(!s)return 0;s->core=core;s->seconds=seconds;
  dispose(atomic_exchange_explicit(&m->pending,s,memory_order_acq_rel));return 1;
 }
+void onde_scene_mixer_playback(OndeSceneMixer*m,int playing,double seconds){
+ if(!m||!isfinite(seconds)||seconds<0||seconds>30)return;
+ atomic_store_explicit(&m->transportSeconds,(float)seconds,memory_order_relaxed);
+ atomic_store_explicit(&m->transportTarget,playing!=0,memory_order_relaxed);
+ atomic_fetch_add_explicit(&m->transportSerial,1,memory_order_release);
+}
+float onde_scene_mixer_entrance_gain(const OndeSceneMixer*m){return m?atomic_load(&m->entranceGain):0;}
+float onde_scene_mixer_entrance_progress(const OndeSceneMixer*m){return m?atomic_load(&m->entranceProgress):0;}
 void onde_scene_mixer_gain(OndeSceneMixer*m,float gain){if(m&&isfinite(gain))atomic_store(&m->targetGain,fmaxf(0,fminf(1,gain)));}
 OndeDSP*onde_scene_mixer_visible(const OndeSceneMixer*m){Scene*s=m?atomic_load_explicit(&m->visible,memory_order_acquire):NULL;return s?s->core:NULL;}
 int onde_scene_mixer_state(const OndeSceneMixer*m){return m?atomic_load(&m->state):0;}
@@ -45,6 +62,11 @@ void onde_scene_mixer_render(OndeSceneMixer*m,float*l,float*r,uint32_t frames){
  if(!m||!l||!r)return;uint32_t written=0;float peak=0;double energy=0;
  const float up=1-expf(-1.f/(.65f*m->rate)),down=1-expf(-1.f/(.085f*m->rate));
  while(written<frames){
+  uint64_t serial=atomic_load_explicit(&m->transportSerial,memory_order_acquire);
+  if(serial!=m->appliedTransportSerial){
+   onde_envelope_to(&m->entrance,atomic_load(&m->transportTarget)?1.f:0.f,atomic_load(&m->transportSeconds));
+   m->appliedTransportSerial=serial;
+  }
   if(!m->next&&!atomic_load_explicit(&m->retired,memory_order_acquire)){
    Scene*p=atomic_exchange_explicit(&m->pending,NULL,memory_order_acq_rel);
    if(p){
@@ -68,7 +90,9 @@ void onde_scene_mixer_render(OndeSceneMixer*m,float*l,float*r,uint32_t frames){
   for(uint32_t i=0;i<n;i++){
    float a=m->active?m->al[i]:0,b=m->active?m->ar[i]:0;
    if(fading){float x=smooth((float)(m->at+i)/(float)m->length);float old=cosf(x*(float)PI*.5f),fresh=sinf(x*(float)PI*.5f);a=a*old+m->bl[i]*fresh;b=b*old+m->br[i]*fresh;}
-   m->master+=(target>m->master?up:down)*(target-m->master);a*=m->master;b*=m->master;
+   m->master+=(target>m->master?up:down)*(target-m->master);a*=m->master*m->entrance.value;b*=m->master*m->entrance.value;
+   /* Never consume a fade while an asynchronous scene is still loading. */
+   if(m->active || m->entrance.target==0)onde_envelope_step(&m->entrance,1./m->rate);
    /* Normally inactive guard, not a gain strategy. */
    if(fabsf(a)>.88f)a=copysignf(.88f+.07f*tanhf((fabsf(a)-.88f)/.07f),a);
    if(fabsf(b)>.88f)b=copysignf(.88f+.07f*tanhf((fabsf(b)-.88f)/.07f),b);
@@ -80,5 +104,6 @@ void onde_scene_mixer_render(OndeSceneMixer*m,float*l,float*r,uint32_t frames){
   }
   written+=n;
  }
- atomic_store(&m->actualGain,m->master);atomic_store(&m->peak,peak);atomic_store(&m->rms,frames?sqrtf(energy/(2.*frames)):0);
+ atomic_store(&m->entranceGain,m->entrance.value);atomic_store(&m->entranceProgress,onde_envelope_progress(&m->entrance));
+ atomic_store(&m->actualGain,m->master*m->entrance.value);atomic_store(&m->peak,peak);atomic_store(&m->rms,frames?sqrtf(energy/(2.*frames)):0);
 }

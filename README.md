@@ -12,6 +12,7 @@ Generative music that keeps unfolding, an adjustable sound mixer, gentle meditat
 
 - **Focus, Relax and Meditation:** choose a mode and keep the musical style you like.
 - **Long-form generation:** seven featured compositions, plus earlier soundscapes. Eight-bar phrases, gradual harmonic movement and slower orchestration changes, rather than a whole track on repeat.
+- **Gentle start:** music fades in over eight seconds, with a shorter resume fade. Adjustable in Settings or through `onde settings startFadeSeconds 8`; volume and chimes are preserved.
 - **Smooth scene changes:** prepare the next scene off the audio thread, then crossfade at a bar boundary. Adjustable from 2 to 30 seconds. This is a musical handover, not DJ beatmatching between different tempos.
 - **Make the sound your own:** control bass, impact, note density, warmth, instrument sections, piano and wordless vocals. Save mixes and import personal audio.
 - **Open-ended meditation:** a count-up stopwatch. By default, a gentle glass chime at 10, 20 and 30 minutes, then no more reminders. The session continues. Chime times and levels are configurable.

@@ -1,6 +1,7 @@
 #ifndef ONDE_DSP_H
 #define ONDE_DSP_H
 #include <stdint.h>
+#include "PlaybackEnvelope.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

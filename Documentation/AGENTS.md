@@ -113,3 +113,7 @@ Import copies audio into the private local library. Never add a user's imports o
 ## Testing and source development
 
 Use temporary `ONDE_HOME` directories for integration tests. They disable automatic update checking in test instances. Keep output muted. All protocol IDs remain ASCII and stable; English labels are presentation, not a data migration. Do not change musical parameters as a side effect of translation or accounting fixes.
+
+## Gentle start (1.9.2)
+
+`onde settings startFadeSeconds N` sets the next playback entrance (0–20 seconds, default 8). Resume uses `min(2,N)` seconds. This is a preference, not a generative DSP parameter. Read `status.preferences.startFadeSeconds`, `generator.entrance` and `playback.recorded_layers` for configuration/progress. Parameter edits do not restart the envelope; profile changes use the existing crossfade. See [Gentle start](GENTLE-START.md).

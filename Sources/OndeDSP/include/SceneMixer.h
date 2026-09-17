@@ -8,6 +8,11 @@ OndeSceneMixer *onde_scene_mixer_create(double rate);
 void onde_scene_mixer_destroy(OndeSceneMixer *m);
 int onde_scene_mixer_submit(OndeSceneMixer *m,OndeDSP *core,double seconds);
 void onde_scene_mixer_collect(OndeSceneMixer *m);
+/* Arm a transport envelope. The rising clock waits for an active scene.
+   Call on start/pause/resume, NEVER on routine volume/parameter changes. */
+void onde_scene_mixer_playback(OndeSceneMixer *m,int playing,double seconds);
+float onde_scene_mixer_entrance_gain(const OndeSceneMixer *m);
+float onde_scene_mixer_entrance_progress(const OndeSceneMixer *m);
 void onde_scene_mixer_gain(OndeSceneMixer *m,float gain);
 void onde_scene_mixer_render(OndeSceneMixer *m,float *left,float *right,uint32_t frames);
 /* Control thread only. Pointers stay alive until collect/submit/destroy. */

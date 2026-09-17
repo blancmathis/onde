@@ -46,6 +46,7 @@ Personal settings, saved soundscapes and imports are stored separately and are p
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
+Gentle start: eight-second configurable fade-in, two-second resume, unchanged scene crossfades and chimes.
 English interface and corrected local-day accounting (including midnight, pause, reset and DST).
 Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
 Twelve-minute audition recordings use this exact engine and its defaults.
