@@ -18,7 +18,7 @@ final class FocusCompositionTests: XCTestCase {
     }
     func testScoreMustBeAValidInteger() throws {
         var c = GenerativeSettings()
-        for x in [-1.0, 0.5, 7.1, 8, Double.nan, Double.infinity] { XCTAssertThrowsError(try c.set("composition", x)) }
+        for x in [-1.0, 0.5, 7.1, 13, Double.nan, Double.infinity] { XCTAssertThrowsError(try c.set("composition", x)) }
         try c.set("composition", 4); XCTAssertEqual(c.composition, 4)
         for k in ["vocals", "piano"] { XCTAssertThrowsError(try c.set(k, 1.01)); try c.set(k, 0.5) }
     }

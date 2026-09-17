@@ -26,7 +26,7 @@ final class LivingV3Tests: XCTestCase {
         XCTAssertEqual(onde_dsp_bpm(p), 72, accuracy: 0.0001)
     }
     func testSeventeenProfilesAndDifferentFocusChoices() throws {
-        XCTAssertEqual(SoundProfile.all.count, 20)
+        XCTAssertEqual(SoundProfile.all.count, 25)
         XCTAssertEqual(SoundProfile.all.filter { $0.mode == .focus }.count, 17)
         XCTAssertEqual(SoundProfile.find("abysses")?.configuration.tempo, 64)
         XCTAssertGreaterThan(SoundProfile.find("abysses")!.configuration.bass, SoundProfile.find("courant")!.configuration.bass)

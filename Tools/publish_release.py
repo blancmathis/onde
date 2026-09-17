@@ -51,7 +51,7 @@ def main():
     tag=info['TAG'];assert re.fullmatch(r'build-[0-9]{14}-[0-9a-f]{8}',tag) and tag.endswith(commit[:8])
     def current():return api(f'repos/{repo}/commits/main')['sha']==commit
     if not current():print('Superseded build: not published.');return
-    names=['Onde-macOS-universal.zip','Onde-macOS-universal.zip.sha256',*[f'{p}-12min.m4a' for p in ['sillage','filigrane','confluence','sanctuaire','ambre','canopee','meridien']],'transition-ambre-sanctuaire.m4a']
+    names=['Onde-macOS-universal.zip','Onde-macOS-universal.zip.sha256',*[f'{p}-12min.m4a' for p in ['sillage','filigrane','confluence','sanctuaire','ambre','canopee','meridien','lagoon','stillwater','hearth','reverie','driftwood']],'transition-ambre-sanctuaire.m4a']
     local={name:root/'dist'/name for name in names}
     metadata={name:(p.stat().st_size,'sha256:'+hashlib.sha256(p.read_bytes()).hexdigest()) for name,p in local.items()}
     gh('release','create',tag,'-R',repo,'--target',commit,'--draft','--title',f'Onde {info["VERSION"]} · {info["ONDE_BUILD"]}','--notes-file','dist/release-notes.md',timeout=90)

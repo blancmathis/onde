@@ -23,27 +23,31 @@ struct SoundControlsView: View {
         Panel {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 26), GridItem(.flexible(), spacing: 26)], spacing: 22) {
                 GeneratorControl(key: "bass", title: "Bass", detail: "Weight and depth of the low end")
-                GeneratorControl(key: "density", title: "Notes", detail: "From a minimal bed to a fuller pattern")
+                GeneratorControl(key: "density", title: model.generatorConfiguration.composition >= 8 ? "Note presence" : "Notes", detail: "From a minimal bed to a fuller pattern")
                 GeneratorControl(key: "warmth", title: "Warmth", detail: "Soften bright edges")
                 GeneratorControl(key: "space", title: "Space", detail: "Intimate room or spacious reverb")
-                if model.generatorConfiguration.vocals > 0 || model.generatorConfiguration.composition == 4 {
+                if model.generatorConfiguration.vocals > 0 || [4, 11].contains(Int(model.generatorConfiguration.composition)) {
                     GeneratorControl(key: "vocals", title: "Wordless voices", detail: "At zero, the accompaniment continues")
                 }
-                if model.generatorConfiguration.piano > 0 || [2, 5].contains(Int(model.generatorConfiguration.composition)) {
+                if model.generatorConfiguration.piano > 0 || [2, 5, 9].contains(Int(model.generatorConfiguration.composition)) {
                     GeneratorControl(key: "piano", title: "Acoustic piano", detail: "The recorded piano part")
                 }
             }
         }
-        DisclosureGroup("Rhythm & detail") {
+        DisclosureGroup(model.generatorConfiguration.composition >= 8 ? "Tone & phrasing" : "Rhythm & detail") {
             Panel {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 26), GridItem(.flexible(), spacing: 26)], spacing: 22) {
                     TempoControl()
+                    if model.generatorConfiguration.composition < 8 {
                     GeneratorControl(key: "pulse", title: "Pulse", detail: "The underlying rhythmic motion")
                     GeneratorControl(key: "punch", title: "Impact", detail: "Definition of low-end attacks")
                     GeneratorControl(key: "drive", title: "Drive", detail: "The bass line's forward motion")
+                    }
                     GeneratorControl(key: "brightness", title: "Brightness", detail: "Harmonic presence")
                     GeneratorControl(key: "movement", title: "Movement", detail: "Slow changes in timbre and stereo")
+                    if model.generatorConfiguration.composition < 8 {
                     GeneratorControl(key: "texture", title: "Harmonic texture", detail: "Musical texture, not background noise")
+                    }
                     GeneratorControl(key: "evolution", title: "Evolution", detail: "Develop phrases without changing tempo")
                     if model.generatorConfiguration.composition == 0 {
                         GeneratorControl(key: "stability", title: "Harmonic stability", detail: "Longer-held chords")
@@ -57,11 +61,21 @@ struct SoundControlsView: View {
                 Panel {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 26), GridItem(.flexible(), spacing: 26)], spacing: 22) {
                         GeneratorControl(key: "strings", title: "Sustained strings", detail: "Violins, violas and cellos")
+                        if model.generatorConfiguration.composition < 8 || model.generatorConfiguration.composition == 10 {
                         GeneratorControl(key: "brass", title: "Horns", detail: "Warm harmonic depth")
+                        }
+                        if model.generatorConfiguration.composition < 8 || model.generatorConfiguration.composition == 10 {
                         GeneratorControl(key: "woods", title: "Woodwinds", detail: "Bassoon and clarinet")
+                        }
+                        if model.generatorConfiguration.composition < 8 || [11, 12].contains(Int(model.generatorConfiguration.composition)) {
                         GeneratorControl(key: "harp", title: "Harp", detail: "Articulated notes")
+                        }
+                        if model.generatorConfiguration.composition < 8 {
                         GeneratorControl(key: "ostinato", title: "Rhythmic strings", detail: "The recurring string motif")
+                        }
+                        if model.generatorConfiguration.composition < 8 {
                         GeneratorControl(key: "percussion", title: "Low percussion", detail: "Timpani and concert bass drum")
+                        }
                         GeneratorControl(key: "orchestra", title: "Orchestra", detail: "Overall acoustic ensemble level")
                     }
                 }.padding(.top, 12)

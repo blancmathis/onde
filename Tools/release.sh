@@ -27,7 +27,7 @@ REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'imp
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
 # Audition files use the same just-built DSP and documented profile settings.
-for profile in ambre canopee meridien sillage filigrane confluence sanctuaire; do
+for profile in ambre canopee meridien sillage filigrane confluence sanctuaire lagoon stillwater hearth reverie driftwood; do
   .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-12min.wav" --minutes 12
   /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-12min.wav" "dist/$profile-12min.m4a"
 done
@@ -54,6 +54,10 @@ Relax and Meditation share the same musical catalog. Optional white/pink/brown n
 rain and ocean have independent levels. Backgrounds and music choices preserve timers.
 Detailed sound controls and personal tools open only when requested.
 English interface and corrected local-day accounting (including midnight, pause, reset and DST).
+Five new Relax/Meditation pieces: Lagoon, Stillwater, Hearth, Reverie and Driftwood.
+Separate authored scores, warm continuous synthesis, soft acoustic piano, legato chamber ensemble,
+wordless synthesized choir and wooden resonators with harp. No new private or proprietary samples.
+Existing default selections and all Focus scores are preserved.
 Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
 Twelve-minute audition recordings use this exact engine and its defaults.
 Filigree uses recorded soft piano; Sanctuary uses original synthesized nonverbal vowels, not recordings of singers.

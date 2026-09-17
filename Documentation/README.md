@@ -13,3 +13,7 @@ Current documentation is in English. Stable CLI IDs retain their original spelli
 Earlier French research and design notes are retained, unmodified, in [the historical archive](archive/fr/). They describe earlier versions and are not the current installation guide or a guarantee of cognitive benefit.
 
 [One-screen listening, mode defaults and background sound](LISTENING.md)
+
+## New relaxation collection
+
+[Five relaxation worlds: evidence, scores and limits](RELAXATION-1.11.md).

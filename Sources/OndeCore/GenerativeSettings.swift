@@ -80,7 +80,7 @@ public struct GenerativeSettings: Codable, Equatable {
     public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, composition, vocals, piano] }
     public static func dspIndex(_ index: Int) -> Int32 { Int32(index < 8 ? index : index + 1) }
     public func value(_ key: String) -> Double { Self.keys.firstIndex(of: key).map { values[$0] } ?? 0 }
-    public static func range(_ key: String) -> ClosedRange<Double> { key == "composition" ? 0...7 : key == "tempo" ? 40...120 : key == "settleMinutes" ? 0...120 : 0...1 }
+    public static func range(_ key: String) -> ClosedRange<Double> { key == "composition" ? 0...12 : key == "tempo" ? 40...120 : key == "settleMinutes" ? 0...120 : 0...1 }
     public mutating func set(_ key: String, _ value: Double) throws {
         guard Self.keys.contains(key) else { throw OndeError("invalid_key", "Generator keys: \(Self.keys.joined(separator: ", ")).") }
         let range = Self.range(key)
@@ -146,7 +146,7 @@ public struct SoundProfile: Identifiable, Codable {
         c.space=0.66;c.movement=0.10;c.pulse=0.28;c.evolution=0.12;c.stability=0.98;c.texture=0;c.character=0.18
         return .init(id:id,title:title,mode:.focus,subtitle:"ORCHESTRA · \(Int(tempo)) BPM",description:description,configuration:c)
     }
-    public static let all: [Self] = FocusCompositions.profiles + [
+    public static let all: [Self] = FocusCompositions.profiles + RelaxCompositions.profiles + [
         ensemble("atlas","Atlas","A broad ensemble of low strings, horns and a deep pulse. One shared score, without breaks.",88,6040,0.84,0.68,0.30,0.23,0.57,0.47,0.83,0.35,0.34,0.42),
         ensemble("ostinato","Ostinato","Articulated cellos, answering strings and timpani. The most driving of the four ensembles.",100,6041,0.56,0.34,0.18,0.35,0.98,0.70,0.85,0.58,0.50,0.53),
         ensemble("aurore","Aurora","Luminous strings, harp and warm woodwinds. A steady, airier flow.",84,6042,0.68,0.15,0.66,0.72,0.36,0.18,0.65,0.21,0.17,0.39),

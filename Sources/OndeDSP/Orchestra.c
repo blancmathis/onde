@@ -29,7 +29,7 @@ int orc_count(const Orchestra *o){return o?o->count:0;}
 int orc_families(const Orchestra *o){return o?o->families:0;}
 int orc_voices(const Orchestra *o){int n=0;if(o)for(int i=0;i<MAX_VOICES;i++)n+=o->voices[i].active;return n;}
 uint64_t orc_events(const Orchestra *o){return o?o->events:0;}
-static int make_note(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed,int held){
+static int make_note(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed,int held,double fade){
  if(!o||inst<0||inst>11||midi<0||midi>127||velocity<=.00001f||!isfinite(velocity)||!isfinite(seconds)||seconds<=0)return 0;
  int root=-1,distance=129;for(int i=0;i<o->count;i++){const Sample *s=&o->samples[i];if(s->instrument==inst&&abs(s->root-midi)<distance){root=s->root;distance=abs(root-midi);}}
  if(root<0||distance>12)return 0;
@@ -43,14 +43,16 @@ static int make_note(Orchestra *o,int inst,int midi,float velocity,float pan,dou
  if(held && sustain && sample->n>sample->rate*1.2){v->held=1;v->life=(uint64_t)(seconds*o->sr);v->loopStart=sample->n*.26;v->loopEnd=sample->n*.80;v->loopFade=fmin(sample->rate*.23,(v->loopEnd-v->loopStart)*.20);}
  v->attack=(v->held?1.2:sustain?.46:inst==8?.010:inst==9?.012:.007)*o->sr;
  v->release=(v->held?1.6:sustain?.95:inst==8?.30:inst==9?.30:.065)*o->sr;
+ if(fade>0){v->attack=fade*o->sr;v->release=fade*o->sr;}
  v->attack=fminf(v->attack,v->life*.25f);v->release=fminf(v->release,v->life*.35f);
  static const float variations[4]={1,.975f,.988f,.965f};v->gain=clip(velocity,0,2)*variations[(position+seed)%4];
  pan=clip(pan,.06,.94);v->panL=sqrtf(1-pan)*1.41421356f;v->panR=sqrtf(pan)*1.41421356f;
  v->group=inst==11?6:inst<3?0:inst==3||inst==4?4:inst==5?1:inst<8?2:inst==8?3:5;
  v->active=1;o->events++;return 1;
 }
-int orc_note(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed){return make_note(o,inst,midi,velocity,pan,seconds,seed,0);}
-int orc_note_held(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed){return make_note(o,inst,midi,velocity,pan,seconds,seed,1);}
+int orc_note(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed){return make_note(o,inst,midi,velocity,pan,seconds,seed,0,0);}
+int orc_note_held(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,uint64_t seed){return make_note(o,inst,midi,velocity,pan,seconds,seed,1,0);}
+int orc_note_legato(Orchestra *o,int inst,int midi,float velocity,float pan,double seconds,double fade,uint64_t seed){if(!isfinite(fade)||fade<.02||fade>30)return 0;return make_note(o,inst,midi,velocity,pan,seconds,seed,1,fade);}
 static float cubic(const float *p,uint32_t n,double pos){
  int i=(int)pos;float t=(float)(pos-i);float a=p[i>0?i-1:0],b=p[i],c=p[i+1<(int)n?i+1:n-1],d=p[i+2<(int)n?i+2:n-1];
  return b+.5f*t*(c-a+t*(2*a-5*b+4*c-d+t*(3*(b-c)+d-a)));

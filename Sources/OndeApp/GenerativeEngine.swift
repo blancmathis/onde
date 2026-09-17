@@ -172,7 +172,7 @@ final class GenerativeEngine {
                 "chapter_index": core.map(onde_dsp_chapter) ?? 0,
                 "phrase_fingerprint": String(core.map(onde_dsp_plan_hash) ?? 0),
                 "theme_variant": core.map(onde_dsp_variant) ?? 0,
-                "phrase_bars": 8, "chapter_bars": 64,
+                "phrase_bars": 8, "chapter_bars": config.composition >= 8 ? 96 : 64,
                 "composition_id": core.map(onde_dsp_composition) ?? 0,
                 "score_events": core.map(onde_dsp_signature_events) ?? 0,
                 "choir_voices": core.map(onde_dsp_choir_voices) ?? 0,

@@ -3,7 +3,7 @@ import XCTest
 
 final class ListeningTests: XCTestCase {
     func testMeditationAndRelaxShareExactCatalog() {
-        XCTAssertEqual(MusicCatalog.profiles(for: .relax).map(\.id), ["velours", "rive", "immersion"])
+        XCTAssertEqual(MusicCatalog.profiles(for: .relax).map(\.id), RelaxCompositions.ids + ["velours", "rive", "immersion"])
         XCTAssertEqual(MusicCatalog.profiles(for: .meditation).map(\.id), MusicCatalog.profiles(for: .relax).map(\.id))
         XCTAssertEqual(MusicCatalog.profiles(for: .focus).count, 17)
         XCTAssertEqual(Set(MusicCatalog.profiles(for: .focus).map(\.id)).intersection(MusicCatalog.profiles(for: .relax).map(\.id)), [])

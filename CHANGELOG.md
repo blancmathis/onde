@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0 — Five relaxation worlds
+
+- Add Lagoon, Stillwater, Hearth, Reverie and Driftwood to the shared Relax/Meditation catalog without changing user defaults.
+- Separate authored scores: warm ambient, acoustic piano, chamber ensemble, synthesized wordless choir, and wooden resonators with recorded harp.
+- Eight-bar sentences, 96-bar chapters, common-tone sustained synthesis and slow overlapping acoustic envelopes. No forced noise, percussion or special-frequency claims.
+- Preserve the seventeen Focus profiles, existing music, background controls, gentle entrances, scene crossfades, timers and personal data.
+- Document controlled studies, conflicting results, evidence limitations and the distinction between production choices and clinical validation.
+- Add planner, audio, transition and native catalog regression tests.
+
 ## 1.10.1 — Listening polish
 
 - Refresh the in-app CLI guide for music choices, independent defaults and background sound.

@@ -147,6 +147,11 @@ struct ListeningMusicCard: View {
     private var isDefault: Bool { model.defaultMusicID(for: model.mode) == profile.id }
     private var detail: String {
         switch profile.id {
+        case "lagoon": return "Deep ambient, without a beat"
+        case "stillwater": return "Spacious acoustic piano"
+        case "hearth": return "Warm strings, horns & woodwinds"
+        case "reverie": return "Wordless choir & distant harp"
+        case "driftwood": return "Rounded wood tones & harp"
         case "ambre": return "Warm electric keys & piano"
         case "canopee": return "Wooden tones, harp & low strings"
         case "meridien": return "Deep bass & minimal house"

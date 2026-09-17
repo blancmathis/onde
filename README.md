@@ -35,6 +35,25 @@ All existing user data and audio profiles are preserved.
 
 No telemetry or cloud audio engine. The optional update checker contacts GitHub. Sound playback does not use external streaming players.
 
+## Five new relaxation worlds
+
+**Lagoon · Stillwater · Hearth · Reverie · Driftwood.** Warm ambient, soft acoustic
+piano, a chamber ensemble, wordless synthesized choir, and rounded wooden tones
+with recorded harp. Available in both Relax and Meditation, alongside the three
+existing choices. Each piece has its own score and develops in long sentences;
+your default music and chimes are unchanged.
+
+| Music | Audition |
+|---|---|
+| Lagoon | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/lagoon-12min.m4a) |
+| Stillwater | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/stillwater-12min.m4a) |
+| Hearth | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/hearth-12min.m4a) |
+| Reverie | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/reverie-12min.m4a) |
+| Driftwood | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/driftwood-12min.m4a) |
+
+[Evidence, composition choices and limitations](Documentation/RELAXATION-1.11.md).
+These pieces are not clinically validated or guaranteed to relax every listener.
+
 ## Listen first
 
 These are continuous twelve-minute renders of the same engine and defaults used in the app. In-app generation does not restart these files. The English display names changed in 1.9; **CLI IDs and asset filenames remain stable**.

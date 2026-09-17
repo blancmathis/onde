@@ -55,7 +55,7 @@ def quit():
 try:
     focused=call('music','list','focus');relaxed=call('music','list','relax');med=call('music','list','meditation')
     check(len(focused)==17,'All seventeen Focus choices remain available')
-    check([p['id'] for p in relaxed]==[p['id'] for p in med]==['velours','rive','immersion'],'Relax and Meditation share the same three choices')
+    check([p['id'] for p in relaxed]==[p['id'] for p in med]==['lagoon','stillwater','hearth','reverie','driftwood','velours','rive','immersion'],'Relax and Meditation share the same eight choices')
     # A genuine old-format profile with preferences and saved content to preserve.
     conf=next(p['configuration'] for p in focused if p['id']=='ambre');conf['bass']=.77
     prefs=dict(masterVolume=0,chimeVolume=.21,fadeSeconds=2,startFadeSeconds=4,markers=[600,1200,1800,2400],chimesEnabled=True,preventSleep=False,reducedMotion=True)
