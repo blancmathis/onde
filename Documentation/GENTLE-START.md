@@ -39,3 +39,18 @@ API references:
 - https://developer.apple.com/documentation/avfaudio/avaudioplayer/devicecurrenttime
 
 The eight-second duration and curve are design choices, not a measured replica of a third-party implementation or a claim of cognitive efficacy.
+
+## Selecting after a pause
+
+Selecting a soundscape card, mode, saved mix or solo library sound while paused
+means **start this music**, not resume a cached previous scene. The old scenes
+and pending preparation are discarded, and the chosen music receives its full
+gentle entrance. Re-selecting the same card also starts a fresh musical timeline.
+Recorded layers rewind to the beginning. Choosing with autoplay disabled remains
+silent until Play, and the subsequent Play still uses the fresh selection.
+
+The ordinary Play button, without a new selection, remains **Resume**: keep the
+current position and any in-progress crossfade, with the short resume fade.
+Switching soundscape while already playing keeps the normal scene crossfade.
+Selecting a different Focus composition does not reset the session stopwatch or
+daily total. Mode changes retain their existing separate-session semantics.

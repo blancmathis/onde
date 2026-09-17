@@ -75,7 +75,7 @@ public struct GenerativeSettings: Codable, Equatable {
     public static func title(_ mode: SessionMode) -> String {
         switch mode { case .focus: return "Momentum"; case .relax: return "Velvet"; case .meditation: return "Immersion" }
     }
-    public var displayName: String { profileID.flatMap { SoundProfile.find($0)?.title } ?? "Paysage personnel" }
+    public var displayName: String { profileID.flatMap { SoundProfile.find($0)?.title } ?? "Custom soundscape" }
     /// The first eight ABI slots predate gain (slot 8). New controls start at slot 9.
     public var values: [Double] { [density, brightness, movement, space, texture, pulse, evolution, settleMinutes, bass, tempo, stability, warmth, character, drive, punch, orchestra, strings, brass, woods, harp, ostinato, percussion, composition, vocals, piano] }
     public static func dspIndex(_ index: Int) -> Int32 { Int32(index < 8 ? index : index + 1) }

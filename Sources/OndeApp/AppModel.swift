@@ -22,6 +22,7 @@ final class AppModel: ObservableObject {
     let updates = UpdateManager()
     private var ownsProfile = false
     private let audio = AudioEngine()
+    private var playbackSelection = PlaybackSelection()
     private let server = CommandServer()
     private var heartbeat: Timer?
     private var saveTask: DispatchWorkItem?
@@ -172,6 +173,7 @@ final class AppModel: ObservableObject {
         }
     }
     func startMode(_ newMode: SessionMode, autostart: Bool = true, reset: Bool = false) {
+        playbackSelection.select(whilePlaying: playing)
         if newMode != mode {
             recordSession(); store.modeMixes[mode.rawValue] = store.layers
             store.mode = newMode; store.layers = store.modeMixes[newMode.rawValue] ?? defaults(for: newMode)
@@ -183,8 +185,12 @@ final class AppModel: ObservableObject {
     }
     func play() {
         guard !playing else { return }
-        let fresh = clock.elapsed(at: now) == 0
-        resumeTiming(); applyAudio(freshStart: fresh); event("play")
+        let restart = playbackSelection.consumeRestart()
+        let fresh = restart || clock.elapsed(at: now) == 0
+        // Explicit selection after pause is not a resume: discard BOTH scenes and
+        // any queued/preparing scene before permitting the new audio graph to run.
+        if restart { audio.restartMusic() }
+        resumeTiming(); applyAudio(freshStart: fresh); event("play", ["music_restarted": restart])
     }
     func pause() { guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
     func togglePlayback() { playing ? pause() : play() }
@@ -197,7 +203,7 @@ final class AppModel: ObservableObject {
             if store.history.count > 200 { store.history = Array(store.history.prefix(200)) }
         }
     }
-    func stop() { recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
+    func stop() { playbackSelection.stop(); recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
     func resetTimer() {
         let wasRunning = playing
         recordSession() // A stopwatch reset must not erase already-earned daily time.
@@ -209,7 +215,11 @@ final class AppModel: ObservableObject {
     func toggle(_ sound: Sound) { setSound(sound.id, enabled: !(store.layers[sound.id]?.enabled ?? false)) }
     func setSound(_ id: String, enabled: Bool? = nil, volume: Double? = nil) {
         var layer = store.layers[id] ?? Layer()
-        if let enabled { layer.enabled = enabled }; if let volume { layer.volume = clamp(volume) }
+        if let enabled {
+            if layer.enabled != enabled { playbackSelection.select(whilePlaying: playing) }
+            layer.enabled = enabled
+        }
+        if let volume { layer.volume = clamp(volume) }
         store.layers[id] = layer; applyAudio(); persist()
     }
     func setMaster(_ n: Double) { store.preferences.masterVolume = clamp(n); applyAudio(); persist() }
@@ -302,6 +312,7 @@ final class AppModel: ObservableObject {
         applyAudio(); persist(); event("generator_seed", ["seed": seed])
     }
     func resetGeneratorSettings() {
+        playbackSelection.select(whilePlaying: playing)
         var all = store.generatorSettings ?? [:]; all[mode.rawValue] = .preset(mode); store.generatorSettings = all
         applyAudio(); persist()
     }
@@ -366,6 +377,7 @@ final class AppModel: ObservableObject {
                 setSound(id, enabled: r["enabled"] as? Bool, volume: v)
             case "solo":
                 let id = try string("id"); guard sounds.contains(where: { $0.id == id }) else { throw OndeError("not_found", "Unknown sound id.") }
+                playbackSelection.select(whilePlaying: playing)
                 for k in Array(store.layers.keys) { store.layers[k]?.enabled = false }; setSound(id, enabled: true)
             case "silence":
                 for k in Array(store.layers.keys) { store.layers[k]?.enabled = false }; applyAudio(); persist()

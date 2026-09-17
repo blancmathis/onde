@@ -118,7 +118,7 @@ final class GenerativeEngine {
         if playing { try prepareGraph() }
         guard let mixer else { return }
         if playing && identity != requestedIdentity {
-            fromTitle = previousName
+            fromTitle = hadMixer ? previousName : ""
             prepareScene(mode: mode, configuration: config, identity: identity)
         } else if !loading, identity == requestedIdentity, let targetCore {
             applyControls(targetCore, mode: mode, configuration: config)
@@ -140,7 +140,7 @@ final class GenerativeEngine {
         requestTicket += 1; loading = false; requestedIdentity = nil; targetCore = nil
         engine.stop(); if let source { engine.detach(source) }; source = nil
         if let mixer { onde_scene_mixer_destroy(mixer) }; mixer = nil
-        wantedPlaying = false; fadeTicket += 1
+        wantedPlaying = false; fadeTicket += 1; fromTitle = ""; lastError = nil
     }
     var running: Bool { engine.isRunning && wantedPlaying && mixer.flatMap { onde_scene_mixer_visible($0) } != nil }
     var transitionSnapshot: [String: Any] {

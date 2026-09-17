@@ -47,7 +47,8 @@ This community build is ad-hoc signed, **not notarized by Apple**. No security s
 The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
 
 Local audio only: no embedded external streaming player.
-Gentle start: eight-second configurable fade-in, two-second resume, unchanged scene crossfades and chimes.
+Fresh selection after pause starts only the chosen music; ordinary Play resumes.
+Gentle start: eight-second configurable fade-in, two-second resume, unchanged live scene crossfades and chimes.
 English interface and corrected local-day accounting (including midnight, pause, reset and DST).
 Seven long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence and Sanctuary.
 Twelve-minute audition recordings use this exact engine and its defaults.

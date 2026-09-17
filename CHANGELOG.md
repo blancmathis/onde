@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.4 — Fresh selection after pause
+
+- Selecting a composition, mode, saved mix or solo library sound while paused starts that music from its beginning with the full gentle entrance. No previous scene fades back in.
+- The ordinary Play button resumes the existing music with its shorter resume fade, including a paused crossfade.
+- Discard pending preparation and both old crossfade scenes on explicit fresh selection. Rewind recorded layers explicitly.
+- Keep the session stopwatch, daily activity, user volume and chimes independent of musical restarts.
+- Keep live scene-to-scene crossfades unchanged.
+
 ## 1.9.3 — Independent local sound studio
 
 - Remove the unused external streaming player, catalog, UI routes and CLI commands.

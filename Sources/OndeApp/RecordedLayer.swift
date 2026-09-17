@@ -64,12 +64,13 @@ final class RecordedLayer {
         player.isPlaying && (!selected || onde_envelope_progress(&envelope) < 1 || abs(level-target) >= 0.000001)
     }
     var snapshot: [String: Any] {
-        ["playing": player.isPlaying && selected, "entrance_gain": envelope.value,
+        ["playing": player.isPlaying && selected, "position_seconds": player.currentTime,
+         "duration_seconds": player.duration, "entrance_gain": envelope.value,
          "entrance_progress": onde_envelope_progress(&envelope), "entrance_seconds": entranceSeconds,
          "output_gain": outputGain, "target_gain": target]
     }
     func stop() {
-        player.stop(); player.volume = 0; selected = false; hasPlayed = false
+        player.stop(); player.currentTime = 0; player.volume = 0; selected = false; hasPlayed = false
         level = 0; target = 0; outputGain = 0; onde_envelope_reset(&envelope, 0)
     }
 }

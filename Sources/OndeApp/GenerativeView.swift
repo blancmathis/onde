@@ -49,7 +49,9 @@ struct GenerativeView: View {
                         Text("100% local · original music").font(.system(size: 10)).foregroundStyle(Theme.muted)
                     }
                     PillButton(title: model.generatorActive && model.playing ? "Pause" : "Listen", symbol: model.generatorActive && model.playing ? "pause.fill" : "play.fill", primary: true) {
-                        if model.generatorActive && model.playing { model.pause() } else { model.startGenerator(model.mode) }
+                        if model.generatorActive {
+                            model.togglePlayback()
+                        } else { model.startGenerator(model.mode) }
                     }
                 }
                 Rectangle().fill(Theme.line).frame(height: 1)

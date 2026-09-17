@@ -78,6 +78,14 @@ final class AudioEngine {
         bell?.stop(); bell?.currentTime = 0; bell?.volume = Float(volume)
         guard bell?.play() == true else { throw OndeError("chime_error", "The chime could not be played.") }
     }
+    /// Explicitly choosing music while paused starts a fresh musical timeline.
+    /// This does not touch the session clock, activity ledger, settings or chimes.
+    func restartMusic() {
+        rampTimer?.invalidate(); rampTimer = nil
+        living.reset()
+        for layer in players.values { layer.stop() }
+        wasPlaying = false; lastDesired = []
+    }
     func stopImmediately() {
         rampTimer?.invalidate(); rampTimer = nil; living.reset()
         for layer in players.values { layer.stop() }

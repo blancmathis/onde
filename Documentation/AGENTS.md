@@ -117,3 +117,13 @@ Use temporary `ONDE_HOME` directories for integration tests. They disable automa
 ## Gentle start (1.9.2)
 
 `onde settings startFadeSeconds N` sets the next playback entrance (0–20 seconds, default 8). Resume uses `min(2,N)` seconds. This is a preference, not a generative DSP parameter. Read `status.preferences.startFadeSeconds`, `generator.entrance` and `playback.recorded_layers` for configuration/progress. Parameter edits do not restart the envelope; profile changes use the existing crossfade. See [Gentle start](GENTLE-START.md).
+
+### Playback selection versus resume
+
+`generate profile ID`, mode selection, `mix load` and `solo ID` select music.
+While paused, the next playback starts a fresh musical timeline with the full
+`startFadeSeconds` entrance, without playing an old scene first. Re-selecting
+the same profile restarts it too. `solo` still preserves paused/running state;
+use `play` afterwards to hear it. Plain `play` without a selection resumes.
+A live profile change still crossfades. Music restarts do not reset daily activity
+or a same-mode stopwatch. Recorded layer status includes `position_seconds`.

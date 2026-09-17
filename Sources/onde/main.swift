@@ -100,7 +100,7 @@ let commandSpecs: [[String: Any]] = [
     ["command":"updates.download","arguments":[:],"effect":"Download and verify candidate into Downloads; no execution or installation"],
     ["command":"updates.automatic","arguments":["enabled":"boolean"],"effect":"Enable/disable periodic metadata checks; never auto-download"],
     ["command":"generate.profiles","arguments":[:],"effect":"List available original sound profiles; available offline via generate profiles"],
-    ["command":"generate.profile","arguments":["id":"stable profile ID from generate profiles"],"effect":"Start profile; preserve global volume, chimes and saved mixes"],
+    ["command":"generate.profile","arguments":["id":"stable profile ID from generate profiles"],"effect":"Select profile; while paused restart only the music with gentle start; while playing crossfade. Preserve session time, volume, chimes and saved mixes"],
 
     ["command":"generate.status","arguments":[:],"effect":"Live original synthesis state, seed, controls, render time, output level"],
     ["command":"generate.play","arguments":["mode":"focus|relax|meditation","seed":"optional integer 0...2^53-1","reset":"optional boolean"],"effect":"Solo the living layer, start mode, preserve chime preferences"],
