@@ -1,0 +1,33 @@
+name: Validate Espace UI (no publication)
+on:
+  pull_request:
+  push:
+    branches: [design/espace-ui-20260919]
+permissions:
+  contents: read
+concurrency:
+  group: espace-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare verified instrument bank
+        run: bash Tools/prepare_orchestra.sh
+      - name: Compile app and run native tests
+        run: |
+          set -o pipefail
+          mkdir -p QA/Espace
+          swift test -c release -j 3 -Xswiftc -DONDE_DESIGN_CAPTURE 2>&1 | tee QA/Espace/swift-tests.log
+      - name: Capture compiled native views in a muted temporary profile
+        run: python3 Tools/capture_espace.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: espace-native-validation
+          path: QA/Espace/
+          if-no-files-found: warn

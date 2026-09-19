@@ -1,0 +1,60 @@
+import SwiftUI
+import AppKit
+import OndeCore
+
+/// Opt-in CI-only capture harness. The release build compiles this to a no-op.
+/// It refuses to operate without a muted, temporary ONDE_HOME and never plays audio.
+@MainActor enum EspaceCapture {
+    private static var started = false
+    static func runIfRequested(model: AppModel) {
+        #if ONDE_DESIGN_CAPTURE
+        let env = ProcessInfo.processInfo.environment
+        guard !started, let homePath = env["ONDE_HOME"], let outputPath = env["ONDE_DESIGN_SNAPSHOT_DIR"] else { return }
+        let home = URL(fileURLWithPath: homePath).standardizedFileURL.resolvingSymlinksInPath()
+        let output = URL(fileURLWithPath: outputPath).standardizedFileURL.resolvingSymlinksInPath()
+        let temporary = URL(fileURLWithPath: NSTemporaryDirectory()).standardizedFileURL.resolvingSymlinksInPath()
+        guard home.path.hasPrefix(temporary.path + "/"), output.path.hasPrefix(home.path + "/"),
+              model.store.preferences.masterVolume == 0, !model.playing else {
+            fputs("Unsafe design capture environment.\n", stderr); exit(3)
+        }
+        started = true
+        Task { @MainActor in
+            do {
+                try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+                model.startDefaultMode(.focus, autostart: false)
+                try await take(RootView().environmentObject(model), size: NSSize(width:1120,height:800), file:output.appendingPathComponent("before-native.png"))
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("focus-native.png"))
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:860,height:640), file:output.appendingPathComponent("compact-native.png"))
+                model.startDefaultMode(.relax, autostart:false)
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("relax-native.png"))
+                model.startDefaultMode(.meditation, autostart:false)
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("meditation-native.png"))
+                model.quietView = true
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("quiet-native.png"))
+                model.quietView = false
+                try await take(EspaceSheetView(sheet:.sound).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("sound-native.png"))
+                try await take(EspaceSheetView(sheet:.settings).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("settings-native.png"))
+                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":8, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
+                try JSONSerialization.data(withJSONObject:receipt, options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("capture.json"))
+                NSApp.terminate(nil)
+            } catch { fputs("Design capture failed: \(error)\n",stderr); exit(4) }
+        }
+        #endif
+    }
+    #if ONDE_DESIGN_CAPTURE
+    private static func take<Content:View>(_ content:Content, size:NSSize, file:URL) async throws {
+        let hosted = NSHostingView(rootView:content.environment(\.locale,Locale(identifier:"en")).environment(\.accessibilityReduceMotion,true).frame(width:size.width,height:size.height))
+        hosted.frame = NSRect(origin:.zero,size:size)
+        let window = NSWindow(contentRect:hosted.frame, styleMask:[.titled], backing:.buffered, defer:false)
+        window.contentView = hosted; window.appearance = NSAppearance(named:.darkAqua)
+        window.orderFront(nil)
+        try await Task.sleep(nanoseconds:700_000_000)
+        hosted.layoutSubtreeIfNeeded(); hosted.displayIfNeeded()
+        guard let bitmap = hosted.bitmapImageRepForCachingDisplay(in:hosted.bounds) else { throw NSError(domain:"EspaceCapture",code:1) }
+        hosted.cacheDisplay(in:hosted.bounds,to:bitmap)
+        guard let png = bitmap.representation(using:.png,properties:[:]) else { throw NSError(domain:"EspaceCapture",code:2) }
+        try png.write(to:file,options:.withoutOverwriting)
+        window.orderOut(nil); window.contentView = nil
+    }
+    #endif
+}

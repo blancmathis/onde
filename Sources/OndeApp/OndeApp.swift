@@ -15,9 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @StateObject private var model = AppModel()
     var body: some Scene {
         Window("Onde", id: "main") {
-            RootView().environmentObject(model).environment(\.locale, Locale(identifier: "en")).onAppear { delegate.model = model }
+            EspaceRootView().environmentObject(model).environment(\.locale, Locale(identifier: "en")).onAppear { delegate.model = model; EspaceCapture.runIfRequested(model: model) }
         }
-        .defaultSize(width: 1120, height: 820)
+        .defaultSize(width: 1120, height: 800)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
