@@ -14,12 +14,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Record reproducible source and validation environment
+        run: |
+          mkdir -p QA/Espace
+          git archive --format=zip -o QA/Espace/source-snapshot.zip HEAD
+          git rev-parse HEAD > QA/Espace/checkout-sha.txt
+          sw_vers > QA/Espace/environment.txt
+          swift --version >> QA/Espace/environment.txt
       - name: Prepare verified instrument bank
         run: bash Tools/prepare_orchestra.sh
       - name: Compile app and run native tests
         run: |
           set -o pipefail
-          mkdir -p QA/Espace
           swift test -c release -j 3 -Xswiftc -DONDE_DESIGN_CAPTURE 2>&1 | tee QA/Espace/swift-tests.log
       - name: Capture compiled native views in a muted temporary profile
         run: python3 Tools/capture_espace.py
