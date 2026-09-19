@@ -52,8 +52,8 @@ struct EspaceCover: View {
 }
 
 struct EspaceRowButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { Body(configuration: configuration) }
-    private struct Body: View {
+    func makeBody(configuration: Configuration) -> some View { RowAppearance(configuration: configuration) }
+    private struct RowAppearance: View {
         let configuration: ButtonStyle.Configuration
         @Environment(\.isFocused) private var focused
         var body: some View {
