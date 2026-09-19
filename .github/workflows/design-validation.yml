@@ -1,8 +1,6 @@
 name: Validate Espace UI (no publication)
 on:
   pull_request:
-  push:
-    branches: [design/espace-ui-20260919]
 permissions:
   contents: read
 concurrency:

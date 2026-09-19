@@ -43,7 +43,7 @@ import OndeCore
     }
     #if ONDE_DESIGN_CAPTURE
     private static func take<Content:View>(_ content:Content, size:NSSize, file:URL) async throws {
-        let hosted = NSHostingView(rootView:content.environment(\.locale,Locale(identifier:"en")).environment(\.accessibilityReduceMotion,true).frame(width:size.width,height:size.height))
+        let hosted = NSHostingView(rootView:content.environment(\.locale,Locale(identifier:"en")).environment(\.espaceReduceMotion,true).frame(width:size.width,height:size.height))
         hosted.frame = NSRect(origin:.zero,size:size)
         let window = NSWindow(contentRect:hosted.frame, styleMask:[.titled], backing:.buffered, defer:false)
         window.contentView = hosted; window.appearance = NSAppearance(named:.darkAqua)

@@ -123,7 +123,7 @@ private enum EspaceSettingsTab: String, CaseIterable, Identifiable {
 
 private struct EspacePreferencesView: View {
     @EnvironmentObject var model: AppModel
-    @Environment(\.accessibilityReduceMotion) private var reduced
+    @Environment(\.espaceReduceMotion) private var reduced
     @AppStorage("onde.espace.visualMotion") private var visualMotion = true
     @State private var tab: EspaceSettingsTab = .general
     var body: some View {

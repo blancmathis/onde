@@ -32,11 +32,11 @@ struct EspaceRootView: View {
         .frame(minWidth: 860, minHeight: 640)
         .background(EspaceTheme.background).foregroundStyle(EspaceTheme.ink)
         .tint(EspaceTheme.accent(model.mode)).preferredColorScheme(.dark)
-        .environment(\.accessibilityReduceMotion, reduced)
+        .environment(\.espaceReduceMotion, reduced)
         .sheet(item: $model.sheet, onDismiss: { model.page = "studio" }) { sheet in
             EspaceSheetView(sheet: sheet).environmentObject(model)
                 .environment(\.locale, Locale(identifier: "en"))
-                .environment(\.accessibilityReduceMotion, reduced)
+                .environment(\.espaceReduceMotion, reduced)
         }
         .overlay(alignment: .top) {
             if let text = model.toast {
@@ -196,7 +196,7 @@ struct EspaceRootView: View {
 
 private struct EspaceListeningPane: View {
     @EnvironmentObject var model: AppModel
-    @Environment(\.accessibilityReduceMotion) private var reduced
+    @Environment(\.espaceReduceMotion) private var reduced
     @Binding var visualMotion: Bool
     let compact: Bool
     var body: some View {

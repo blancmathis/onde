@@ -39,7 +39,7 @@ struct EspaceButtonStyle: ButtonStyle {
         let tint: Color
         @Environment(\.isEnabled) private var enabled
         @Environment(\.isFocused) private var focused
-        @Environment(\.accessibilityReduceMotion) private var reduced
+        @Environment(\.espaceReduceMotion) private var reduced
         @Environment(\.colorSchemeContrast) private var contrast
         @State private var hovered = false
         var body: some View {
@@ -121,7 +121,7 @@ struct EspaceArtwork: View {
     let mode: SessionMode
     let enabled: Bool
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduced
+    @Environment(\.espaceReduceMotion) private var reduced
     @StateObject private var driver = EspaceMotionDriver()
     @State private var visible = false
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
