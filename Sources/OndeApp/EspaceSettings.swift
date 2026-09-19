@@ -73,11 +73,18 @@ private struct EspaceSoundSettings: View {
             EspaceSettingSlider(title: "Music", value: Binding(get: { model.musicLevel }, set: model.setMusicLevel))
                 .disabled(!model.generatorActive).accessibilityIdentifier("music-level")
             Divider().overlay(EspaceTheme.line)
-            Picker("Background sound", selection: Binding(get: { model.currentBackground.kind }, set: { model.changeBackground($0) })) {
-                ForEach(BackgroundKind.allCases) { kind in Text(kind.title).tag(kind) }
-            }.pickerStyle(.menu).font(.system(size: 13)).accessibilityIdentifier("background-kind")
-            EspaceSettingSlider(title: "Background amount", value: Binding(get: { model.currentBackground.volume }, set: { model.changeBackground(model.currentBackground.kind, volume: $0) }))
-                .disabled(model.currentBackground.kind == .off).accessibilityIdentifier("background-level")
+            HStack {
+                Text("Background sound").font(.system(size: 13))
+                Spacer()
+                Picker("Background sound", selection: Binding(get: { model.currentBackground.kind }, set: { model.changeBackground($0) })) {
+                    ForEach(BackgroundKind.allCases) { kind in Text(kind.title).tag(kind) }
+                }.labelsHidden().pickerStyle(.menu).frame(width: 205)
+                    .accessibilityLabel("Background sound").accessibilityIdentifier("background-kind")
+            }
+            if model.currentBackground.kind != .off {
+                EspaceSettingSlider(title: "Background amount", value: Binding(get: { model.currentBackground.volume }, set: { model.changeBackground(model.currentBackground.kind, volume: $0) }))
+                    .accessibilityIdentifier("background-level")
+            }
             Text("One optional background, remembered for this mode. Master volume affects the whole mix.")
                 .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(3)
         }
@@ -100,9 +107,8 @@ private struct EspaceSoundSettings: View {
             EspaceSettingSlider(title: "Music crossfade", value: Binding(get: { model.transitionSeconds }, set: model.setTransitionSeconds), range: 2...30, seconds: true)
         }
         if model.generatorActive {
-            DisclosureGroup("Instruments, composition & export", isExpanded: $advanced) {
-                SoundControlsView().padding(.top, 18)
-            }.font(.system(size: 13, weight: .medium))
+            DisclosureGroup("Instruments, composition & export", isExpanded: $advanced) { SoundControlsView().padding(.top, 18) }
+                .font(.system(size: 13, weight: .medium))
             Button("Restore this sound's settings…") { resetConfirmation = true }.buttonStyle(EspaceButtonStyle())
                 .confirmationDialog("Restore this sound's original settings? Your defaults, backgrounds, volume and chimes are unchanged.", isPresented: $resetConfirmation) {
                     Button("Restore sound settings", role: .destructive) { model.resetCurrentMusicTuning() }
@@ -125,6 +131,7 @@ private struct EspacePreferencesView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.espaceReduceMotion) private var reduced
     @AppStorage("onde.espace.visualMotion") private var visualMotion = true
+    @AppStorage("onde.espace.showArtwork") private var showArtwork = true
     @State private var tab: EspaceSettingsTab = .general
     var body: some View {
         Picker("Settings section", selection: $tab) {
@@ -133,7 +140,8 @@ private struct EspacePreferencesView: View {
         switch tab {
         case .general:
             EspaceSection(title: "Your listening space", detail: "Opening Onde never starts playback. Browsing a mode does not change the current session.") {
-                Toggle("Subtle visual motion", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced)
+                Toggle("Show artwork", isOn: $showArtwork).toggleStyle(.switch).font(.system(size: 13))
+                Toggle("Subtle visual motion", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced || !showArtwork)
                 Text(reduced ? "Reduce motion is enabled in the system or in Onde. The listening surface stays still." : "Only the listening surface moves. Music cards stay still; the visual pauses when Onde is not active.")
                     .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(4)
                 Divider().overlay(EspaceTheme.line)

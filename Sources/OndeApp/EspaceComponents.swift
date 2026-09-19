@@ -68,7 +68,7 @@ struct EspaceIconButton: View {
     }
 }
 
-/// Only this small view observes the animation clock, not the catalogue or player.
+/// The animation clock is scoped to the decorative surface.
 @MainActor final class EspaceMotionDriver: ObservableObject {
     @Published private(set) var time: Double = 0
     private var clock = EspaceClock()
@@ -92,7 +92,6 @@ struct EspaceIconButton: View {
     deinit { timer?.invalidate() }
 }
 
-/// Window visibility has a separate gate from app/scene activity.
 private struct EspaceWindowProbe: NSViewRepresentable {
     let changed: (Bool) -> Void
     func makeNSView(context: Context) -> Probe { let view = Probe(); view.changed = changed; return view }
@@ -129,6 +128,8 @@ struct EspaceArtwork: View {
     private var fps: Int { EspaceMotionPolicy.fps(visible: visible, active: scenePhase == .active, enabled: enabled, reduced: reduced, lowPower: lowPower, hot: hot) }
     var body: some View {
         EspaceSurface(id: id, mode: mode, time: driver.time, economical: lowPower)
+            .id(id).transition(.opacity)
+            .animation(reduced ? nil : .easeInOut(duration: 0.4), value: id)
             .background(EspaceWindowProbe { visible = $0 }.frame(width: 0, height: 0))
             .onAppear { driver.configure(fps: fps) }
             .onChange(of: fps) { _, rate in driver.configure(fps: rate) }
@@ -139,7 +140,7 @@ struct EspaceArtwork: View {
     }
 }
 
-/// This deterministic surface also renders in offline native snapshot tests.
+/// Deterministic rendering shared by the live view and offline native captures.
 struct EspaceSurface: View {
     let id: String
     let mode: SessionMode
@@ -172,18 +173,5 @@ struct EspaceSurface: View {
 struct EspaceThumbnail: View {
     let id: String
     let mode: SessionMode
-    var body: some View {
-        Canvas { context, size in
-            let seed = ListeningDesign.seed(id)
-            for line in 0..<7 {
-                let y = CGFloat(line) * 5 + 9
-                var path = Path(); path.move(to: CGPoint(x: -3, y: y))
-                path.addCurve(to: CGPoint(x: size.width + 3, y: y - 4), control1: CGPoint(x: 15, y: y - 15 - seed * 9), control2: CGPoint(x: 27, y: y + 24))
-                context.stroke(path, with: .color(EspaceTheme.accent(mode).opacity(0.55)), lineWidth: 0.8)
-            }
-        }
-        .frame(width: 44, height: 49)
-        .background(LinearGradient(colors: [EspaceTheme.shade(mode, light: 0.2).opacity(0.8), EspaceTheme.surface], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 8))
-        .clipShape(RoundedRectangle(cornerRadius: 8)).accessibilityHidden(true)
-    }
+    var body: some View { EspaceCover(id: id) }
 }

@@ -2,8 +2,7 @@ import SwiftUI
 import AppKit
 import OndeCore
 
-/// Listening and browsing are deliberately separate. Only explicit playback
-/// actions call AppModel. Existing audio selection, chimes and CLI stay intact.
+/// Browsing never starts playback. Explicit actions use the existing AppModel.
 struct EspaceRootView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var systemReduced
@@ -12,19 +11,24 @@ struct EspaceRootView: View {
     @State private var initialized = false
     @FocusState private var searchFocused: Bool
     @AppStorage("onde.espace.visualMotion") private var visualMotion = true
+    @AppStorage("onde.espace.showArtwork") private var showArtwork = true
+    init(browse initialBrowse: SessionMode? = nil, query initialQuery: String = "") {
+        _browse = State(initialValue: initialBrowse ?? .focus)
+        _query = State(initialValue: initialQuery)
+        _initialized = State(initialValue: initialBrowse != nil)
+    }
     private var reduced: Bool { systemReduced || model.store.preferences.reducedMotion }
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 header(compact: geometry.size.width < 1040)
                 HStack(alignment: .top, spacing: 28) {
-                    EspaceListeningPane(visualMotion: $visualMotion, compact: geometry.size.height < 730)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    if !model.quietView {
-                        collection.frame(width: geometry.size.width < 1040 ? 292 : 324)
-                    }
-                }
-                .padding(.horizontal, 30).padding(.top, 8).padding(.bottom, 24)
+                    Group {
+                        if model.quietView { EspaceQuietPane() }
+                        else { EspaceListeningPane(visualMotion: $visualMotion, showArtwork: showArtwork, compact: geometry.size.height < 730) }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if !model.quietView { collection.frame(width: geometry.size.width < 1040 ? 292 : 338) }
+                }.padding(.horizontal, 30).padding(.top, 8).padding(.bottom, 24)
                 if model.updates.available { updateBanner }
                 footer
             }
@@ -35,8 +39,7 @@ struct EspaceRootView: View {
         .environment(\.espaceReduceMotion, reduced)
         .sheet(item: $model.sheet, onDismiss: { model.page = "studio" }) { sheet in
             EspaceSheetView(sheet: sheet).environmentObject(model)
-                .environment(\.locale, Locale(identifier: "en"))
-                .environment(\.espaceReduceMotion, reduced)
+                .environment(\.locale, Locale(identifier: "en")).environment(\.espaceReduceMotion, reduced)
         }
         .overlay(alignment: .top) {
             if let text = model.toast {
@@ -57,21 +60,25 @@ struct EspaceRootView: View {
             if let text { NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested, userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.medium.rawValue]) }
         }
         .onExitCommand { if model.quietView { model.quietView = false } else { query = "" } }
+        .background {
+            Button("Find music") { model.quietView = false; searchFocused = true }
+                .keyboardShortcut("f", modifiers: .command).frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
+        }
     }
     private func header(compact: Bool) -> some View {
         HStack(spacing: 20) {
             HStack(spacing: 8) {
                 Image(systemName: "waveform.path").font(.system(size: 25, weight: .light)).foregroundStyle(EspaceTheme.accent(model.mode))
-                Text("onde").font(.system(size: 33, design: .serif)).tracking(-1.5)
-            }.frame(width: compact ? 100 : 150, alignment: .leading).accessibilityElement(children: .ignore).accessibilityLabel("Onde")
+                Text("onde").font(.system(size: 33, design: .serif)).tracking(-1.5).lineLimit(1).fixedSize()
+            }.fixedSize().frame(width: compact ? 124 : 150, alignment: .leading)
+                .accessibilityElement(children: .ignore).accessibilityLabel("Onde")
             Spacer(minLength: 0)
             if !model.quietView {
                 Picker("Browse music", selection: $browse) {
                     ForEach(SessionMode.allCases) { mode in Text(mode.title).tag(mode) }
                 }.pickerStyle(.segmented).labelsHidden().frame(width: compact ? 300 : 324)
                     .controlSize(.large).accessibilityLabel("Browse music without changing playback")
-                    .accessibilityIdentifier("browse-mode")
-                    .onChange(of: browse) { _, _ in query = "" }
+                    .accessibilityIdentifier("browse-mode").onChange(of: browse) { _, _ in query = "" }
             }
             Spacer(minLength: 0)
             HStack(spacing: 10) {
@@ -83,6 +90,9 @@ struct EspaceRootView: View {
                 }
                 EspaceIconButton(symbol: "gearshape", title: "Settings · ⌘,") { model.sheet = .settings }
                 Menu {
+                    Toggle("Show artwork", isOn: $showArtwork)
+                    Toggle("Animate artwork", isOn: $visualMotion).disabled(reduced || !showArtwork)
+                    Divider()
                     Button("Personal audio & mixes…") { model.sheet = .personal }
                     Button("Session history…") { model.sheet = .history }
                     Divider()
@@ -96,12 +106,12 @@ struct EspaceRootView: View {
         }.padding(.horizontal, 30).frame(height: 84)
     }
     private var profiles: [SoundProfile] {
-        let defaultID = model.defaultMusicID(for: browse)
-        return MusicCatalog.profiles(for: browse).enumerated()
+        // Keep row positions stable while the user changes a default.
+        MusicCatalog.profiles(for: browse).enumerated()
             .filter { ListeningDesign.matches(query: query, title: $0.element.title, id: $0.element.id, description: $0.element.description + " " + ListeningDesign.detail($0.element.id)) }
             .sorted {
-                let a = ListeningDesign.rank(id: $0.element.id, defaultID: defaultID)
-                let b = ListeningDesign.rank(id: $1.element.id, defaultID: defaultID)
+                let a = ListeningDesign.rank(id: $0.element.id, defaultID: "")
+                let b = ListeningDesign.rank(id: $1.element.id, defaultID: "")
                 return a == b ? $0.offset < $1.offset : a < b
             }.map(\.element)
     }
@@ -139,7 +149,7 @@ struct EspaceRootView: View {
                 .background(EspaceTheme.surface, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(searchFocused ? EspaceTheme.accent(browse) : EspaceTheme.line, lineWidth: searchFocused ? 2 : 1))
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(browse == model.mode ? "Choose a sound. Your default stays yours." : "Browsing \(browse.title). \(model.mode.title) \(model.playing ? "continues." : "is ready.")")
+                Text(browse == model.mode ? "Click to play. The star sets your default." : "Browsing \(browse.title). \(model.mode.title) \(model.playing ? "continues." : "is unchanged.")")
                     .font(.system(size: 11)).foregroundStyle(EspaceTheme.secondary).fixedSize(horizontal: false, vertical: true)
                 if browse != model.mode {
                     Spacer(minLength: 0)
@@ -169,10 +179,11 @@ struct EspaceRootView: View {
     }
     private var footer: some View {
         HStack(spacing: 20) {
-            Label("No account. Just your space.", systemImage: "lock").font(.system(size: 11))
+            Label("On your Mac. Just for you.", systemImage: "lock").font(.system(size: 11))
             Spacer(minLength: 0)
-            Button { model.sheet = .sound } label: { Label("Background · \(model.currentBackground.kind.title)", systemImage: "waveform.path").font(.system(size: 12)).lineLimit(1) }
-                .buttonStyle(.plain).accessibilityLabel("Adjust background sound, currently \(model.currentBackground.kind.title)")
+            Button { model.sheet = .sound } label: {
+                Label("Background · \(model.currentBackground.kind.title)", systemImage: "waveform.path").font(.system(size: 12)).lineLimit(1)
+            }.buttonStyle(.plain).accessibilityLabel("Adjust background sound, currently \(model.currentBackground.kind.title)")
             Spacer(minLength: 0)
             HStack(spacing: 10) {
                 Image(systemName: model.store.preferences.masterVolume == 0 ? "speaker.slash" : "speaker.wave.2").font(.system(size: 13))
@@ -198,6 +209,7 @@ private struct EspaceListeningPane: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.espaceReduceMotion) private var reduced
     @Binding var visualMotion: Bool
+    let showArtwork: Bool
     let compact: Bool
     var body: some View {
         VStack(spacing: 0) {
@@ -206,19 +218,20 @@ private struct EspaceListeningPane: View {
                 Spacer()
                 Text(model.generatorActive ? "Continuous sound, on your Mac" : "Your listening space")
             }.font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).padding(.top, 14)
-            EspaceArtwork(id: model.selectedMusicID ?? "personal", mode: model.mode,
-                          enabled: visualMotion && !reduced && model.sheet == nil)
-                .opacity(model.quietView ? 0.6 : 1)
-                .frame(minHeight: compact ? 105 : 145, maxHeight: .infinity)
-                .overlay(alignment: .bottomTrailing) {
-                    Button { visualMotion.toggle() } label: {
-                        Text(reduced ? "Motion reduced" : visualMotion ? "Pause visual" : "Resume visual")
-                            .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
-                    }.buttonStyle(.plain).foregroundStyle(EspaceTheme.secondary).disabled(reduced)
-                        .help("Pauses the visual only. Your music and timer are unchanged.")
-                        .accessibilityLabel(reduced ? "Motion reduced" : visualMotion ? "Pause decorative motion" : "Resume decorative motion")
-                        .accessibilityIdentifier("visual-motion")
-                }
+            if showArtwork {
+                EspaceArtwork(id: model.selectedMusicID ?? "personal", mode: model.mode,
+                              enabled: visualMotion && !reduced && model.sheet == nil)
+                    .frame(minHeight: compact ? 105 : 145, maxHeight: .infinity)
+                    .overlay(alignment: .bottomTrailing) {
+                        Button { visualMotion.toggle() } label: {
+                            Text(reduced ? "Motion reduced" : visualMotion ? "Pause visual" : "Resume visual")
+                                .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
+                        }.buttonStyle(.plain).foregroundStyle(EspaceTheme.secondary).disabled(reduced)
+                            .help("Pauses the visual only. Your music and timer are unchanged.")
+                            .accessibilityLabel(reduced ? "Motion reduced" : visualMotion ? "Pause decorative motion" : "Resume decorative motion")
+                            .accessibilityIdentifier("visual-motion")
+                    }
+            } else { Spacer(minLength: 32) }
             EspacePlaybackStatus().padding(.top, 8)
             Text(model.currentMusicTitle).font(.system(size: compact ? 39 : 49, weight: .regular, design: .serif))
                 .tracking(-1.3).multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)
@@ -246,10 +259,11 @@ private struct EspaceListeningPane: View {
             HStack(spacing: 10) {
                 Button { model.sheet = .sound } label: { Label("Adjust sound", systemImage: "slider.horizontal.3") }
                     .buttonStyle(EspaceButtonStyle()).accessibilityIdentifier("adjust-sound")
-                Button { model.quietView.toggle() } label: {
-                    Label(model.quietView ? "Back to music" : "Quiet view", systemImage: model.quietView ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                Button { model.quietView = true } label: {
+                    Label("Quiet view", systemImage: "arrow.up.left.and.arrow.down.right")
                 }.buttonStyle(EspaceButtonStyle()).help("Quiet view · ⇧⌘F").accessibilityIdentifier("quiet-view")
             }.padding(.bottom, 10)
+            if !showArtwork { Spacer(minLength: 32) }
         }.padding(.horizontal, 6)
     }
     private var chimeCaption: String {
@@ -300,13 +314,13 @@ private struct EspaceMusicRow: View {
                     EspaceThumbnail(id: profile.id, mode: browse)
                     VStack(alignment: .leading, spacing: 5) {
                         HStack(spacing: 6) {
-                            Text(profile.title).font(.system(size: 14, weight: .semibold))
+                            Text(profile.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                             if selected { Image(systemName: model.playing ? "waveform" : "checkmark").font(.system(size: 10)).foregroundStyle(EspaceTheme.accent(browse)) }
                         }
                         Text(ListeningDesign.detail(profile.id)).font(.system(size: 11)).foregroundStyle(EspaceTheme.secondary).lineLimit(2)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.padding(.vertical, 12).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel("Play \(profile.title) in \(browse.title)")
+            }.buttonStyle(EspaceRowButtonStyle()).accessibilityLabel("Play \(profile.title) in \(browse.title)")
                 .accessibilityIdentifier("music-card-\(profile.id)")
                 .help("Play \(profile.title) in \(browse.title). Your saved default does not change.")
             Button {
@@ -316,10 +330,52 @@ private struct EspaceMusicRow: View {
                     .frame(width: 30, height: 38).foregroundStyle(isDefault ? EspaceTheme.accent(browse) : EspaceTheme.secondary)
             }.buttonStyle(.borderless).disabled(isDefault)
                 .accessibilityLabel(isDefault ? "\(profile.title) is the \(browse.title) default" : "Set \(profile.title) as \(browse.title) default")
-                .accessibilityIdentifier("default-\(profile.id)").help("Set default without starting playback")
+                .accessibilityIdentifier("default-\(profile.id)")
+                .help(isDefault ? "Your starting sound for \(browse.title)" : "Use \(profile.title) when you start \(browse.title). Does not play audio.")
         }.padding(.leading, 8).padding(.trailing, 3)
             .background(selected ? EspaceTheme.accent(browse).opacity(0.10) : hovered ? EspaceTheme.surface : .clear, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? EspaceTheme.accent(browse).opacity(contrast == .increased ? 1 : 0.20) : .clear, lineWidth: contrast == .increased ? 2 : 1))
             .onHover { hovered = $0 }
+    }
+}
+
+/// A true quiet space: no catalogue or artwork allocation.
+private struct EspaceQuietPane: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Label(model.mode.title, systemImage: model.mode.symbol)
+                    .font(.system(size: 12)).foregroundStyle(EspaceTheme.accent(model.mode))
+                Spacer()
+                Button { model.quietView = false } label: {
+                    Label("Back to music", systemImage: "arrow.down.right.and.arrow.up.left")
+                }.buttonStyle(EspaceButtonStyle()).help("Leave quiet view · Escape").accessibilityIdentifier("quiet-view")
+            }.padding(.top, 14)
+            Spacer(minLength: 30)
+            Text(model.currentMusicTitle).font(.system(size: 26, design: .serif))
+                .foregroundStyle(EspaceTheme.secondary).multilineTextAlignment(.center).lineLimit(2)
+            Text(clockText(model.elapsed)).font(.system(size: 94, weight: .ultraLight, design: .rounded))
+                .monospacedDigit().tracking(-3).lineLimit(1).minimumScaleFactor(0.5).padding(.top, 24)
+                .accessibilityLabel("Elapsed \(clockText(model.elapsed))")
+            Text(caption).font(.system(size: 13)).foregroundStyle(EspaceTheme.secondary)
+                .multilineTextAlignment(.center).padding(.top, 15)
+            HStack(spacing: 16) {
+                Button { model.togglePlayback() } label: {
+                    Label(model.playing ? "Pause" : model.elapsed > 0 ? "Resume" : "Play", systemImage: model.playing ? "pause.fill" : "play.fill")
+                }.buttonStyle(EspaceButtonStyle(primary: true, tint: EspaceTheme.accent(model.mode)))
+                    .accessibilityIdentifier("transport-play").help("Play or pause · ⌘P")
+                EspaceIconButton(symbol: "stop", title: "End session · ⌘.") { model.stop() }
+            }.padding(.top, 32)
+            Spacer(minLength: 30)
+            EspacePlaybackStatus().padding(.bottom, 24)
+        }.frame(maxWidth: 760)
+    }
+    private var caption: String {
+        if model.mode == .meditation, model.store.preferences.chimesEnabled {
+            if let next = model.nextMarker { return "Next chime at \(clockText(next)). No time limit." }
+            return "No more chimes. Stay as long as you like."
+        }
+        return "No countdown. Stay as long as you like."
     }
 }

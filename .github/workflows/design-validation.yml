@@ -29,6 +29,15 @@ jobs:
           swift test -c release -j 3 -Xswiftc -DONDE_DESIGN_CAPTURE 2>&1 | tee QA/Espace/swift-tests.log
       - name: Capture compiled native views in a muted temporary profile
         run: python3 Tools/capture_espace.py
+      - name: Package isolated app and verify existing listening behavior
+        env:
+          ONDE_SKIP_DOWNLOADS: '1'
+          ONDE_ORIGINALS_ONLY: '1'
+        run: |
+          set -o pipefail
+          bash Tools/package.sh 2>&1 | tee QA/Espace/package.log
+          python3 Tools/listening_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/listening-integration.log
+          python3 Tools/check_english.py 2>&1 | tee QA/Espace/copy-check.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

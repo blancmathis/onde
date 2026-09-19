@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CI-only native captures; no app install, publish, user profile or playback."""
+"""CI-only native captures; no install, publication, user profile or playback."""
 import json, os, pathlib, shutil, subprocess, tempfile
 root = pathlib.Path(__file__).resolve().parents[1]
 output = root/'QA/Espace'
@@ -18,6 +18,7 @@ with tempfile.TemporaryDirectory(prefix='onde-espace-', dir=os.environ.get('TMPD
     if result.returncode:
         raise RuntimeError(f'Capture exited {result.returncode}; inspect capture.log')
     receipt = json.loads((output/'capture.json').read_text())
-    assert receipt['count']==8 and receipt['muted'] and not receipt['playing'], receipt
-    assert len(list(output.glob('*-native.png')))==8
+    assert receipt['count']==12 and receipt['muted'] and not receipt['playing'], receipt
+    assert len(list(output.glob('*-native.png')))==12
+    assert (output/'surface-0.png').read_bytes() != (output/'surface-8.png').read_bytes()
     print(json.dumps(receipt,indent=2))
