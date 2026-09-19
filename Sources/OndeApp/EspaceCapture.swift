@@ -21,6 +21,19 @@ import OndeCore
         Task { @MainActor in
             do {
                 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+                // Exercise the actual Timer/RunLoop driver, separately from geometry snapshots.
+                let clock = EspaceMotionDriver()
+                clock.configure(fps: 24)
+                try await Task.sleep(nanoseconds: 400_000_000)
+                guard clock.time > 0 else { throw NSError(domain:"EspaceClockDidNotRun", code:1) }
+                clock.stop()
+                let frozen = clock.time
+                try await Task.sleep(nanoseconds: 160_000_000)
+                guard clock.time == frozen else { throw NSError(domain:"EspaceClockDidNotPause", code:2) }
+                clock.configure(fps: 12)
+                try await Task.sleep(nanoseconds: 400_000_000)
+                guard clock.time > frozen else { throw NSError(domain:"EspaceClockDidNotResume", code:3) }
+                clock.stop()
                 model.startDefaultMode(.focus, autostart: false)
                 try await take(RootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("before-native.png"))
                 try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("focus-native.png"))
@@ -42,7 +55,8 @@ import OndeCore
                 model.quietView = false
                 try await take(EspaceSheetView(sheet:.sound).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("sound-native.png"))
                 try await take(EspaceSheetView(sheet:.settings).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("settings-native.png"))
-                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":12, "surface_frames":2, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
+                try await take(EspaceMenuBarView().environmentObject(model), size:NSSize(width:340,height:480), file:output.appendingPathComponent("menubar-native.png"))
+                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":13, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
                 try JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("capture.json"))
                 NSApp.terminate(nil)
             } catch { fputs("Design capture failed: \(error)\n",stderr); exit(4) }

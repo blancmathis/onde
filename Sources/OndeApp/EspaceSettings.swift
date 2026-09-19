@@ -76,10 +76,23 @@ private struct EspaceSoundSettings: View {
             HStack {
                 Text("Background sound").font(.system(size: 13))
                 Spacer()
-                Picker("Background sound", selection: Binding(get: { model.currentBackground.kind }, set: { model.changeBackground($0) })) {
-                    ForEach(BackgroundKind.allCases) { kind in Text(kind.title).tag(kind) }
-                }.labelsHidden().pickerStyle(.menu).frame(width: 205)
-                    .accessibilityLabel("Background sound").accessibilityIdentifier("background-kind")
+                Menu {
+                    ForEach(BackgroundKind.allCases) { kind in
+                        Button { model.changeBackground(kind) } label: {
+                            if kind == model.currentBackground.kind { Label(kind.title, systemImage: "checkmark") }
+                            else { Text(kind.title) }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(model.currentBackground.kind.title).font(.system(size: 12))
+                        Spacer()
+                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
+                    }.padding(.horizontal, 12).frame(width: 205, height: 34)
+                        .background(EspaceTheme.raised, in: RoundedRectangle(cornerRadius: 8))
+                }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .accessibilityLabel("Background sound, currently \(model.currentBackground.kind.title)")
+                    .accessibilityIdentifier("background-kind")
             }
             if model.currentBackground.kind != .off {
                 EspaceSettingSlider(title: "Background amount", value: Binding(get: { model.currentBackground.volume }, set: { model.changeBackground(model.currentBackground.kind, volume: $0) }))

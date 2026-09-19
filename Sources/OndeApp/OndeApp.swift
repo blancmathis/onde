@@ -41,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         MenuBarExtra {
-            MenuBarView().environmentObject(model).environment(\.locale, Locale(identifier: "en"))
+            EspaceMenuBarView().environmentObject(model).environment(\.locale, Locale(identifier: "en"))
         } label: {
             Image(systemName: model.playing ? "waveform" : "waveform.path")
             if model.playing { Text(clockText(model.elapsed)) }
