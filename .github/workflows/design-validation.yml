@@ -27,6 +27,10 @@ jobs:
         run: |
           set -o pipefail
           swift test -c release -j 3 -Xswiftc -DONDE_DESIGN_CAPTURE 2>&1 | tee QA/Espace/swift-tests.log
+      - name: Verify and render the fixed Onde menu-bar template
+        run: |
+          swiftc Sources/OndeApp/OndeStatusIcon.swift Tools/StatusIconCheck.swift -o .build/status-icon-check
+          .build/status-icon-check QA/Espace
       - name: Capture compiled native views in a muted temporary profile
         run: python3 Tools/capture_espace.py
       - name: Package isolated app and verify existing listening behavior
@@ -38,6 +42,11 @@ jobs:
           bash Tools/package.sh 2>&1 | tee QA/Espace/package.log
           python3 Tools/listening_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/listening-integration.log
           python3 Tools/check_english.py 2>&1 | tee QA/Espace/copy-check.log
+      - name: Verify transport timing and daily totals in muted native profiles
+        run: |
+          set -o pipefail
+          python3 Tools/transport_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/transport-integration.log
+          python3 Tools/daily_activity_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/daily-integration.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

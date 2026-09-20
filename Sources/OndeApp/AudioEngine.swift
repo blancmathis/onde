@@ -17,6 +17,12 @@ final class AudioEngine {
     var playingIDs: [String] {
         lastDesired.filter { $0 == "living" ? living.running : players[$0]?.selected == true && players[$0]?.player.isPlaying == true }.sorted()
     }
+    /// Read on the main thread, like apply(). No large DSP snapshot per tick.
+    var transportHealth: (running: Bool, preparing: Bool, error: String?) {
+        let generated = lastDesired.contains("living")
+        return (!playingIDs.isEmpty, generated && living.loading,
+                generated ? living.lastError : nil)
+    }
     var playbackSnapshot: [String: Any] {
         ["start_fade_seconds": startFade, "resume_fade_seconds": min(2, startFade),
          "curve": "squared_smoothstep", "recorded_layers": players.mapValues { $0.snapshot }]

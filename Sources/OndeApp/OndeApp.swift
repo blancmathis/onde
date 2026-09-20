@@ -43,8 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MenuBarExtra {
             EspaceMenuBarView().environmentObject(model).environment(\.locale, Locale(identifier: "en"))
         } label: {
-            Image(systemName: model.playing ? "waveform" : "waveform.path")
-            if model.playing { Text(clockText(model.elapsed)) }
+            Image(nsImage: OndeStatusIcon.image)
+                .renderingMode(.template)
+                .accessibilityLabel("Onde")
+                .help("Open Onde")
         }.menuBarExtraStyle(.window)
     }
 }

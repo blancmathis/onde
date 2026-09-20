@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.2 — Stable menu-bar identity and accurate session timing
+
+- Always show the original Onde concentric-wave mark in the menu bar, as a fixed monochrome template. No elapsed title or playback-dependent symbol.
+- Separate Play intent from the clock: waiting for audio preparation or recovery no longer accrues session or daily time.
+- Pause Focus/Relax automatically when all sound layers are switched off. Do not resume when a layer is merely re-enabled; Play remains explicit.
+- Pause on synchronous audio failure, failed preparation or sustained output loss. Prevent late preparation from restarting a paused session.
+- Preserve deliberate silent meditation and its configured chimes, volume-only muting, live crossfades, pause/resume, saved defaults, daily history and imports.
+- Stop resets the current session only; today's accumulated total remains available.
+
 ## 1.11.1 — Reliable update downloads
 
 - Show real byte and percentage progress while downloading a release, with an explicit cancel action.
