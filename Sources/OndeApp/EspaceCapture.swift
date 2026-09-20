@@ -55,8 +55,12 @@ import OndeCore
                 model.quietView = false
                 try await take(EspaceSheetView(sheet:.sound).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("sound-native.png"))
                 try await take(EspaceSheetView(sheet:.settings).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("settings-native.png"))
+                for tab in [EspaceSettingsTab.defaults, .meditation, .advanced] {
+                    try await take(EspaceSheetView(sheet:.settings, initialSettingsTab:tab).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("settings-\(tab.rawValue.lowercased())-native.png"))
+                }
+                try await take(EspaceRootView().environmentObject(model), size:NSSize(width:860,height:640), file:output.appendingPathComponent("contrast-compact-native.png"), highContrast:true)
                 try await take(EspaceMenuBarView().environmentObject(model), size:NSSize(width:340,height:480), file:output.appendingPathComponent("menubar-native.png"))
-                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":13, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
+                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":17, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
                 try JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("capture.json"))
                 NSApp.terminate(nil)
             } catch { fputs("Design capture failed: \(error)\n",stderr); exit(4) }
@@ -64,11 +68,11 @@ import OndeCore
         #endif
     }
     #if ONDE_DESIGN_CAPTURE
-    private static func take<Content:View>(_ content:Content, size:NSSize, file:URL) async throws {
+    private static func take<Content:View>(_ content:Content, size:NSSize, file:URL, highContrast:Bool = false) async throws {
         let hosted = NSHostingView(rootView:content.defaultAppStorage(defaults).environment(\.locale,Locale(identifier:"en")).environment(\.espaceReduceMotion,true).frame(width:size.width,height:size.height))
         hosted.frame = NSRect(origin:.zero,size:size)
         let window = NSWindow(contentRect:hosted.frame,styleMask:[.titled],backing:.buffered,defer:false)
-        window.contentView = hosted; window.appearance = NSAppearance(named:.darkAqua)
+        window.contentView = hosted; window.appearance = NSAppearance(named:highContrast ? .accessibilityHighContrastDarkAqua : .darkAqua)
         window.orderFront(nil)
         try await Task.sleep(nanoseconds:700_000_000)
         hosted.layoutSubtreeIfNeeded(); hosted.displayIfNeeded()

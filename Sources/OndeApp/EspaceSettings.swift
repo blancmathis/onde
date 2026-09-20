@@ -4,18 +4,37 @@ import OndeCore
 struct EspaceSheetView: View {
     @EnvironmentObject var model: AppModel
     let sheet: ListeningSheet
+    @State private var settingsTab: EspaceSettingsTab
+    @State private var chimeDraft = EspaceChimeDraft(markers: [])
+    @State private var initialized = false
+    @State private var confirmDiscard = false
+    @State private var pendingSheet: ListeningSheet?
+    init(sheet: ListeningSheet, initialSettingsTab: EspaceSettingsTab = .general) {
+        self.sheet = sheet
+        _settingsTab = State(initialValue: initialSettingsTab)
+    }
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Text(sheet == .sound ? "Adjust sound" : sheet.title).font(.system(size: 23, weight: .semibold)).tracking(-0.5)
                 Spacer()
-                Button("Done") { model.sheet = nil }.keyboardShortcut(.cancelAction).buttonStyle(EspaceButtonStyle())
+                Button("Done") { requestExit() }.keyboardShortcut(.cancelAction).buttonStyle(EspaceButtonStyle())
             }.padding(24)
+            if sheet == .settings && chimeDraft.isDirty {
+                HStack(spacing: 12) {
+                    Label("Unapplied chime times", systemImage: "pencil.circle")
+                    Spacer()
+                    Button("Review") { settingsTab = .meditation }.buttonStyle(.plain)
+                    Button("Discard edit") { chimeDraft.reload() }.buttonStyle(.plain)
+                }.font(.system(size: 12)).foregroundStyle(EspaceTheme.accent(.meditation))
+                    .padding(.horizontal, 26).padding(.bottom, 16)
+                    .accessibilityIdentifier("chime-draft-banner")
+            }
             Divider().overlay(EspaceTheme.line)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     switch sheet {
-                    case .settings: EspacePreferencesView()
+                    case .settings: EspacePreferencesView(tab: $settingsTab, chimeDraft: $chimeDraft, navigate: { requestExit(to: $0) })
                     case .sound: EspaceSoundSettings()
                     case .personal: PersonalAudioView()
                     case .history: HistoryView()
@@ -27,6 +46,19 @@ struct EspaceSheetView: View {
             }
         }.frame(width: 740, height: 590).background(EspaceTheme.background)
             .foregroundStyle(EspaceTheme.ink).tint(EspaceTheme.accent(model.mode)).preferredColorScheme(.dark)
+            .interactiveDismissDisabled(sheet == .settings && chimeDraft.isDirty)
+            .onAppear {
+                if !initialized { chimeDraft = EspaceChimeDraft(markers: model.store.preferences.markers); initialized = true }
+            }
+            .onChange(of: model.store.preferences.markers) { _, markers in chimeDraft.receive(markers) }
+            .confirmationDialog("Discard unapplied chime times?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+                Button("Discard and continue", role: .destructive) { chimeDraft.reload(); model.sheet = pendingSheet }
+                Button("Keep editing", role: .cancel) { }
+            } message: { Text("Your saved chime times have not changed.") }
+    }
+    private func requestExit(to next: ListeningSheet? = nil) {
+        if sheet == .settings && chimeDraft.isDirty { pendingSheet = next; confirmDiscard = true }
+        else { model.sheet = next }
     }
 }
 
@@ -57,7 +89,7 @@ private struct EspaceSettingSlider: View {
                 Spacer()
                 Text(formatted).font(.system(size: 12)).monospacedDigit().foregroundStyle(EspaceTheme.secondary)
             }
-            Slider(value: $value, in: range).accessibilityLabel(title + (seconds ? " in seconds" : " level"))
+            Slider(value: $value, in: range).accessibilityLabel(title + (seconds ? " in seconds" : " level")).accessibilityValue(formatted)
         }
     }
 }
@@ -135,7 +167,7 @@ private struct EspaceSoundSettings: View {
     }
 }
 
-private enum EspaceSettingsTab: String, CaseIterable, Identifiable {
+enum EspaceSettingsTab: String, CaseIterable, Identifiable {
     case general = "General", defaults = "Defaults", meditation = "Meditation", advanced = "Advanced"
     var id: String { rawValue }
 }
@@ -145,7 +177,9 @@ private struct EspacePreferencesView: View {
     @Environment(\.espaceReduceMotion) private var reduced
     @AppStorage("onde.espace.visualMotion") private var visualMotion = true
     @AppStorage("onde.espace.showArtwork") private var showArtwork = true
-    @State private var tab: EspaceSettingsTab = .general
+    @Binding var tab: EspaceSettingsTab
+    @Binding var chimeDraft: EspaceChimeDraft
+    let navigate: (ListeningSheet) -> Void
     var body: some View {
         Picker("Settings section", selection: $tab) {
             ForEach(EspaceSettingsTab.allCases) { item in Text(item.rawValue).tag(item) }
@@ -181,7 +215,7 @@ private struct EspacePreferencesView: View {
                 Text("Relax and Meditation share music, but keep independent defaults and backgrounds.")
                     .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(3)
             }
-        case .meditation: EspaceChimeSettings()
+        case .meditation: EspaceChimeSettings(draft: $chimeDraft)
         case .advanced:
             EspaceSection(title: "Recorded audio", detail: "Smoothing for imported audio and background layers. Generated music uses its own crossfade.") {
                 EspaceSettingSlider(title: "Recorded-layer smoothing", value: Binding(get: { model.store.preferences.fadeSeconds }, set: { value in
@@ -190,8 +224,8 @@ private struct EspacePreferencesView: View {
             }
             EspaceSection(title: "Existing tools", detail: "Your saved mixes, imported audio and history are kept intact.") {
                 HStack(spacing: 10) {
-                    Button("Personal audio & mixes") { model.sheet = .personal }.buttonStyle(EspaceButtonStyle())
-                    Button("Agent & CLI") { model.sheet = .cli }.buttonStyle(EspaceButtonStyle())
+                    Button("Personal audio & mixes") { navigate(.personal) }.buttonStyle(EspaceButtonStyle())
+                    Button("Agent & CLI") { navigate(.cli) }.buttonStyle(EspaceButtonStyle())
                 }
             }
         }
@@ -200,28 +234,26 @@ private struct EspacePreferencesView: View {
 
 private struct EspaceChimeSettings: View {
     @EnvironmentObject var model: AppModel
-    @State private var draft = ""
+    @Binding var draft: EspaceChimeDraft
     @State private var error = ""
-    @State private var conflict = false
-    private func format(_ markers: [Double]) -> String { markers.map { String(format: "%g", $0 / 60) }.joined(separator: ", ") }
     var body: some View {
         EspaceSection(title: "Meditation chimes", detail: "A soft glass chime marks each time you choose. After the last chime, the timer and music continue.") {
             Toggle("Enable chimes", isOn: Binding(get: { model.store.preferences.chimesEnabled }, set: { value in
                 _ = model.handle(["command": "settings", "key": "chimesEnabled", "value": value])
             })).toggleStyle(.switch).font(.system(size: 13))
             Text("Times in minutes from the start of the session").font(.system(size: 13))
-            TextField("10, 20, 30", text: $draft).textFieldStyle(.roundedBorder).font(.system(size: 14, design: .monospaced))
+            TextField("10, 20, 30", text: $draft.text).textFieldStyle(.roundedBorder).font(.system(size: 14, design: .monospaced))
                 .onSubmit(apply).accessibilityLabel("Chime times in minutes, separated by commas")
             Text("Separate times with commas. Leave empty for no chimes. Past times are not replayed.")
                 .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(4)
             if !error.isEmpty { Text(error).font(.system(size: 12)).foregroundStyle(Color(hex: 0xEAB2A4)).accessibilityLabel(error) }
-            if conflict {
+            if draft.hasConflict {
                 Text("Chime times changed elsewhere. Reload before applying an edit.").font(.system(size: 12)).foregroundStyle(Color(hex: 0xEAB2A4))
-                Button("Reload current times") { draft = format(model.store.preferences.markers); conflict = false; error = "" }.buttonStyle(EspaceButtonStyle())
+                Button("Reload current times") { draft.reload(); error = "" }.buttonStyle(EspaceButtonStyle())
             }
             HStack(spacing: 10) {
-                Button("Apply times", action: apply).buttonStyle(EspaceButtonStyle(primary: true, tint: EspaceTheme.accent(.meditation))).disabled(conflict || draft == format(model.store.preferences.markers))
-                Button("Use 10, 20, 30") { draft = "10, 20, 30" }.buttonStyle(EspaceButtonStyle())
+                Button("Apply times", action: apply).buttonStyle(EspaceButtonStyle(primary: true, tint: EspaceTheme.accent(.meditation))).disabled(draft.hasConflict || !draft.isDirty)
+                Button("Use 10, 20, 30") { draft.text = "10, 20, 30"; error = "" }.buttonStyle(EspaceButtonStyle())
             }
             Divider().overlay(EspaceTheme.line)
             EspaceSettingSlider(title: "Chime level", value: Binding(get: { model.store.preferences.chimeVolume }, set: model.setChime))
@@ -231,23 +263,14 @@ private struct EspaceChimeSettings: View {
                 Button { model.previewChime() } label: { Label("Listen", systemImage: "bell") }.buttonStyle(EspaceButtonStyle())
             }
         }
-        .onAppear { draft = format(model.store.preferences.markers) }
-        .onChange(of: model.store.preferences.markers) { old, new in
-            if draft == format(new) { conflict = false }
-            else if draft == format(old) { draft = format(new); conflict = false }
-            else { conflict = true }
-        }
+        .onChange(of: draft.text) { _, _ in error = "" }
     }
     private func apply() {
-        guard !conflict else { return }
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let parts = text.isEmpty ? [] : text.split(separator: ",", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
-        let values = parts.compactMap(Double.init)
-        guard values.count == parts.count, values.allSatisfy({ $0.isFinite && $0 > 0 && $0 <= 1440 }), values.count <= 32 else {
-            error = "Use up to 32 positive times, no greater than 1440 minutes."; return
-        }
         do {
-            try model.setMarkers(values.map { $0 * 60 }); draft = format(model.store.preferences.markers)
+            draft.receive(model.store.preferences.markers)
+            let seconds = try draft.parsedSeconds()
+            try model.setMarkers(seconds)
+            draft.didApply(model.store.preferences.markers)
             error = ""; model.notify("Chime times updated.")
         } catch { self.error = error.localizedDescription }
     }
