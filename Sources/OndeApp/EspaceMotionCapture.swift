@@ -8,6 +8,21 @@ import OndeCore
 @MainActor enum EspaceMotionCapture {
     private static var started = false
     private static var checks: [String] = []
+    // Hosted runners may enable system Reduce Motion. Model both environment values
+    // on this private root, without changing the machine or production policy.
+    private final class AccessibilityFixture: ObservableObject {
+        @Published var reduced = false
+    }
+    private struct FixtureRoot: View {
+        let model: AppModel
+        let defaults: UserDefaults
+        @ObservedObject var accessibility: AccessibilityFixture
+        var body: some View {
+            EspaceRootView().environmentObject(model).defaultAppStorage(defaults)
+                .environment(\.locale, Locale(identifier: "en"))
+                .environment(\.accessibilityReduceMotion, accessibility.reduced)
+        }
+    }
     @discardableResult static func runIfRequested(model: AppModel) -> Bool {
         let env = ProcessInfo.processInfo.environment
         guard let outputPath = env["ONDE_MOTION_CHECK_DIR"] else { return false }
@@ -54,7 +69,7 @@ import OndeCore
         }
         let count = bitmap.bytesPerRow * bitmap.pixelsHigh
         bytes.initialize(repeating: 0, count: count)
-        host.cacheDisplay(in: host.bounds, to: bitmap)
+        host.cacheDisplay(in: host.bounds,to: bitmap)
         guard let png = bitmap.representation(using: .png, properties: [:]) else { throw NSError(domain: "LiveMotionPNG", code: 1) }
         if let file { try png.write(to: file) }
         return Frame(bytes: Data(bytes: bytes, count: count), png: png)
@@ -71,12 +86,13 @@ import OndeCore
         defaults.set(true, forKey: "onde.espace.visualMotion")
         defaults.set(true, forKey: "onde.espace.showArtwork")
         defaults.set("automatic", forKey: "onde.espace.artworkChoice")
+        model.startDefaultMode(.focus, autostart: false)
         // Allow SwiftUI to finish its initial scene presentation before ordering it out.
         try await wait(0.7)
         // Keep the app's original scene out of view; its status item still exists.
         for window in NSApp.windows where window.title == "Onde" { window.orderOut(nil) }
-        let host = NSHostingView(rootView: EspaceRootView().environmentObject(model)
-            .defaultAppStorage(defaults).environment(\.locale, Locale(identifier: "en")))
+        let accessibility = AccessibilityFixture()
+        let host = NSHostingView(rootView: FixtureRoot(model: model, defaults: defaults, accessibility: accessibility))
         let window = NSWindow(contentRect: NSRect(x: 30, y: 50, width: 1120, height: 800),
             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -84,6 +100,7 @@ import OndeCore
         window.appearance = NSAppearance(named: .darkAqua)
         NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil)
         try await wait(0.7)
+        window.makeFirstResponder(nil)
         _ = try frame(host, file: output.appendingPathComponent("window-presented.png"))
         for window in NSApp.windows {
             print("WINDOW", window.title, "visible", window.isVisible, "mini", window.isMiniaturized,
@@ -132,6 +149,14 @@ import OndeCore
         try check(changed(ra,rb) == 0, "Reduced motion keeps the actual rendered view still")
         model.store.preferences.reducedMotion = false
         try await wait(0.4); try await running(true, "Explicitly leaving reduced motion resumes the surface")
+        accessibility.reduced = true
+        try await wait(0.4); try await running(false, "System Reduce Motion environment stops the integrated animation")
+        let systemFrameA = try frame(host)
+        try await wait(0.3)
+        let systemFrameB = try frame(host)
+        try check(changed(systemFrameA,systemFrameB) == 0, "System reduced motion freezes rendered pixels")
+        accessibility.reduced = false
+        try await wait(0.4); try await running(true, "Explicit system motion preference change resumes the surface")
         model.sheet = .settings
         try await wait(0.8); try await running(false, "A settings sheet pauses the animation behind it")
         model.sheet = nil
@@ -174,7 +199,9 @@ import OndeCore
         try await wait(0.3); try await running(false, "Closing the hosting window leaves no running artwork clock")
         let receipt: [String: Any] = ["passed": checks.count, "checks": checks, "motifs": motions,
             "recorded_frame_seconds": timestamps, "muted": true,
-            "scope": "Real EspaceRootView in NSWindow, natural Timer/RunLoop, pixel comparisons and actual window lifecycle. Programmatic preferences/actions; not a full pointer or GPU performance test.",
+            "runner_system_reduce_motion": NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+            "controlled_accessibility_environment": true,
+            "scope": "Real EspaceRootView in NSWindow, natural Timer/RunLoop, pixel comparisons and actual window lifecycle. Programmatic preferences/actions and controlled accessibility environment; not a full pointer or GPU performance test.",
             "os": ProcessInfo.processInfo.operatingSystemVersionString]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent("motion-integration.json"))
