@@ -8,21 +8,6 @@ import OndeCore
 @MainActor enum EspaceMotionCapture {
     private static var started = false
     private static var checks: [String] = []
-    // Hosted runners may enable system Reduce Motion. Model both environment values
-    // on this private root, without changing the machine or production policy.
-    private final class AccessibilityFixture: ObservableObject {
-        @Published var reduced = false
-    }
-    private struct FixtureRoot: View {
-        let model: AppModel
-        let defaults: UserDefaults
-        @ObservedObject var accessibility: AccessibilityFixture
-        var body: some View {
-            EspaceRootView().environmentObject(model).defaultAppStorage(defaults)
-                .environment(\.locale, Locale(identifier: "en"))
-                .environment(\.accessibilityReduceMotion, accessibility.reduced)
-        }
-    }
     @discardableResult static func runIfRequested(model: AppModel) -> Bool {
         let env = ProcessInfo.processInfo.environment
         guard let outputPath = env["ONDE_MOTION_CHECK_DIR"] else { return false }
@@ -91,8 +76,8 @@ import OndeCore
         try await wait(0.7)
         // Keep the app's original scene out of view; its status item still exists.
         for window in NSApp.windows where window.title == "Onde" { window.orderOut(nil) }
-        let accessibility = AccessibilityFixture()
-        let host = NSHostingView(rootView: FixtureRoot(model: model, defaults: defaults, accessibility: accessibility))
+        let host = NSHostingView(rootView: EspaceRootView().environmentObject(model)
+            .defaultAppStorage(defaults).environment(\.locale, Locale(identifier: "en")))
         let window = NSWindow(contentRect: NSRect(x: 30, y: 50, width: 1120, height: 800),
             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -105,6 +90,28 @@ import OndeCore
         for window in NSApp.windows {
             print("WINDOW", window.title, "visible", window.isVisible, "mini", window.isMiniaturized,
                   "exposed", window.occlusionState.contains(.visible), "frame", window.frame)
+        }
+        let reducedCase = ProcessInfo.processInfo.environment["ONDE_MOTION_CASE"] == "system-reduced"
+        try check(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion == reducedCase,
+                  "The real system accessibility preference matches this fixture")
+        if reducedCase {
+            try await running(false, "Actual system Reduce Motion stops the integrated artwork")
+            let a = try frame(host, file: output.appendingPathComponent("system-reduced-a.png"))
+            let frozen = EspaceMotionAudit.live.map(\.time)
+            try await wait(0.6)
+            let b = try frame(host, file: output.appendingPathComponent("system-reduced-b.png"))
+            try check(changed(a,b) == 0 && frozen == EspaceMotionAudit.live.map(\.time),
+                      "Actual system Reduce Motion freezes pixels and clocks")
+            try check(!model.playing && model.elapsed == 0 && model.todaySeconds == 0,
+                      "Reduced-motion fixture leaves music and session time stopped")
+            window.orderOut(nil); window.contentView = nil; window.close()
+            try await wait(0.3); try await running(false, "Reduced-motion fixture leaves no artwork clock")
+            let receipt: [String: Any] = ["passed": checks.count, "checks": checks,
+                "runner_system_reduce_motion": true, "muted": true,
+                "scope": "Unmodified production accessibility environment in a disposable hosted Mac; no synthetic time or scene/window override."]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+                .write(to: output.appendingPathComponent("motion-integration.json"))
+            return
         }
         try await running(true, "Full listening view starts one animation clock without playing audio")
         let first = try frame(host, file: output.appendingPathComponent("live-initial.png"))
@@ -149,14 +156,6 @@ import OndeCore
         try check(changed(ra,rb) == 0, "Reduced motion keeps the actual rendered view still")
         model.store.preferences.reducedMotion = false
         try await wait(0.4); try await running(true, "Explicitly leaving reduced motion resumes the surface")
-        accessibility.reduced = true
-        try await wait(0.4); try await running(false, "System Reduce Motion environment stops the integrated animation")
-        let systemFrameA = try frame(host)
-        try await wait(0.3)
-        let systemFrameB = try frame(host)
-        try check(changed(systemFrameA,systemFrameB) == 0, "System reduced motion freezes rendered pixels")
-        accessibility.reduced = false
-        try await wait(0.4); try await running(true, "Explicit system motion preference change resumes the surface")
         model.sheet = .settings
         try await wait(0.8); try await running(false, "A settings sheet pauses the animation behind it")
         model.sheet = nil
@@ -200,8 +199,8 @@ import OndeCore
         let receipt: [String: Any] = ["passed": checks.count, "checks": checks, "motifs": motions,
             "recorded_frame_seconds": timestamps, "muted": true,
             "runner_system_reduce_motion": NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
-            "controlled_accessibility_environment": true,
-            "scope": "Real EspaceRootView in NSWindow, natural Timer/RunLoop, pixel comparisons and actual window lifecycle. Programmatic preferences/actions and controlled accessibility environment; not a full pointer or GPU performance test.",
+            "controlled_accessibility_environment": false,
+            "scope": "Real EspaceRootView in NSWindow, natural Timer/RunLoop, pixel comparisons and actual window lifecycle. Programmatic preferences/actions and actual system motion preference; not a full pointer or GPU performance test.",
             "os": ProcessInfo.processInfo.operatingSystemVersionString]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent("motion-integration.json"))
