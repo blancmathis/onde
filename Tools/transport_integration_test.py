@@ -70,6 +70,9 @@ class Fixture:
         return b
     def quit(self):
         if self.process and self.process.poll() is None:
+            # Dismiss the error alert deliberately produced by failure fixtures.
+            # AppKit can defer termination while an alert is presented.
+            self.call('errors.clear'); time.sleep(.3)
             self.call('quit'); self.process.wait(timeout=15)
     def close(self):
         if self.process and self.process.poll() is None:
