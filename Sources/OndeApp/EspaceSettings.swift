@@ -31,6 +31,13 @@ struct EspaceSheetView: View {
                     .accessibilityIdentifier("chime-draft-banner")
             }
             Divider().overlay(EspaceTheme.line)
+            if sheet == .settings {
+                Picker("Settings section", selection: $settingsTab) {
+                    ForEach(EspaceSettingsTab.allCases) { item in Text(item.rawValue).tag(item) }
+                }.pickerStyle(.segmented).labelsHidden().controlSize(.large)
+                    .padding(.horizontal, 26).padding(.top, 20).padding(.bottom, 4)
+                    .accessibilityIdentifier("settings-section")
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     switch sheet {
@@ -181,23 +188,20 @@ private struct EspacePreferencesView: View {
     @Binding var chimeDraft: EspaceChimeDraft
     let navigate: (ListeningSheet) -> Void
     var body: some View {
-        Picker("Settings section", selection: $tab) {
-            ForEach(EspaceSettingsTab.allCases) { item in Text(item.rawValue).tag(item) }
-        }.pickerStyle(.segmented).labelsHidden().controlSize(.large)
         switch tab {
         case .general:
             EspaceSection(title: "Your listening space", detail: "Opening Onde never starts playback. Browsing a mode does not change the current session.") {
-                Toggle("Show artwork", isOn: $showArtwork).toggleStyle(.switch).font(.system(size: 13))
-                Toggle("Subtle visual motion", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced || !showArtwork)
+                EspaceSettingToggle("Show artwork", isOn: $showArtwork).toggleStyle(.switch).font(.system(size: 13))
+                EspaceSettingToggle("Subtle visual motion", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced || !showArtwork)
                 Text(reduced ? "Reduce motion is enabled in the system or in Onde. The listening surface stays still." : "Only the listening surface moves. Music cards stay still; the visual pauses when Onde is not active.")
                     .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(4)
                 Divider().overlay(EspaceTheme.line)
-                Toggle("Reduce motion in Onde", isOn: Binding(get: { model.store.preferences.reducedMotion }, set: { value in
+                EspaceSettingToggle("Reduce motion in Onde", isOn: Binding(get: { model.store.preferences.reducedMotion }, set: { value in
                     _ = model.handle(["command": "settings", "key": "reducedMotion", "value": value])
                 })).toggleStyle(.switch).font(.system(size: 13))
             }
             EspaceSection(title: "Playback") {
-                Toggle("Keep playing with the display off", isOn: Binding(get: { model.store.preferences.preventSleep }, set: { value in
+                EspaceSettingToggle("Keep playing with the display off", isOn: Binding(get: { model.store.preferences.preventSleep }, set: { value in
                     _ = model.handle(["command": "settings", "key": "preventSleep", "value": value])
                 })).toggleStyle(.switch).font(.system(size: 13))
                 Text("Prevents automatic system sleep while a session is running. Closing the lid or putting the Mac to sleep still pauses the session.")
@@ -238,7 +242,7 @@ private struct EspaceChimeSettings: View {
     @State private var error = ""
     var body: some View {
         EspaceSection(title: "Meditation chimes", detail: "A soft glass chime marks each time you choose. After the last chime, the timer and music continue.") {
-            Toggle("Enable chimes", isOn: Binding(get: { model.store.preferences.chimesEnabled }, set: { value in
+            EspaceSettingToggle("Enable chimes", isOn: Binding(get: { model.store.preferences.chimesEnabled }, set: { value in
                 _ = model.handle(["command": "settings", "key": "chimesEnabled", "value": value])
             })).toggleStyle(.switch).font(.system(size: 13))
             Text("Times in minutes from the start of the session").font(.system(size: 13))
@@ -273,5 +277,20 @@ private struct EspaceChimeSettings: View {
             draft.didApply(model.store.preferences.markers)
             error = ""; model.notify("Chime times updated.")
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+/// Trailing switches share an alignment, independently of the label length.
+private struct EspaceSettingToggle: View {
+    let title: String
+    @Binding var isOn: Bool
+    init(_ title: String, isOn: Binding<Bool>) { self.title = title; self._isOn = isOn }
+    var body: some View {
+        HStack(spacing: 24) {
+            Text(title).font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            Spacer(minLength: 12)
+            Toggle(title, isOn: $isOn).labelsHidden().toggleStyle(.switch).accessibilityLabel(title)
+        }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
     }
 }
