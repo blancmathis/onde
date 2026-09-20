@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11.1 — Reliable update downloads
+
+- Show real byte and percentage progress while downloading a release, with an explicit cancel action.
+- Extend the verified download budget for slower connections and wait for temporary connectivity loss instead of appearing frozen.
+- Clear stale paths from earlier releases before a new transfer, so an old verified archive is never presented as the current update.
+- Add a direct browser fallback while retaining exact size and SHA-256 verification for in-app downloads.
+- Report transfer and verification state through the local status/CLI snapshot.
+
 ## 1.11.0 — Five relaxation worlds
 
 - Add Lagoon, Stillwater, Hearth, Reverie and Driftwood to the shared Relax/Meditation catalog without changing user defaults.

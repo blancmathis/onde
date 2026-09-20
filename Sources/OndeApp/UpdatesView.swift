@@ -3,38 +3,100 @@ import OndeCore
 
 struct UpdatesView: View {
     @ObservedObject var updates: UpdateManager
+
+    private var progressTitle: String {
+        if updates.verifying { return "Verifying SHA-256…" }
+        if let progress = updates.downloadProgress {
+            return "Downloading \(Int((progress * 100).rounded()))%"
+        }
+        return "Preparing secure download…"
+    }
+
+    private var progressDetail: String {
+        let expected = updates.expectedDownloadBytes
+        guard expected > 0 else { return "Waiting for GitHub…" }
+        let total = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
+        guard updates.downloadedBytes > 0 else { return total }
+        let received = ByteCountFormatter.string(fromByteCount: updates.downloadedBytes, countStyle: .file)
+        return "\(received) of \(total)"
+    }
+
     var body: some View {
         PageHeader(eyebrow: "Onde · open source", title: "Stay up to date. On your terms.", subtitle: "Builds are published from main on GitHub. Nothing installs without you.")
         Panel {
             VStack(alignment: .leading, spacing: 21) {
                 HStack(spacing: 16) {
-                    Image(systemName: updates.available ? "arrow.down.circle.fill" : "checkmark.seal")
+                    Image(systemName: updates.downloadedPath != nil ? "checkmark.circle.fill" : updates.available ? "arrow.down.circle.fill" : "checkmark.seal")
                         .font(.system(size: 32, weight: .light)).foregroundStyle(Theme.accent)
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(updates.available ? "An update is ready." : "Your version: \(AppBuild.version)")
+                        Text(updates.downloadedPath != nil ? "Download ready." : updates.available ? "An update is ready." : "Your version: \(AppBuild.version)")
                             .font(.system(size: 24, design: .serif))
                         Text(updates.candidate?.title ?? "Check for available releases.")
                             .font(.system(size: 12)).foregroundStyle(Theme.muted)
                     }
                     Spacer()
-                    if updates.checking || updates.downloading { ProgressView().controlSize(.small) }
+                    if updates.checking { ProgressView().controlSize(.small) }
                 }
+
                 HStack(spacing: 12) {
                     PillButton(title: updates.checking ? "Checking…" : "Check for updates", symbol: "arrow.clockwise") { updates.check() }
                         .disabled(updates.checking || updates.downloading)
-                    if updates.candidate != nil {
-                        PillButton(title: updates.downloading ? "Downloading…" : "Download update", symbol: "arrow.down", primary: true) { updates.download() }
-                            .disabled(updates.downloading || updates.checking)
+                    if updates.available {
+                        if updates.downloading {
+                            PillButton(title: updates.verifying ? "Verifying…" : "Downloading…", symbol: updates.verifying ? "checkmark.shield" : "arrow.down", primary: true) {}
+                                .disabled(true)
+                            if !updates.verifying {
+                                PillButton(title: "Cancel", symbol: "xmark") { updates.cancelDownload() }
+                            }
+                        } else {
+                            PillButton(title: "Download update", symbol: "arrow.down", primary: true) { updates.download() }
+                        }
                     }
                 }
-                if let error = updates.error { Text(error).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
+
+                if updates.downloading {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(progressTitle).font(.system(size: 12, weight: .semibold))
+                            Spacer()
+                            Text(progressDetail).font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.muted)
+                        }
+                        if updates.verifying {
+                            ProgressView().controlSize(.small)
+                        } else if let progress = updates.downloadProgress {
+                            ProgressView(value: progress).tint(Theme.accent)
+                        } else {
+                            ProgressView()
+                        }
+                        Text(updates.verifying ? "Checking the complete archive before keeping it." : "The download continues while Onde remains open. Slow connections can take several minutes.")
+                            .font(.system(size: 10)).foregroundStyle(Theme.muted).lineSpacing(3)
+                    }
+                    .padding(14)
+                    .background(Theme.background.opacity(0.35), in: RoundedRectangle(cornerRadius: 14))
+                }
+
+                if updates.available {
+                    Button { updates.openDownloadInBrowser() } label: {
+                        Label("Download in browser instead", systemImage: "safari")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.accent)
+                    .help("Open the verified release archive in your default browser")
+                }
+
+                if let error = updates.error {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+                }
                 if let path = updates.downloadedPath {
                     Label("Download verified with SHA-256.", systemImage: "checkmark.shield.fill").foregroundStyle(Theme.accent).font(.system(size: 12))
                     Text(path).font(.system(size: 10, design: .monospaced)).foregroundStyle(Theme.muted).textSelection(.enabled)
                     PillButton(title: "Show in Finder", symbol: "folder") { updates.reveal() }
                 }
                 if let date = updates.lastChecked {
-                    Text("Last checked: \(date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(Locale(identifier: "en"))))").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                    Text("Last checked: \(date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(Locale(identifier: "en"))))")
+                        .font(.system(size: 10)).foregroundStyle(Theme.muted)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -62,6 +124,7 @@ struct UpdatesView: View {
         }
     }
 }
+
 struct UpdateBanner: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var updates: UpdateManager
@@ -71,8 +134,11 @@ struct UpdateBanner: View {
                 Image(systemName: "arrow.down.circle").foregroundStyle(Theme.accent)
                 Text("A new version is available").font(.system(size: 12, weight: .medium))
                 Spacer()
-                Button(updates.downloading ? "Downloading…" : "Download") { updates.download(); model.page = "updates" }
-                    .buttonStyle(.plain).foregroundStyle(Theme.accent).font(.system(size: 12, weight: .semibold)).disabled(updates.downloading)
+                Button(updates.downloading ? updates.verifying ? "Verifying…" : "Downloading…" : "Download") {
+                    updates.download()
+                    model.page = "updates"
+                }
+                .buttonStyle(.plain).foregroundStyle(Theme.accent).font(.system(size: 12, weight: .semibold)).disabled(updates.downloading)
             }.padding(.horizontal, 30).padding(.vertical, 12).background(Theme.panel)
         }
     }
