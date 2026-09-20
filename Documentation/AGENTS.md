@@ -31,7 +31,7 @@ onde volume 0.4
 onde silence
 ```
 
-`silence` disables sound layers, including the generator, but leaves the active session stopwatch and meditation chimes running. Master volume zero also silences chimes. Do not raise a user's volume unexpectedly. Closing the main window does not end playback.
+`silence` disables sound layers, including the generator. In Focus and Relax it pauses the session and daily accounting. In Meditation it intentionally keeps the practice stopwatch and configured chimes running. Master volume zero also silences chimes. Do not raise a user's volume unexpectedly. Closing the main window does not end playback.
 
 ## Generative compositions
 

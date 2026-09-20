@@ -37,7 +37,11 @@ final class AppModel: ObservableObject {
     private var toastTicket = 0
     private var shuttingDown = false
     var now: Double { ProcessInfo.processInfo.systemUptime }
-    var playing: Bool { clock.running }
+    // Transport intent is separate from measured session time. A preparing or
+    // interrupted audio graph must not keep adding listening seconds.
+    @Published private(set) var playbackRequested = false
+    private var playbackClockPolicy = PlaybackClockPolicy()
+    var playing: Bool { playbackRequested }
     var mode: SessionMode { store.mode }
     var activeSounds: [Sound] { sounds.filter { store.layers[$0.id]?.enabled == true } }
     var nextMarker: Double? {
@@ -125,6 +129,8 @@ final class AppModel: ObservableObject {
     }
     private func clamp(_ n: Double) -> Double { n.isFinite ? min(1, max(0, n)) : 0 }
     func tick() {
+        guard !shuttingDown else { return }
+        synchronizePlaybackClock()
         refreshActivity()
         let current = clock.elapsed(at: now)
         if current != elapsed { elapsed = current }
@@ -163,8 +169,41 @@ final class AppModel: ObservableObject {
     func applyAudio(freshStart: Bool = false) {
         audio.transitionSeconds = transitionSeconds;
         do { try audio.apply(sounds: sounds, layers: store.layers, master: store.preferences.masterVolume, playing: playing, fade: store.preferences.fadeSeconds, mode: musicRenderMode, generatorConfig: generatorConfiguration, startFadeSeconds: store.preferences.startFadeSeconds, freshStart: freshStart) }
-        catch { fail(error) }
+        catch {
+            playbackRequested = false
+            playbackClockPolicy.reset()
+            pauseTiming()
+            audio.stopImmediately()
+            fail(error)
+        }
+        synchronizePlaybackClock()
         updateSleepAssertion()
+    }
+    /// All controls (window, menu-bar player and CLI) share this reconciliation.
+    /// Volume/mute is not Pause: a running stream still has a musical timeline.
+    private func synchronizePlaybackClock() {
+        guard ownsProfile, !shuttingDown else { return }
+        let health = audio.transportHealth
+        let decision = playbackClockPolicy.evaluate(
+            requested: playing, mode: mode, hasSelection: !activeSounds.isEmpty,
+            hasRunningAudio: health.running, preparing: health.preparing,
+            failed: health.error != nil, at: now)
+        switch decision {
+        case .count:
+            if !clock.running { resumeTiming() }
+        case .idle, .wait:
+            if clock.running { pauseTiming() }
+        case .noSources, .unavailable:
+            // pause() clears intent before applying audio, so this cannot recurse
+            // indefinitely or allow late scene preparation to restart playback.
+            pause()
+            if decision == .noSources {
+                notify("Session paused. Choose a sound to continue.")
+            } else {
+                fail(OndeError("playback_unavailable", health.error ?? "Audio output stopped. The session is paused; press Play to try again."))
+            }
+            event("playback_auto_paused", ["reason": decision.rawValue])
+        }
     }
     private func updateSleepAssertion() {
         if playing && sessionActivity == nil {
@@ -189,8 +228,12 @@ final class AppModel: ObservableObject {
         if newMode != mode {
             recordSession(); store.modeMixes[mode.rawValue] = store.layers
             store.mode = newMode; store.layers = store.modeMixes[newMode.rawValue] ?? defaults(for: newMode)
+            playbackRequested = false; playbackClockPolicy.reset()
             clock.stop(); elapsed = 0; sessionStarted = nil
-        } else if reset { recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil }
+        } else if reset {
+            recordSession(); playbackRequested = false; playbackClockPolicy.reset()
+            clock.stop(); elapsed = 0; sessionStarted = nil
+        }
         page = "studio"
         if !deferAudio {
             if autostart { if playing { applyAudio() } else { play() } } else { applyAudio() }
@@ -204,9 +247,14 @@ final class AppModel: ObservableObject {
         // Explicit selection after pause is not a resume: discard BOTH scenes and
         // any queued/preparing scene before permitting the new audio graph to run.
         if restart { audio.restartMusic() }
-        resumeTiming(); applyAudio(freshStart: fresh); event("play", ["music_restarted": restart])
+        playbackRequested = true; playbackClockPolicy.reset()
+        applyAudio(freshStart: fresh); event("play", ["music_restarted": restart])
     }
-    func pause() { guard playing else { return }; pauseTiming(); applyAudio(); event("pause") }
+    func pause() {
+        guard playing else { return }
+        playbackRequested = false; playbackClockPolicy.reset()
+        pauseTiming(); applyAudio(); event("pause")
+    }
     func togglePlayback() { playing ? pause() : play() }
     private func recordSession() {
         activity.pause(at: Date(), uptime: now)
@@ -217,15 +265,29 @@ final class AppModel: ObservableObject {
             if store.history.count > 200 { store.history = Array(store.history.prefix(200)) }
         }
     }
-    func stop() { playbackSelection.stop(); recordSession(); clock.stop(); elapsed = 0; sessionStarted = nil; applyAudio(); persist(); event("stop") }
+    func stop() {
+        playbackSelection.stop(); recordSession()
+        playbackRequested = false; playbackClockPolicy.reset()
+        clock.stop(); elapsed = 0; sessionStarted = nil
+        applyAudio(); persist(); event("stop")
+    }
     func resetTimer() {
-        let wasRunning = playing
+        let wasRunning = clock.running
         recordSession() // A stopwatch reset must not erase already-earned daily time.
         clock.reset(at: now); elapsed = 0; sessionStarted = wasRunning ? Date() : nil
         if wasRunning { activity.resume(at: Date(), uptime: now) }
         persist(); event("timer_reset")
     }
-    func shutdown() { guard ownsProfile, !shuttingDown else { return }; shuttingDown = true; saveTask?.cancel(); recordSession(); persistNow(); audio.stopImmediately(); if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }; if hasAssertion { IOPMAssertionRelease(assertionID) } }
+    func shutdown() {
+        guard ownsProfile, !shuttingDown else { return }
+        shuttingDown = true; heartbeat?.invalidate(); heartbeat = nil
+        saveTask?.cancel(); recordSession()
+        playbackRequested = false; playbackClockPolicy.reset()
+        clock.pause(at: now); elapsed = clock.elapsed(at: now)
+        persistNow(); audio.stopImmediately()
+        if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }
+        if hasAssertion { IOPMAssertionRelease(assertionID); hasAssertion = false }
+    }
     func toggle(_ sound: Sound) { setSound(sound.id, enabled: !(store.layers[sound.id]?.enabled ?? false)) }
     func setSound(_ id: String, enabled: Bool? = nil, volume: Double? = nil) {
         var layer = store.layers[id] ?? Layer()
@@ -251,7 +313,7 @@ final class AppModel: ObservableObject {
     }
     func loadMix(_ id: String, autostart: Bool = true) throws {
         guard let mix = store.mixes.first(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Mix not found.") }
-        startMode(mix.mode, autostart: false); store.layers = mix.layers
+        startMode(mix.mode, autostart: false, deferAudio: true); store.layers = mix.layers
         if let settings = mix.generatorSettings { var all = store.generatorSettings ?? [:]; all[mix.mode.rawValue] = settings; store.generatorSettings = all }
         if autostart { play() }; applyAudio(); persist(); notify(mix.name)
     }
@@ -295,7 +357,7 @@ final class AppModel: ObservableObject {
     }
     func startSoundProfile(_ id: String) {
         guard let profile = SoundProfile.find(id) else { return }
-        startMode(profile.mode, autostart: false)
+        startMode(profile.mode, autostart: false, deferAudio: true)
         var all = store.generatorSettings ?? [:]
         all[profile.mode.rawValue] = profile.configuration
         store.generatorSettings = all
@@ -305,7 +367,7 @@ final class AppModel: ObservableObject {
         page = "generative"; persist(); event("sound_profile", ["profile": id])
     }
     func startGenerator(_ selected: SessionMode, seed: UInt64? = nil, reset: Bool = false) {
-        startMode(selected, autostart: false, reset: reset)
+        startMode(selected, autostart: false, reset: reset, deferAudio: true)
         if let seed { setGeneratorSeed(seed) }
         for key in Array(store.layers.keys) { store.layers[key]?.enabled = false }
         store.layers["living"] = Layer(true, store.layers["living"]?.volume ?? 0.65)
@@ -352,8 +414,10 @@ final class AppModel: ObservableObject {
         NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Onde" })?.makeKeyAndOrderFront(nil)
     }
     func snapshot() -> [String: Any] {
+        synchronizePlaybackClock()
         refreshActivity(checkpoint: false)
         return ["listening": listeningSnapshot, "playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+         "timer_running": clock.running, "playback_requested": playbackRequested,
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),
          "preferences": jsonObject(store.preferences), "layers": jsonObject(store.layers),
