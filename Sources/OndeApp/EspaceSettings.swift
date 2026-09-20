@@ -192,8 +192,8 @@ private struct EspacePreferencesView: View {
         case .general:
             EspaceSection(title: "Your listening space", detail: "Opening Onde never starts playback. Browsing a mode does not change the current session.") {
                 EspaceSettingToggle("Show artwork", isOn: $showArtwork).toggleStyle(.switch).font(.system(size: 13))
-                EspaceSettingToggle("Subtle visual motion", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced || !showArtwork)
-                Text(reduced ? "Reduce motion is enabled in the system or in Onde. The listening surface stays still." : "Only the listening surface moves. Music cards stay still; the visual pauses when Onde is not active.")
+                EspaceSettingToggle("Animate artwork", isOn: $visualMotion).toggleStyle(.switch).font(.system(size: 13)).disabled(reduced || !showArtwork)
+                Text(reduced ? "Reduce motion is enabled in the system or in Onde. The listening surface stays still." : "Only the listening surface moves. Choose its animation below the artwork. Hidden windows pause; visible background windows use reduced detail.")
                     .font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).lineSpacing(4)
                 Divider().overlay(EspaceTheme.line)
                 EspaceSettingToggle("Reduce motion in Onde", isOn: Binding(get: { model.store.preferences.reducedMotion }, set: { value in

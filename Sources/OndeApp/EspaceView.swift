@@ -25,7 +25,7 @@ struct EspaceRootView: View {
                 HStack(alignment: .top, spacing: 28) {
                     Group {
                         if model.quietView { EspaceQuietPane() }
-                        else { EspaceListeningPane(visualMotion: $visualMotion, showArtwork: showArtwork, compact: geometry.size.height < 730) }
+                        else { EspaceListeningPane(visualMotion: $visualMotion, showArtwork: $showArtwork, compact: geometry.size.height < 730) }
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                     if !model.quietView { collection.frame(width: geometry.size.width < 1040 ? 292 : 338) }
                 }.padding(.horizontal, 30).padding(.top, 8).padding(.bottom, 24)
@@ -54,7 +54,12 @@ struct EspaceRootView: View {
         .alert("Onde", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("Close", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
-        .onAppear { if !initialized { browse = model.mode; initialized = true } }
+        .onAppear {
+            if !initialized { browse = model.mode; initialized = true }
+            #if ONDE_DESIGN_CAPTURE
+            EspaceMotionCapture.runIfRequested(model: model)
+            #endif
+        }
         .onChange(of: model.mode) { _, mode in browse = mode; query = "" }
         .onChange(of: model.toast) { _, text in
             if let text { NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested, userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.medium.rawValue]) }
@@ -209,7 +214,9 @@ private struct EspaceListeningPane: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.espaceReduceMotion) private var reduced
     @Binding var visualMotion: Bool
-    let showArtwork: Bool
+    @Binding var showArtwork: Bool
+    @AppStorage("onde.espace.artworkChoice") private var artworkChoice = "automatic"
+    @Environment(\.accessibilityReduceMotion) private var systemReduced
     let compact: Bool
     var body: some View {
         VStack(spacing: 0) {
@@ -220,18 +227,48 @@ private struct EspaceListeningPane: View {
             }.font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).padding(.top, 14)
             if showArtwork {
                 EspaceArtwork(id: model.selectedMusicID ?? "personal", mode: model.mode,
-                              enabled: visualMotion && !reduced && model.sheet == nil)
+                              enabled: visualMotion && model.sheet == nil,
+                              choice: artworkChoice)
                     .frame(minHeight: compact ? 105 : 145, maxHeight: .infinity)
-                    .overlay(alignment: .bottomTrailing) {
-                        Button { visualMotion.toggle() } label: {
-                            Text(reduced ? "Motion reduced" : visualMotion ? "Pause visual" : "Resume visual")
-                                .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
-                        }.buttonStyle(.plain).foregroundStyle(EspaceTheme.secondary).disabled(reduced)
-                            .help("Pauses the visual only. Your music and timer are unchanged.")
-                            .accessibilityLabel(reduced ? "Motion reduced" : visualMotion ? "Pause decorative motion" : "Resume decorative motion")
-                            .accessibilityIdentifier("visual-motion")
+                    .overlay(alignment: .bottom) {
+                        HStack(spacing: 12) {
+                            Menu {
+                                Picker("Animation", selection: $artworkChoice) {
+                                    Text("Automatic · follows the music").tag("automatic")
+                                    Divider()
+                                    ForEach(OndeMotif.allCases) { motif in Text(motif.title).tag(motif.rawValue) }
+                                }
+                            } label: {
+                                Label("Animation · \(EspaceArtworkSelection.motif(choice: artworkChoice, musicID: model.selectedMusicID ?? "personal", mode: model.mode).title)", systemImage: "waveform.path")
+                                    .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
+                            }.menuStyle(.borderlessButton).menuIndicator(.visible).fixedSize()
+                                .accessibilityLabel("Choose animation without changing the music")
+                                .accessibilityIdentifier("artwork-choice")
+                            Spacer(minLength: 4)
+                            if reduced {
+                                Button { model.sheet = .settings } label: {
+                                    Text(systemReduced ? "Motion reduced by macOS" : "Motion reduced in Onde")
+                                        .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
+                                }.buttonStyle(.plain).help("Open appearance settings. Reduce Motion is never overridden automatically.")
+                            } else {
+                                Button { visualMotion.toggle() } label: {
+                                    Label(visualMotion ? "Pause visual" : "Resume visual", systemImage: visualMotion ? "pause" : "play")
+                                        .font(.system(size: 11)).padding(.horizontal, 8).frame(height: 30)
+                                }.buttonStyle(.plain)
+                                    .help("Changes the animation only. Your music and session timer are unchanged.")
+                                    .accessibilityIdentifier("visual-motion")
+                            }
+                        }.foregroundStyle(EspaceTheme.secondary)
                     }
-            } else { Spacer(minLength: 32) }
+            } else {
+                VStack(spacing: 10) {
+                    Spacer(minLength: 24)
+                    Text("Artwork is hidden").font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary)
+                    Button("Show animation") { showArtwork = true; visualMotion = true }
+                        .buttonStyle(EspaceButtonStyle()).accessibilityIdentifier("show-artwork")
+                    Spacer(minLength: 24)
+                }.frame(maxHeight: .infinity)
+            }
             EspacePlaybackStatus().padding(.top, 8)
             Text(model.currentMusicTitle).font(.system(size: compact ? 39 : 49, weight: .regular, design: .serif))
                 .tracking(-1.3).multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)

@@ -87,7 +87,7 @@ final class ListeningDesignTests: XCTestCase {
     func testEveryMotionStopGateTakesPriorityOverQuality() {
         for lowPower in [false,true] {
             XCTAssertEqual(EspaceMotionPolicy.fps(visible:false,active:true,enabled:true,reduced:false,lowPower:lowPower,hot:false),0)
-            XCTAssertEqual(EspaceMotionPolicy.fps(visible:true,active:false,enabled:true,reduced:false,lowPower:lowPower,hot:false),0)
+            XCTAssertEqual(EspaceMotionPolicy.fps(visible:true,active:false,enabled:true,reduced:false,lowPower:lowPower,hot:false),12)
             XCTAssertEqual(EspaceMotionPolicy.fps(visible:true,active:true,enabled:false,reduced:false,lowPower:lowPower,hot:false),0)
             XCTAssertEqual(EspaceMotionPolicy.fps(visible:true,active:true,enabled:true,reduced:true,lowPower:lowPower,hot:false),0)
             XCTAssertEqual(EspaceMotionPolicy.fps(visible:true,active:true,enabled:true,reduced:false,lowPower:lowPower,hot:true),0)

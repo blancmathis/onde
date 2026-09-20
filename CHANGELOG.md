@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.3 — Restore live artwork
+
+- Bring the twelve original Courants II animations into the native listening surface; follow the current music or choose a visual without changing audio.
+- Use the actual hosting window's visibility, minimization and occlusion rather than requiring an active SwiftUI scene. Visible background windows keep gentle motion at a reduced cadence.
+- Show a recovery action when artwork is hidden and explain an explicit or system motion restriction instead of leaving a blank panel.
+- Keep Pause visual independent of playback, respect Reduce Motion and stop the visual clock when hidden, in Quiet view, under a sheet or in serious thermal conditions.
+- Keep the fixed menu-bar logo, corrected session timer, sound engine, library and personal preferences unchanged.
+- Add live NSWindow/SwiftUI frame comparisons and integrated animation lifecycle regression tests; previous static captures alone did not cover that path.
+
 ## 1.11.2 — Stable menu-bar identity and accurate session timing
 
 - Always show the original Onde concentric-wave mark in the menu bar, as a fixed monochrome template. No elapsed title or playback-dependent symbol.
