@@ -84,6 +84,11 @@ import OndeCore
         window.appearance = NSAppearance(named: .darkAqua)
         NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil)
         try await wait(0.7)
+        _ = try frame(host, file: output.appendingPathComponent("window-presented.png"))
+        for window in NSApp.windows {
+            print("WINDOW", window.title, "visible", window.isVisible, "mini", window.isMiniaturized,
+                  "exposed", window.occlusionState.contains(.visible), "frame", window.frame)
+        }
         try await running(true, "Full listening view starts one animation clock without playing audio")
         let first = try frame(host, file: output.appendingPathComponent("live-initial.png"))
         try await wait(0.85)

@@ -59,6 +59,9 @@ struct EspaceArtworkWindowProbe: NSViewRepresentable {
         private var previous: EspaceWindowVisibility?
         private var refreshPending = false
         private var attached = false
+        #if ONDE_DESIGN_CAPTURE
+        private var lastDiagnostic = ""
+        #endif
         override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); attach() }
         override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); requestRefresh() }
         override func layout() { super.layout(); requestRefresh() }
@@ -93,6 +96,10 @@ struct EspaceArtworkWindowProbe: NSViewRepresentable {
                 let shown = self.attached && self.window?.isVisible == true && self.window?.isMiniaturized == false &&
                     self.window?.occlusionState.contains(.visible) == true && !NSApp.isHidden &&
                     !self.isHiddenOrHasHiddenAncestor && !self.visibleRect.isEmpty
+                #if ONDE_DESIGN_CAPTURE
+                let diagnostic = "PROBE title=\(self.window?.title ?? "nil") attached=\(self.attached) frame=\(self.frame) visibleRect=\(self.visibleRect) windowVisible=\(self.window?.isVisible == true) mini=\(self.window?.isMiniaturized == true) exposed=\(self.window?.occlusionState.contains(.visible) == true) appHidden=\(NSApp.isHidden) viewHidden=\(self.isHiddenOrHasHiddenAncestor) active=\(NSApp.isActive)"
+                if diagnostic != self.lastDiagnostic { print(diagnostic); self.lastDiagnostic = diagnostic }
+                #endif
                 let value = EspaceWindowVisibility(visible: shown, active: NSApp.isActive)
                 guard value != self.previous else { return }
                 self.previous = value
@@ -133,7 +140,12 @@ struct EspaceArtwork: View {
                 .id(motif).transition(.opacity)
         }
         .animation(reduced || !enabled ? nil : .easeInOut(duration: 0.45), value: motif)
-        .background(EspaceArtworkWindowProbe { visibility = $0 })
+        .background {
+            GeometryReader { geometry in
+                EspaceArtworkWindowProbe { visibility = $0 }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+        }
         .onAppear { appeared = true; synchronize() }
         .onChange(of: fps) { _, _ in synchronize() }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
@@ -142,6 +154,9 @@ struct EspaceArtwork: View {
         .accessibilityHidden(true).allowsHitTesting(false)
     }
     private func synchronize() {
+        #if ONDE_DESIGN_CAPTURE
+        print("ARTWORK id=\(id) appeared=\(appeared) visibility=\(visibility) enabled=\(enabled) reduced=\(reduced) hot=\(hot) lowPower=\(lowPower) fps=\(fps)")
+        #endif
         // Do not change line density while the visual is paused.
         if fps > 0 { retainedEconomy = fps <= 12 }
         driver.configure(fps: fps)
