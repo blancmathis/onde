@@ -18,8 +18,8 @@ with tempfile.TemporaryDirectory(prefix='onde-espace-', dir=os.environ.get('TMPD
     if result.returncode:
         raise RuntimeError(f'Capture exited {result.returncode}; inspect capture.log')
     receipt = json.loads((output/'capture.json').read_text())
-    assert receipt['count']==13 and receipt['muted'] and not receipt['playing'], receipt
+    assert receipt['count']==17 and receipt['muted'] and not receipt['playing'], receipt
     assert receipt['timer_driver_checks']==3
-    assert len(list(output.glob('*-native.png')))==13
+    assert len(list(output.glob('*-native.png')))==17
     assert (output/'surface-0.png').read_bytes() != (output/'surface-8.png').read_bytes()
     print(json.dumps(receipt,indent=2))
