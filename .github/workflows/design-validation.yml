@@ -31,6 +31,8 @@ jobs:
         run: |
           swiftc Sources/OndeApp/OndeStatusIcon.swift Tools/StatusIconCheck.swift -o .build/status-icon-check
           .build/status-icon-check QA/Espace
+      - name: Verify live artwork in the real native window
+        run: python3 Tools/test_live_artwork.py
       - name: Capture compiled native views in a muted temporary profile
         run: python3 Tools/capture_espace.py
       - name: Package isolated app and verify existing listening behavior

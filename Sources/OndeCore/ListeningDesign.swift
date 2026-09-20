@@ -90,7 +90,8 @@ public struct EspaceClock: Sendable {
 public enum EspaceMotionPolicy {
     /// Request budget, not a promise about measured frame rate or battery life.
     public static func fps(visible: Bool, active: Bool, enabled: Bool, reduced: Bool, lowPower: Bool, hot: Bool) -> Int {
-        guard visible, active, enabled, !reduced, !hot else { return 0 }
-        return lowPower ? 12 : 24
+        guard visible, enabled, !reduced, !hot else { return 0 }
+        // A visible window does not become a still image when another app takes focus.
+        return lowPower || !active ? 12 : 24
     }
 }
