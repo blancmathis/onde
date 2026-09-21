@@ -87,8 +87,8 @@ final class UpdateInstallationTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: file), "preserved")
     }
     func testRejectsInstallingOverArbitraryLocations() {
-        XCTAssertThrowsError(try UpdateInstallation.validateTarget(URL(fileURLWithPath: "/tmp/Onde.app"))))
-        XCTAssertThrowsError(try UpdateInstallation.validateTarget(URL(fileURLWithPath: "/Volumes/Test/Onde.app"))))
+        XCTAssertThrowsError(try UpdateInstallation.validateTarget(URL(fileURLWithPath: "/tmp/Onde.app")))
+        XCTAssertThrowsError(try UpdateInstallation.validateTarget(URL(fileURLWithPath: "/Volumes/Test/Onde.app")))
     }
 }
 #endif

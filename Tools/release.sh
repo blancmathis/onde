@@ -14,7 +14,7 @@ if [[ "$native" == arm64 ]]; then other=x86_64; else other=arm64; fi
 swift build -c release --triple "$other-apple-macosx14.0" --scratch-path .build-cross -j 3
 cross=$(swift build -c release --triple "$other-apple-macosx14.0" --scratch-path .build-cross --show-bin-path)
 mkdir -p .build/universal dist
-for name in Onde ondectl; do
+for name in Onde ondectl onde-updater; do
   lipo -create ".build/release/$name" "$cross/$name" -output ".build/universal/$name"
   lipo ".build/universal/$name" -verify_arch arm64 x86_64
 done
@@ -26,6 +26,7 @@ REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'imp
 /usr/libexec/PlistBuddy -c 'Print :OndeCommit' dist/Onde.app/Contents/Info.plist
 COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-macOS-universal.zip
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
+ONDE_PACKAGED_UPDATE_ARCHIVE="$PWD/dist/Onde-macOS-universal.zip" swift test -c release -j 3 --filter testPackagedUpdateArchiveIsAccepted
 # Audition files use the same just-built DSP and documented profile settings.
 for profile in ambre canopee meridien sillage filigrane confluence sanctuaire lagoon stillwater hearth reverie driftwood; do
   .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-12min.wav" --minutes 12
@@ -44,7 +45,9 @@ Download **Onde-macOS-universal.zip**, unzip, quit the old app and move Onde.app
 Personal settings, saved soundscapes and imports are stored separately and are preserved.
 
 This community build is ad-hoc signed, **not notarized by Apple**. No security settings are changed.
-The app checks public GitHub releases and offers a SHA-256-verified download; installation remains manual.
+After a verified download, choose Install and Relaunch. Installation requires explicit approval.
+Download-only clients (1.11.3 and earlier) need one manual replacement to receive this updater.
+Future releases are built and published from main; no user Mac is needed for deployment.
 
 Local audio only: no embedded external streaming player.
 Fresh selection after pause starts only the chosen music; ordinary Play resumes.
