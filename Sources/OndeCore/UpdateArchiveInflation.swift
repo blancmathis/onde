@@ -12,7 +12,7 @@ enum UpdateArchiveInflation {
             guard let bytes = raw.bindMemory(to: UInt8.self).baseAddress else { throw reject() }
             let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 65_536)
             defer { buffer.deallocate() }
-            var stream = compression_stream()
+            var stream = compression_stream(dst_ptr: buffer, dst_size: 0, src_ptr: bytes.advanced(by: start), src_size: 0, state: nil)
             guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) != COMPRESSION_STATUS_ERROR else { throw reject() }
             defer { compression_stream_destroy(&stream) }
             stream.src_ptr = bytes.advanced(by: start)
