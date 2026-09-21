@@ -31,6 +31,7 @@ fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Sounds"
 cp "${ONDE_BIN_DIR:-.build/release}/Onde" "$APP/Contents/MacOS/Onde"
 cp "${ONDE_BIN_DIR:-.build/release}/ondectl" "$APP/Contents/MacOS/ondectl"
+cp "${ONDE_BIN_DIR:-.build/release}/onde-updater" "$APP/Contents/MacOS/onde-updater"
 cp Assets/white.wav "$APP/Contents/Resources/Sounds/"
 for name in aube piano orbit rain ocean brown pink chime; do cp "Assets/$name.m4a" "$APP/Contents/Resources/Sounds/"; done
 if [[ "${ONDE_ORIGINALS_ONLY:-0}" != "1" ]]; then
@@ -86,6 +87,7 @@ if [[ ! -f Assets/AppIcon.icns ]]; then
   iconutil -c icns Assets/AppIcon.iconset -o Assets/AppIcon.icns
 fi
 cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+codesign --force --sign - "$APP/Contents/MacOS/onde-updater"
 codesign --force --sign - "$APP/Contents/MacOS/ondectl"
 codesign --force --sign - "$APP/Contents/MacOS/Onde"
 codesign --force --sign - "$APP"

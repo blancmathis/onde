@@ -49,6 +49,9 @@ jobs:
           set -o pipefail
           python3 Tools/transport_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/transport-integration.log
           python3 Tools/daily_activity_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/daily-integration.log
+      - name: Verify update of the packaged app and preserve the private library
+        run: |
+          ONDE_PACKAGED_APPLICATION="$PWD/dist/Onde.app" swift test -c release -j 3 -Xswiftc -DONDE_DESIGN_CAPTURE --filter UpdatePackagedTests
       - uses: actions/upload-artifact@v4
         if: always()
         with:

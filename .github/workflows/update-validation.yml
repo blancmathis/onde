@@ -1,0 +1,24 @@
+name: Validate update installation
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: onde-update-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  update-tests:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build the unprivileged native helper
+        run: swift build -j 3 --product onde-updater
+      - name: Verify archives, actual installation, relaunch and rollback
+        run: |
+          export ONDE_RUN_INSTALLATION_INTEGRATION=1
+          export ONDE_UPDATE_HELPER_PATH="$(swift build --show-bin-path)/onde-updater"
+          swift test -j 3 --filter UpdateInstallation
+          swift test -j 3 --filter UpdateArchiveHardeningTests

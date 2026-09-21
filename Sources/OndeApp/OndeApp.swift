@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @StateObject private var model = AppModel()
     var body: some Scene {
         Window("Onde", id: "main") {
-            EspaceRootView().environmentObject(model).environment(\.locale, Locale(identifier: "en")).onAppear { delegate.model = model; EspaceCapture.runIfRequested(model: model) }
+            EspaceRootView().environmentObject(model).environment(\.locale, Locale(identifier: "en")).onAppear { delegate.model = model; UpdateInstallationController.shared.applicationDidOpen(); EspaceCapture.runIfRequested(model: model) }
         }
         .defaultSize(width: 1120, height: 800)
         .windowStyle(.hiddenTitleBar)

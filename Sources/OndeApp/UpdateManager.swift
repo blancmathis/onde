@@ -3,7 +3,7 @@ import AppKit
 import CryptoKit
 import OndeCore
 
-/// Downloads are opt-in, verified, and never executed or installed by this class.
+/// Downloads remain opt-in. Only the separately confirmed installer can replace the app.
 final class UpdateManager: ObservableObject {
     @Published private(set) var checking = false
     @Published private(set) var downloading = false
@@ -58,7 +58,7 @@ final class UpdateManager: ObservableObject {
     }
 
     func check() {
-        guard !checking, !downloading else { return }
+        guard !checking, !downloading, !UpdateInstallationController.shared.busy else { return }
         checking = true
         error = nil
         var request = URLRequest(url: UpdatePolicy.endpoint)
@@ -75,6 +75,7 @@ final class UpdateManager: ObservableObject {
                     await MainActor.run {
                         self.candidate = nil
                         self.available = false
+                        self.clearReadyDownload()
                         self.error = "No downloadable release has been published yet."
                         self.checking = false
                         self.lastChecked = Date()
@@ -86,12 +87,11 @@ final class UpdateManager: ObservableObject {
                 let release = try JSONDecoder().decode(PublicRelease.self, from: data)
                 let verified = try UpdatePolicy.parse(release)
                 await MainActor.run {
-                    if let downloadedBuild = self.downloadedBuild, downloadedBuild != verified.build {
-                        self.downloadedBuild = nil
-                        self.downloadedPath = nil
-                    }
+                    if let downloadedBuild = self.downloadedBuild, downloadedBuild != verified.build { self.clearReadyDownload() }
                     self.candidate = verified
                     self.available = UpdatePolicy.isNewer(verified, than: AppBuild.number)
+                    if self.available { self.restoreReadyDownload(for: verified) }
+                    else { self.clearReadyDownload() }
                     self.lastChecked = Date()
                     self.checking = false
                     self.error = nil
@@ -106,14 +106,42 @@ final class UpdateManager: ObservableObject {
         }
     }
 
+    // Reuse a completed download only for the exact release returned by GitHub.
+    // The installer rehashes a private copy before extraction or execution.
+    private func restoreReadyDownload(for update: VerifiedUpdate) {
+        guard downloadedPath == nil, !isolated,
+              UserDefaults.standard.string(forKey: "OndeReadyUpdateBuild") == String(update.build),
+              UserDefaults.standard.string(forKey: "OndeReadyUpdateSHA256") == update.sha256,
+              let path = UserDefaults.standard.string(forKey: "OndeReadyUpdatePath"),
+              let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        guard url.deletingLastPathComponent().path == downloads.standardizedFileURL.path,
+              url.lastPathComponent.hasPrefix("Onde-\(update.tag)"), url.pathExtension == "zip",
+              url.resolvingSymlinksInPath().path == url.path, FileManager.default.fileExists(atPath: url.path) else {
+            clearReadyDownload(); return
+        }
+        downloadedPath = url.path
+        downloadedBuild = update.build
+    }
+
+    private func clearReadyDownload() {
+        downloadedPath = nil
+        downloadedBuild = nil
+        if !isolated {
+            for key in ["OndeReadyUpdatePath", "OndeReadyUpdateBuild", "OndeReadyUpdateSHA256"] { UserDefaults.standard.removeObject(forKey: key) }
+        }
+    }
+
     func download() {
-        guard !downloading, let update = candidate, UpdatePolicy.isNewer(update, than: AppBuild.number) else { return }
+        guard !checking, !downloading, !UpdateInstallationController.shared.busy,
+              let update = candidate, UpdatePolicy.isNewer(update, than: AppBuild.number) else { return }
+        // A finished download is an installation candidate, not a reason to download again.
+        if let path = downloadedPath, downloadedBuild == update.build, FileManager.default.fileExists(atPath: path) { return }
         downloadSerial &+= 1
         let serial = downloadSerial
         progressTimer?.invalidate()
         downloadTask?.cancel()
-        downloadedPath = nil
-        downloadedBuild = nil
+        clearReadyDownload()
         downloading = true
         verifying = false
         downloadProgress = 0
@@ -126,53 +154,36 @@ final class UpdateManager: ObservableObject {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         let task = session.downloadTask(with: request) { [weak self] location, response, taskError in
             guard let self else { return }
-            if let taskError {
-                self.finishFailure(taskError, serial: serial)
-                return
-            }
-            guard let location,
-                  let http = response as? HTTPURLResponse,
-                  http.statusCode == 200,
-                  response?.url?.scheme == "https" else {
+            if let taskError { self.finishFailure(taskError, serial: serial); return }
+            guard let location, let http = response as? HTTPURLResponse,
+                  http.statusCode == 200, response?.url?.scheme == "https" else {
                 self.finishFailure(OndeError("download_failed", "The download from GitHub failed."), serial: serial)
                 return
             }
-
-            let staging = FileManager.default.temporaryDirectory
-                .appendingPathComponent("Onde-update-\(UUID().uuidString).zip")
-            do {
-                try FileManager.default.moveItem(at: location, to: staging)
-            } catch {
-                self.finishFailure(error, serial: serial)
-                return
-            }
-
+            let staging = FileManager.default.temporaryDirectory.appendingPathComponent("Onde-update-\(UUID().uuidString).zip")
+            do { try FileManager.default.moveItem(at: location, to: staging) }
+            catch { self.finishFailure(error, serial: serial); return }
             DispatchQueue.main.async {
-                guard self.downloadSerial == serial else {
-                    try? FileManager.default.removeItem(at: staging)
-                    return
-                }
+                guard self.downloadSerial == serial else { try? FileManager.default.removeItem(at: staging); return }
                 self.progressTimer?.invalidate()
                 self.progressTimer = nil
                 self.downloadTask = nil
                 self.downloadedBytes = update.bytes
                 self.downloadProgress = 1
                 self.verifying = true
-
                 DispatchQueue.global(qos: .utility).async { [weak self] in
-                    guard let self else {
-                        try? FileManager.default.removeItem(at: staging)
-                        return
-                    }
+                    guard let self else { try? FileManager.default.removeItem(at: staging); return }
                     do {
                         let completed = try self.verifyAndStore(staging, update: update)
                         DispatchQueue.main.async {
-                            guard self.downloadSerial == serial else {
-                                try? FileManager.default.removeItem(at: completed)
-                                return
-                            }
+                            guard self.downloadSerial == serial else { try? FileManager.default.removeItem(at: completed); return }
                             self.downloadedPath = completed.path
                             self.downloadedBuild = update.build
+                            if !self.isolated {
+                                UserDefaults.standard.set(completed.path, forKey: "OndeReadyUpdatePath")
+                                UserDefaults.standard.set(String(update.build), forKey: "OndeReadyUpdateBuild")
+                                UserDefaults.standard.set(update.sha256, forKey: "OndeReadyUpdateSHA256")
+                            }
                             self.downloading = false
                             self.verifying = false
                             self.downloadProgress = nil
@@ -180,15 +191,19 @@ final class UpdateManager: ObservableObject {
                             self.expectedDownloadBytes = 0
                             self.error = nil
                         }
-                    } catch {
-                        self.finishFailure(error, serial: serial)
-                    }
+                    } catch { self.finishFailure(error, serial: serial) }
                 }
             }
         }
         downloadTask = task
         startProgressMonitor(task, expected: update.bytes, serial: serial)
         task.resume()
+    }
+
+    func downloadAgain() {
+        guard !checking, !downloading, !UpdateInstallationController.shared.busy else { return }
+        clearReadyDownload()
+        download()
     }
 
     func cancelDownload() {
@@ -208,13 +223,7 @@ final class UpdateManager: ObservableObject {
 
     private func startProgressMonitor(_ task: URLSessionDownloadTask, expected: Int64, serial: UInt64) {
         let timer = Timer(timeInterval: UpdateTransferPolicy.progressInterval, repeats: true) { [weak self, weak task] timer in
-            guard let self, let task,
-                  self.downloadSerial == serial,
-                  self.downloading,
-                  !self.verifying else {
-                timer.invalidate()
-                return
-            }
+            guard let self, let task, self.downloadSerial == serial, self.downloading, !self.verifying else { timer.invalidate(); return }
             let received = max(0, task.countOfBytesReceived)
             self.downloadedBytes = received
             self.downloadProgress = UpdateTransferPolicy.progress(received: received, expected: expected)
@@ -225,19 +234,13 @@ final class UpdateManager: ObservableObject {
 
     private func verifyAndStore(_ temporary: URL, update: VerifiedUpdate) throws -> URL {
         defer { try? FileManager.default.removeItem(at: temporary) }
-        let size = try temporary.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard Int64(size) == update.bytes else { throw OndeError("size_mismatch", "The download size does not match the published release.") }
-
-        let handle = try FileHandle(forReadingFrom: temporary)
-        defer { try? handle.close() }
-        var hash = SHA256()
-        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty { hash.update(data: chunk) }
-        let digest = hash.finalize().map { String(format: "%02x", $0) }.joined()
-        guard digest == update.sha256 else { throw OndeError("digest_mismatch", "SHA-256 verification failed. The archive was not kept.") }
-
+        try UpdateInstallation.verifyArchive(temporary, bytes: update.bytes, sha256: update.sha256)
         let directory: URL
         if isolated { directory = OndePaths.support.appendingPathComponent("Downloads", isDirectory: true) }
-        else { directory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0] }
+        else {
+            guard let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { throw OndeError("download_folder", "The Downloads folder is unavailable.") }
+            directory = downloads
+        }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var destination = directory.appendingPathComponent("Onde-\(update.tag).zip")
         var index = 2
@@ -267,10 +270,7 @@ final class UpdateManager: ObservableObject {
     func reveal() {
         if let path = downloadedPath { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
     }
-
-    func openDownloadInBrowser() {
-        if let update = candidate { NSWorkspace.shared.open(update.url) }
-    }
+    func openDownloadInBrowser() { if let update = candidate { NSWorkspace.shared.open(update.url) } }
 
     func snapshot() -> [String: Any] {
         ["repository": AppBuild.repository, "current_version": AppBuild.version, "current_build": AppBuild.number,
@@ -283,6 +283,9 @@ final class UpdateManager: ObservableObject {
          "expected_sha256": candidate?.sha256 as Any? ?? NSNull(),
          "downloaded_path": downloadedPath as Any? ?? NSNull(),
          "last_checked": lastChecked.map { ISO8601DateFormatter().string(from: $0) } as Any? ?? NSNull(),
-         "error": error as Any? ?? NSNull(), "automatic_installation": false]
+         "error": error as Any? ?? NSNull(), "automatic_installation": false,
+         "installing": UpdateInstallationController.shared.busy,
+         "installation_error": UpdateInstallationController.shared.error as Any? ?? NSNull(),
+         "installation_requires_confirmation": true]
     }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.4 — Install and relaunch updates
+
+- A completed, verified download now offers Install and Relaunch instead of another download.
+- Remember completed archives across relaunches and reuse them only for the exact published build and SHA-256.
+- Stage and validate updates before quitting; use an unprivileged one-shot helper, atomic bundle exchange, startup acknowledgement and safe rollback. Preserve personal settings, history, mixes and imports.
+- Show installation failures and a manual fallback instead of silently stopping after download. No automatic installation, signing-key export, launch agent or macOS security override.
+- Test malicious/truncated archives, hash mismatches, actual native relaunch and failed-start rollback.
+- Versions 1.11.3 and earlier need one manual replacement to receive the new installer.
+
 ## 1.11.3 — Restore live artwork
 
 - Bring the twelve original Courants II animations into the native listening surface; follow the current music or choose a visual without changing audio.
