@@ -21,3 +21,4 @@ jobs:
           export ONDE_RUN_INSTALLATION_INTEGRATION=1
           export ONDE_UPDATE_HELPER_PATH="$(swift build --show-bin-path)/onde-updater"
           swift test -j 3 --filter UpdateInstallation
+          swift test -j 3 --filter UpdateArchiveHardeningTests
