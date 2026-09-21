@@ -20,6 +20,7 @@ for name in Onde ondectl onde-updater; do
 done
 ONDE_BIN_DIR="$PWD/.build/universal" bash Tools/package.sh
 codesign --verify --deep --strict dist/Onde.app
+ONDE_PACKAGED_APPLICATION="$PWD/dist/Onde.app" swift test -c release -j 3 --filter UpdatePackagedTests
 # The bundled CLI must report the same version as the archive and release.
 REPORTED_VERSION=$(dist/Onde.app/Contents/MacOS/ondectl schema | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["version"])')
 [[ "$REPORTED_VERSION" == "$VERSION" ]] || { echo 'Packaged CLI version mismatch' >&2; exit 1; }

@@ -123,7 +123,7 @@ The exporter uses a fresh instance of the same render core, writes a JSON proven
 
 A successful push to `main` runs tests, builds Intel and Apple Silicon executables and publishes a complete release. The app can check the public GitHub release API at launch, when returning to the app, and approximately every five minutes. A new build shows a **Download** button, even if its semantic version is unchanged.
 
-Downloads are size-checked and SHA-256-verified, then saved to Downloads. **Installation is manual:** quit Onde and replace the app. Your settings, history and imported audio live outside the app bundle. Automatic checks can be disabled in **Updates**. GitHub receives ordinary network metadata, not listening history or imports.
+Downloads are size-checked and SHA-256-verified, then saved to Downloads. **Choose Install and Relaunch** when the download is ready, then confirm. Onde validates the application, quits normally, replaces its bundle atomically and reopens at the same location. A failed startup restores the previous app when it is safe to do so; errors remain visible. The installer is a short-lived, unprivileged process, not a service. Versions 1.11.3 and earlier require one manual replacement to receive this installer. Your settings, history and imported audio live outside the app bundle. Automatic checks can be disabled in **Updates**. GitHub receives ordinary network metadata, not listening history or imports.
 
 ## Daily time: what changed in 1.9
 
