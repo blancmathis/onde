@@ -1,0 +1,18 @@
+name: Validate update installation
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: onde-update-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  update-tests:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and test the real update implementation
+        run: swift test -j 3 --filter UpdateInstallationTests
