@@ -53,6 +53,10 @@ struct UpdatesView: View {
                             }.disabled(updates.checking).accessibilityIdentifier("updates.install")
                             PillButton(title: "Show in Finder", symbol: "folder") { updates.reveal() }
                         }
+                        if installation.error != nil {
+                            Button("Download again") { updates.downloadAgain() }
+                                .buttonStyle(.plain).foregroundStyle(Theme.accent).disabled(updates.checking)
+                        }
                         Text("Playback will stop during the restart. Your settings, soundscapes, history and imports stay in your library.")
                             .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(3)
                     }

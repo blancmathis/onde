@@ -200,6 +200,12 @@ final class UpdateManager: ObservableObject {
         task.resume()
     }
 
+    func downloadAgain() {
+        guard !checking, !downloading, !UpdateInstallationController.shared.busy else { return }
+        clearReadyDownload()
+        download()
+    }
+
     func cancelDownload() {
         guard downloading, !verifying else { return }
         downloadSerial &+= 1

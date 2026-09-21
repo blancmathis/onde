@@ -9,6 +9,9 @@ guard CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--transacti
     exit(2)
 }
 let directory = URL(fileURLWithPath: CommandLine.arguments[2])
+// AppKit must receive its actual event-loop turns for NSWorkspace launch state.
+let application = NSApplication.shared
+application.setActivationPolicy(.prohibited)
 DispatchQueue.global(qos: .userInitiated).async {
     do {
         try UpdateInstallation.runHelper(directory: directory)
@@ -32,4 +35,4 @@ DispatchQueue.global(qos: .userInitiated).async {
         exit(1)
     }
 }
-RunLoop.main.run()
+application.run()

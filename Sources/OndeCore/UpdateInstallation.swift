@@ -236,10 +236,16 @@ public enum UpdateInstallation {
         guard let parent = NSRunningApplication(processIdentifier: plan.parentPID),
               parent.bundleURL?.standardizedFileURL.path == target.path else { throw failure("The requesting Onde process is no longer running.") }
         try validateBundle(incoming, build: plan.build, commit: plan.commit)
+        // Kernel exit notification, not AppKit's run-loop-cached isTerminated flag.
+        let parentExited = DispatchSemaphore(value: 0)
+        let exitSource = DispatchSource.makeProcessSource(identifier: plan.parentPID, eventMask: .exit, queue: .global(qos: .utility))
+        exitSource.setEventHandler { parentExited.signal() }
+        exitSource.activate()
+        defer { exitSource.cancel() }
         try writeState("ready", in: directory)
-        let deadline = Date().addingTimeInterval(60)
-        while !parent.isTerminated && Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
-        guard parent.isTerminated else { throw failure("Onde did not quit. The update was cancelled and your app was not changed.") }
+        guard parentExited.wait(timeout: .now() + 60) == .success else {
+            throw failure("Onde did not quit. The update was cancelled and your app was not changed.")
+        }
         guard try String(contentsOf: directory.appendingPathComponent("authorize.txt"), encoding: .utf8) == plan.token else {
             throw failure("The installation was not authorized.")
         }
