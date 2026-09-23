@@ -42,22 +42,21 @@ import OndeCore
                                              userInfo: [NSLocalizedDescriptionKey: name]) }
         checks.append(name); print("PASS \(name)"); fflush(stdout)
     }
-    func elements(in root: Any) -> [NSAccessibilityProtocol] {
-        var found: [NSAccessibilityProtocol] = [], seen = Set<ObjectIdentifier>()
+    func elements(in root: Any) -> [NativeAXElement] {
+        var found: [NativeAXElement] = [], seen = Set<ObjectIdentifier>()
         func visit(_ item: Any, depth: Int) {
-            guard depth < 35, found.count < 2500, let node = item as? NSAccessibilityProtocol else { return }
-            guard seen.insert(ObjectIdentifier(node as AnyObject)).inserted else { return }
+            guard depth < 35, found.count < 2500, let object = item as? NSObject else { return }
+            guard seen.insert(ObjectIdentifier(object)).inserted else { return }
+            let node = NativeAXElement(object)
             found.append(node)
-            for child in node.accessibilityChildren() ?? [] { visit(child, depth: depth + 1) }
+            for child in node.children { visit(child, depth: depth + 1) }
         }
         visit(root, depth: 0)
         return found
     }
-    func allElements() -> [NSAccessibilityProtocol] { NSApp.windows.flatMap { elements(in: $0) } }
-    func label(_ node: NSAccessibilityProtocol) -> String {
-        node.accessibilityLabel() ?? node.accessibilityTitle() ?? ""
-    }
-    func find(id: String? = nil, title: String? = nil, in root: Any? = nil) throws -> NSAccessibilityProtocol {
+    func allElements() -> [NativeAXElement] { NSApp.windows.flatMap { elements(in: $0) } }
+    func label(_ node: NativeAXElement) -> String { node.label }
+    func find(id: String? = nil, title: String? = nil, in root: Any? = nil) throws -> NativeAXElement {
         let nodes = root.map { elements(in: $0) } ?? allElements()
         guard let node = nodes.first(where: {
             if let id { return $0.accessibilityIdentifier() == id }
@@ -90,7 +89,7 @@ import OndeCore
             ["id": $0.accessibilityIdentifier() ?? "", "label": label($0),
              "role": $0.accessibilityRole()?.rawValue ?? "", "enabled": $0.isAccessibilityEnabled(),
              "value": String(describing: $0.accessibilityValue() ?? ""),
-             "frame": NSStringFromRect($0.accessibilityFrame())]
+             "frame": NSStringFromRect($0.accessibilityFrame()), "class": String(describing: type(of: $0.object)), "children": $0.children.count]
         }
         try JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent(name + ".json"))
@@ -99,10 +98,12 @@ import OndeCore
         var failure: String?
         do {
             try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            checks += try await UpdateMetadataCapture.run()
             try await pause(1)
             guard let window = NSApp.windows.first(where: { $0.title == "Onde" }) else {
                 throw NSError(domain: "OndeNativeInteraction", code: 3)
             }
+            NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             try await pause()
             try dump("initial-elements")
@@ -185,6 +186,46 @@ import OndeCore
         model.sheet = nil; model.errorMessage = nil; model.stop()
         try? await pause()
         NSApp.terminate(nil)
+    }
+}
+
+/// SwiftUI accessibility elements can implement NSObject's accessibility API
+/// without declaring NSAccessibilityProtocol. Do not drop those real children.
+/// The legacy calls here are test-driver compatibility, not app UI overrides.
+@MainActor private struct NativeAXElement {
+    let object: NSObject
+    init(_ object: NSObject) { self.object = object }
+    private var modern: NSAccessibilityProtocol? { object as? NSAccessibilityProtocol }
+    private func value(_ name: String) -> Any? {
+        object.accessibilityAttributeValue(NSAccessibility.Attribute(rawValue: name))
+    }
+    var children: [Any] {
+        let direct = modern?.accessibilityChildren() ?? []
+        return direct.isEmpty ? (value("AXChildren") as? [Any] ?? []) : direct
+    }
+    var label: String {
+        modern?.accessibilityLabel() ?? modern?.accessibilityTitle()
+            ?? value("AXDescription") as? String ?? value("AXTitle") as? String
+            ?? value("AXPlaceholderValue") as? String ?? ""
+    }
+    func accessibilityIdentifier() -> String? {
+        modern?.accessibilityIdentifier() ?? value("AXIdentifier") as? String
+    }
+    func accessibilityRole() -> NSAccessibility.Role? {
+        modern?.accessibilityRole() ?? (value("AXRole") as? String).map(NSAccessibility.Role.init(rawValue:))
+    }
+    func accessibilityValue() -> Any? { modern?.accessibilityValue() ?? value("AXValue") }
+    func accessibilityFrame() -> NSRect { modern?.accessibilityFrame() ?? .zero }
+    func isAccessibilityEnabled() -> Bool { modern?.isAccessibilityEnabled() ?? value("AXEnabled") as? Bool ?? false }
+    func accessibilityPerformPress() -> Bool {
+        if let modern { return modern.accessibilityPerformPress() }
+        guard object.accessibilityActionNames().contains(.press) else { return false }
+        object.accessibilityPerformAction(.press)
+        return true
+    }
+    func setAccessibilityValue(_ value: String) {
+        if let modern { modern.setAccessibilityValue(value) }
+        else { object.accessibilitySetValue(value, for: .value) }
     }
 }
 #endif
