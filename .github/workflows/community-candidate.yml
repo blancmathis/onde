@@ -1,11 +1,12 @@
 name: Community release candidate (no publication)
 on:
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 concurrency:
   group: onde-community-candidate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   package:
     runs-on: macos-15

@@ -63,7 +63,7 @@ import OndeCore
         let pid = ProcessInfo.processInfo.processIdentifier
         let executable = Bundle.main.executableURL!.path
         let helper = ProcessInfo.processInfo.environment["ONDE_AX_ACTION_HELPER"]
-        var request: [String: Any] = ["id": node.id, "label": node.label, "role": node.role, "in_sheet": node.inSheet]
+        var request: [String: Any] = ["id": node.id, "label": node.label, "role": node.role, "in_sheet": node.inSheet, "element_path": node.path]
         if let value { request["value"] = value }
         guard let helper, let data = try? JSONSerialization.data(withJSONObject: request),
               let argument = String(data: data, encoding: .utf8) else { return -10 }
@@ -221,14 +221,16 @@ import OndeCore
 /// Calls run off the app's main thread so its actual AX server can reply.
 private final class NativeAXNode: @unchecked Sendable {
     let element: AXUIElement
+    let path: [Int]
     let id: String
     let label: String
     let role: String
     let value: String
     let enabled: Bool
     let inSheet: Bool
-    init(element: AXUIElement, inSheet: Bool) {
+    init(element: AXUIElement, inSheet: Bool, path: [Int]) {
         self.element = element
+        self.path = path
         self.id = Self.attribute(element, "AXIdentifier") as? String ?? ""
         self.role = Self.attribute(element, kAXRoleAttribute) as? String ?? ""
         self.label = [Self.attribute(element, kAXDescriptionAttribute) as? String,
@@ -248,20 +250,20 @@ private final class NativeAXNode: @unchecked Sendable {
         let app = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         AXUIElementSetMessagingTimeout(app, 2)
         var result: [NativeAXNode] = []
-        func visit(_ element: AXUIElement, depth: Int, inSheet: Bool) {
+        func visit(_ element: AXUIElement, depth: Int, inSheet: Bool, path: [Int]) {
             guard depth < 35, result.count < 2500,
                   !result.contains(where: { CFEqual($0.element, element) }) else { return }
-            let node = NativeAXNode(element: element, inSheet: inSheet)
+            let node = NativeAXNode(element: element, inSheet: inSheet, path: path)
             result.append(node)
-            for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
-                visit(child, depth: depth + 1, inSheet: node.inSheet)
+            for (index, child) in (attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).enumerated() {
+                visit(child, depth: depth + 1, inSheet: node.inSheet, path: path + [1, index])
             }
-            for child in attribute(element, "AXSheets") as? [AXUIElement] ?? [] {
-                visit(child, depth: depth + 1, inSheet: true)
+            for (index, child) in (attribute(element, "AXSheets") as? [AXUIElement] ?? []).enumerated() {
+                visit(child, depth: depth + 1, inSheet: true, path: path + [2, index])
             }
         }
-        for window in attribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            visit(window, depth: 0, inSheet: false)
+        for (index, window) in (attribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).enumerated() {
+            visit(window, depth: 0, inSheet: false, path: [0, index])
         }
         return result
     }

@@ -117,9 +117,12 @@ exit(app.terminate() ? 0 : 3)
                 call('silence')
                 call('timer', 'reset')
                 call('timer', 'markers', '1,2', '--seconds')
-                wait_for(lambda s: s['elapsed_seconds'] > 2.5)
+                # Elapsed time in a status snapshot does not run the heartbeat's
+                # chime delivery. Wait for both actual deliveries, not wall time.
+                state = wait_for(lambda s: s['fired_markers'] == [1, 2] and s['elapsed_seconds'] > 2.5, seconds=8)
                 events = call('events')
-                assert len([e for e in events if e['type'] == 'chime']) == 2
+                markers = [e['marker_seconds'] for e in events if e['type'] == 'chime']
+                assert markers == [1, 2], ('Scheduled deliveries', markers, state)
             elif 'preview' in case:
                 for _ in range(5 if case == 'repeated-preview' else 1):
                     call('chime', 'preview')
