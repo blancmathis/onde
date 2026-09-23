@@ -32,6 +32,13 @@ jobs:
           set -o pipefail
           swiftc Sources/OndeApp/ChimePlayer.swift Tools/ChimeLifecycleCheck.swift -o .build/chime-lifecycle-check
           .build/chime-lifecycle-check 2>&1 | tee QA/FullAudit/chime-lifecycle.log
+      - name: Verify clean and dirty native sheet termination policies
+        id: sheet_policy
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          swiftc Sources/OndeApp/SheetTerminationPolicy.swift Tools/SheetTerminationCheck.swift -o .build/sheet-termination-check
+          .build/sheet-termination-check 2>&1 | tee QA/FullAudit/sheet-termination.log
       - name: Verify native shutdown after previews and scheduled chimes
         id: shutdown
         continue-on-error: true
@@ -84,10 +91,13 @@ jobs:
       - name: Require every audit phase to pass
         if: always()
         env:
+          SHEET_POLICY: ${{ steps.sheet_policy.outcome }}
           SHUTDOWN: ${{ steps.shutdown.outcome }}
           GENERAL: ${{ steps.general.outcome }}
           INTEGRATIONS: ${{ steps.integrations.outcome }}
-        run: test "$SHUTDOWN" = success && test "$GENERAL" = success && test "$INTEGRATIONS" = success
+        run: |
+          printf 'sheet_policy=%s shutdown=%s general=%s integrations=%s\n' "$SHEET_POLICY" "$SHUTDOWN" "$GENERAL" "$INTEGRATIONS"
+          test "$SHEET_POLICY" = success && test "$SHUTDOWN" = success && test "$GENERAL" = success && test "$INTEGRATIONS" = success
       - uses: actions/upload-artifact@v4
         if: always()
         with:

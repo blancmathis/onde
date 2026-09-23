@@ -22,7 +22,11 @@ struct EspaceSheetView: View {
             }.padding(24)
             if sheet == .settings && chimeDraft.isDirty {
                 HStack(spacing: 12) {
-                    Label("Unapplied chime times", systemImage: "pencil.circle")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label("Unapplied chime times", systemImage: "pencil.circle")
+                        Text("Apply or discard this edit before closing or quitting.")
+                            .font(.system(size: 11)).foregroundStyle(EspaceTheme.secondary)
+                    }
                     Spacer()
                     Button("Review") { settingsTab = .meditation }.buttonStyle(.plain)
                     Button("Discard edit") { chimeDraft.reload() }.buttonStyle(.plain)
@@ -54,6 +58,7 @@ struct EspaceSheetView: View {
         }.frame(width: 740, height: 590).background(EspaceTheme.background)
             .foregroundStyle(EspaceTheme.ink).tint(EspaceTheme.accent(model.mode)).preferredColorScheme(.dark)
             .interactiveDismissDisabled(sheet == .settings && chimeDraft.isDirty)
+            .ondeSheetTerminationPolicy(preventsTermination: sheet == .settings && chimeDraft.isDirty)
             .onAppear {
                 if !initialized { chimeDraft = EspaceChimeDraft(markers: model.store.preferences.markers); initialized = true }
             }

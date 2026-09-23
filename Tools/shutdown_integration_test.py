@@ -46,7 +46,11 @@ exit(app.terminate() ? 0 : 3)
              'recorded-preview', 'generated-preview', 'scheduled-chimes',
              'native-preview', 'native-generated-preview',
              'sheet-credits', 'native-sheet-credits', 'sheet-settings',
-             'native-sheet-settings', 'sheet-cycle', 'native-sheet-cycle']
+             'native-sheet-settings', 'sheet-cycle', 'native-sheet-cycle',
+             'sheet-personal', 'native-sheet-personal', 'sheet-history',
+             'native-sheet-history', 'sheet-cli', 'native-sheet-cli',
+             'sheet-updates', 'native-sheet-updates', 'generated-sheet-settings',
+             'native-generated-sheet-settings']
     results = []
     for case in cases:
         destination = output / case
@@ -137,8 +141,11 @@ exit(app.terminate() ? 0 : 3)
             if case == 'finished-preview':
                 assert not call('status')['playback']['chime']['retained'], 'Completed preview releases its player'
             if 'sheet-' in case:
+                page = case.rsplit('sheet-', 1)[1]
+                if page == 'personal':
+                    page = 'mixes'  # Public CLI alias for Personal audio & mixes.
                 pages = (['studio', 'library', 'mixes', 'settings', 'cli', 'history', 'credits']
-                         if 'cycle' in case else ['settings' if 'settings' in case else 'credits'])
+                         if 'cycle' in case else [page])
                 for page in pages:
                     call('ui', 'page', page)
                 time.sleep(.5)

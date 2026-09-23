@@ -8,12 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         sender.windows.first { $0.title == "Onde" }?.makeKeyAndOrderFront(nil); return true
     }
-    // Onde is not document-based. Its accepted settings and session are flushed
-    // in applicationWillTerminate; an open SwiftUI settings/information sheet
-    // must not leave ordinary Quit pending. Unapplied drafts are not auto-saved.
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        .terminateNow
-    }
+    // Each sheet declares its own termination policy before AppKit consults
+    // this delegate. Cleanup runs only after Quit has actually been accepted.
     func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
 }
 @main struct OndeApplication: App {

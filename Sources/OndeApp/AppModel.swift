@@ -563,7 +563,11 @@ final class AppModel: ObservableObject {
                 guard let n = r["enabled"] as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() else { throw OndeError("invalid_argument", "enabled must be a boolean.") }
                 updates.automatic = n.boolValue; result = updates.snapshot()
             case "errors.clear": errorMessage = nil
-            case "quit": shutdown(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSApp.terminate(nil) }
+            case "quit":
+                // A sheet with unapplied edits may reject termination. Do not
+                // stop audio/timing or persistence until AppKit accepts Quit.
+                // applicationWillTerminate performs the idempotent shutdown.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSApp.terminate(nil) }
             default: throw OndeError("unknown_command", "Unknown command: \(cmd). Run onde schema.")
             }
             if result is NSNull { result = snapshot() }
