@@ -4,8 +4,7 @@ import ApplicationServices
 import SwiftUI
 import OndeCore
 
-/// In-process native accessibility actions on the real SwiftUI window. This is
-/// not a VoiceOver session, inter-app automation or a physical pointer audit.
+/// Public AX actions on the actual owned app, not model-command substitutes.
 @MainActor enum EspaceInteractionCheck {
     private static var started = false
     static func runIfRequested(model: AppModel) -> Bool {
@@ -22,10 +21,7 @@ import OndeCore
             fputs("Refusing unsafe UI interaction fixture.\n", stderr)
             return true
         }
-        Task { @MainActor in
-            let check = NativeInteraction(model: model, output: output)
-            await check.run()
-        }
+        Task { @MainActor in await NativeInteraction(model: model, output: output).run() }
         return true
     }
 }
@@ -43,55 +39,61 @@ import OndeCore
                                              userInfo: [NSLocalizedDescriptionKey: name]) }
         checks.append(name); print("PASS \(name)"); fflush(stdout)
     }
-    func elements(in root: Any) -> [NSAccessibilityProtocol] {
-        var found: [NSAccessibilityProtocol] = [], seen = Set<ObjectIdentifier>()
-        func visit(_ item: Any, depth: Int) {
-            guard depth < 35, found.count < 2500, let node = item as? NSAccessibilityProtocol else { return }
-            guard seen.insert(ObjectIdentifier(node as AnyObject)).inserted else { return }
-            found.append(node)
-            for child in node.accessibilityChildren() ?? [] { visit(child, depth: depth + 1) }
+    func nodes() async -> [NativeAXNode] {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: NativeAXNode.snapshot())
+            }
         }
-        visit(root, depth: 0)
-        return found
     }
-    func allElements() -> [NSAccessibilityProtocol] { NSApp.windows.flatMap { elements(in: $0) } }
-    func label(_ node: NSAccessibilityProtocol) -> String {
-        node.accessibilityLabel() ?? node.accessibilityTitle() ?? ""
-    }
-    func find(id: String? = nil, title: String? = nil, in root: Any? = nil) throws -> NSAccessibilityProtocol {
-        let nodes = root.map { elements(in: $0) } ?? allElements()
-        guard let node = nodes.first(where: {
-            if let id { return $0.accessibilityIdentifier() == id }
-            return label($0) == title && $0.accessibilityRole() != .staticText
+    func find(id: String? = nil, title: String? = nil, in root: Any? = nil) async throws -> NativeAXNode {
+        let inSheet = (root as? NSWindow)?.sheetParent != nil
+        let candidates = await nodes()
+        guard let node = candidates.first(where: {
+            guard !inSheet || $0.inSheet else { return false }
+            if let id { return $0.id == id }
+            return $0.label == title && $0.role != "AXStaticText" && $0.role != "AXGroup"
         }) else {
             throw NSError(domain: "OndeNativeInteraction", code: 2,
                           userInfo: [NSLocalizedDescriptionKey: "Missing native control: \(id ?? title ?? "unknown")"])
         }
         return node
     }
+    func perform(_ node: NativeAXNode, value: String? = nil) async -> Int32 {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result: AXError
+                if let value { result = AXUIElementSetAttributeValue(node.element, kAXValueAttribute as CFString, value as CFString) }
+                else { result = AXUIElementPerformAction(node.element, kAXPressAction as CFString) }
+                continuation.resume(returning: result.rawValue)
+            }
+        }
+    }
     func press(id: String? = nil, title: String? = nil, in root: Any? = nil) async throws {
-        let node = try find(id: id, title: title, in: root)
-        try require(node.isAccessibilityEnabled(), "Control enabled: \(id ?? title ?? "unknown")")
-        try require(node.accessibilityPerformPress(), "Native press accepted: \(id ?? title ?? "unknown")")
+        let node = try await find(id: id, title: title, in: root)
+        try require(node.enabled, "Control enabled: \(id ?? title ?? "unknown")")
+        let result = await perform(node)
+        try require(result == AXError.success.rawValue, "Native press accepted: \(id ?? title ?? "unknown") [\(result)]")
         try await pause()
     }
     func edit(id: String? = nil, title: String? = nil, text: String, in root: Any? = nil) async throws {
-        let node = try find(id: id, title: title, in: root)
-        node.setAccessibilityValue(text)
+        let node = try await find(id: id, title: title, in: root)
+        let result = await perform(node, value: text)
+        try require(result == AXError.success.rawValue, "Native field edit accepted: \(id ?? title ?? "unknown") [\(result)]")
         try await pause()
-        try require((node.accessibilityValue() as? String) == text, "Native field accepted text: \(id ?? title ?? "unknown")")
+        let current = try await find(id: id, title: title, in: root)
+        try require(current.value == text, "Native field contains text: \(id ?? title ?? "unknown")")
     }
     func waitFor(_ name: String, seconds: Double = 15, _ predicate: () -> Bool) async throws {
         let end = ProcessInfo.processInfo.systemUptime + seconds
         while !predicate(), ProcessInfo.processInfo.systemUptime < end { try await pause(0.1) }
         try require(predicate(), name)
     }
-    func dump(_ name: String) throws {
-        let items: [[String: Any]] = allElements().map {
-            ["id": $0.accessibilityIdentifier() ?? "", "label": label($0),
-             "role": $0.accessibilityRole()?.rawValue ?? "", "enabled": $0.isAccessibilityEnabled(),
-             "value": String(describing: $0.accessibilityValue() ?? ""),
-             "frame": NSStringFromRect($0.accessibilityFrame())]
+    func dump(_ name: String) async throws {
+        let snapshot = await nodes()
+        let items: [[String: Any]] = snapshot.map {
+            ["id": $0.id, "label": $0.label, "role": $0.role,
+             "enabled": $0.enabled, "value": $0.value, "in_sheet": $0.inSheet]
         }
         try JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent(name + ".json"))
@@ -101,17 +103,7 @@ import OndeCore
         do {
             try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
             checks += try await UpdateMetadataCapture.run()
-            let axStatus: Int32 = await withCheckedContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async {
-                    // Read this very process only; do not request or modify TCC permissions.
-                    let app = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-                    AXUIElementSetMessagingTimeout(app, 2)
-                    var value: CFTypeRef?
-                    let result = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value)
-                    continuation.resume(returning: result.rawValue)
-                }
-            }
-            print("SELF_AX_READ", axStatus, "TRUSTED", AXIsProcessTrusted()); fflush(stdout)
+            try require(AXIsProcessTrusted(), "Native UI fixture has existing accessibility access; no permission override")
             try await pause(1)
             guard let window = NSApp.windows.first(where: { $0.title == "Onde" }) else {
                 throw NSError(domain: "OndeNativeInteraction", code: 3)
@@ -119,7 +111,7 @@ import OndeCore
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             try await pause()
-            try dump("initial-elements")
+            try await dump("initial-elements")
             try require(!model.playing && model.elapsed == 0, "First launch is silent and does not count time")
             let initialMusic = model.selectedMusicID
             try await press(id: "default-ambre", in: window)
@@ -143,11 +135,12 @@ import OndeCore
             try await press(title: "End session · ⌘.", in: window)
             try require(!model.playing && model.elapsed == 0, "Native End session resets only the current session")
             try await edit(id: "music-search", text: "zz-no-such-sound", in: window)
-            try require(allElements().contains { label($0) == "No matching sounds" || ($0.accessibilityValue() as? String) == "No matching sounds" },
+            let searched = await nodes()
+            try require(searched.contains { $0.label == "No matching sounds" || $0.value == "No matching sounds" },
                         "Search displays its native empty state")
             try await press(title: "Clear search", in: window)
-            try require((try find(id: "music-search", in: window).accessibilityValue() as? String) == "",
-                        "Clear search restores an empty native field")
+            let search = try await find(id: "music-search", in: window)
+            try require(search.value == "", "Clear search restores an empty native field")
             try await press(title: "Settings · ⌘,", in: window)
             try await waitFor("Settings is an attached native sheet") { window.attachedSheet != nil && model.sheet == .settings }
             let sheet = window.attachedSheet!
@@ -184,21 +177,70 @@ import OndeCore
             try await press(title: "Done")
             try await waitFor("Done dismisses the real sheet") { window.attachedSheet == nil && model.sheet == nil }
             try require(model.store.preferences.masterVolume == 0 && model.errorMessage == nil, "UI audit stays muted without unhandled errors")
-            try dump("final-elements")
+            try await dump("final-elements")
         } catch {
             failure = error.localizedDescription
-            try? dump("failure-elements")
+            try? await dump("failure-elements")
             fputs("Native interaction failed: \(error)\n", stderr)
         }
         let result: [String: Any] = ["ok": failure == nil, "passed": checks.count, "checks": checks,
                                      "error": failure as Any? ?? NSNull(), "muted": model.store.preferences.masterVolume == 0,
-                                     "scope": "Native in-process accessibility actions and real SwiftUI presentations; not a full VoiceOver or physical-pointer audit"]
+                                     "scope": "Public AX actions on this owned native process and real SwiftUI presentations; not a full VoiceOver or physical-pointer audit"]
         try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent("interaction.json"))
-        // Only the disposable fixture. Failure remains recorded even if cleanup exits normally.
         model.sheet = nil; model.errorMessage = nil; model.stop()
         try? await pause()
         NSApp.terminate(nil)
+    }
+}
+
+/// Use the public AX server, not private SwiftUI implementation objects.
+/// Calls run off the app's main thread so its actual AX server can reply.
+private final class NativeAXNode: @unchecked Sendable {
+    let element: AXUIElement
+    let id: String
+    let label: String
+    let role: String
+    let value: String
+    let enabled: Bool
+    let inSheet: Bool
+    init(element: AXUIElement, inSheet: Bool) {
+        self.element = element
+        self.id = Self.attribute(element, "AXIdentifier") as? String ?? ""
+        self.role = Self.attribute(element, kAXRoleAttribute) as? String ?? ""
+        self.label = [Self.attribute(element, kAXDescriptionAttribute) as? String,
+                      Self.attribute(element, kAXTitleAttribute) as? String,
+                      Self.attribute(element, "AXPlaceholderValue") as? String]
+            .compactMap { $0 }.first(where: { !$0.isEmpty }) ?? ""
+        self.value = Self.attribute(element, kAXValueAttribute).map { String(describing: $0) } ?? ""
+        self.enabled = Self.attribute(element, kAXEnabledAttribute) as? Bool ?? false
+        self.inSheet = inSheet || self.role == "AXSheet"
+    }
+    static func attribute(_ element: AXUIElement, _ key: String) -> Any? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, key as CFString, &value) == .success else { return nil }
+        return value
+    }
+    static func snapshot() -> [NativeAXNode] {
+        let app = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        AXUIElementSetMessagingTimeout(app, 2)
+        var result: [NativeAXNode] = []
+        func visit(_ element: AXUIElement, depth: Int, inSheet: Bool) {
+            guard depth < 35, result.count < 2500,
+                  !result.contains(where: { CFEqual($0.element, element) }) else { return }
+            let node = NativeAXNode(element: element, inSheet: inSheet)
+            result.append(node)
+            for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
+                visit(child, depth: depth + 1, inSheet: node.inSheet)
+            }
+            for child in attribute(element, "AXSheets") as? [AXUIElement] ?? [] {
+                visit(child, depth: depth + 1, inSheet: true)
+            }
+        }
+        for window in attribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            visit(window, depth: 0, inSheet: false)
+        }
+        return result
     }
 }
 #endif
