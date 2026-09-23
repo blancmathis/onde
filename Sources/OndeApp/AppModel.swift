@@ -320,7 +320,7 @@ final class AppModel: ObservableObject {
         store.mixes.insert(Mix(name: name, mode: mode, layers: store.layers, generatorSettings: generatorConfiguration), at: 0); persist(); notify("Mix saved.")
     }
     func loadMix(_ id: String, autostart: Bool = true) throws {
-        guard let mix = store.mixes.first(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Mix not found.") }
+        let mix = store.mixes[try MixLookup.index(for: id, in: store.mixes)]
         startMode(mix.mode, autostart: false, deferAudio: true); store.layers = mix.layers
         if let settings = mix.generatorSettings { var all = store.generatorSettings ?? [:]; all[mix.mode.rawValue] = settings; store.generatorSettings = all }
         if autostart { play() }; applyAudio(); persist(); notify(mix.name)
@@ -521,8 +521,8 @@ final class AppModel: ObservableObject {
             case "mix.save": try saveMix(name: string("name"))
             case "mix.load": try loadMix(string("id"), autostart: r["play"] as? Bool ?? true)
             case "mix.delete":
-                let id = try string("id"); guard store.mixes.contains(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Unknown mix.") }
-                store.mixes.removeAll { $0.id == id || $0.name == id }; persist()
+                let index = try MixLookup.index(for: string("id"), in: store.mixes)
+                store.mixes.remove(at: index); persist()
             case "import": result = jsonObject(try importSound(path: string("path"), title: r["title"] as? String))
             case "sound.remove": try removeImport(string("id"))
             case "history": result = jsonObject(store.history)

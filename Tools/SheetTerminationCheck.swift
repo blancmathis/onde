@@ -1,9 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Native presentation-policy test, not a pointer/VoiceOver or full draft-edit
-/// test. Use a real SwiftUI .sheet: a modifier in an arbitrary NSHostingView
-/// cannot configure a separately created AppKit sheet's presentation policy.
+/// Exercise a real SwiftUI presentation. Test the dirty edit before an allowed
+/// Quit: AppKit may end an unprotected sheet even when the delegate cancels exit.
 @main struct SheetTerminationCheck {
     @MainActor final class Policy: ObservableObject {
         @Published var dirty = false
@@ -13,7 +12,7 @@ import SwiftUI
         var requests = 0
         func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
             requests += 1
-            return .terminateCancel // Keep the checker alive after accepted requests.
+            return .terminateCancel
         }
     }
     struct Root: View {
@@ -57,8 +56,7 @@ import SwiftUI
                 throw NSError(domain: "SheetTerminationCheck", code: 1,
                               userInfo: [NSLocalizedDescriptionKey: message])
             }
-            checks.append(message); print("PASS \(message)")
-            fflush(stdout)
+            checks.append(message); print("PASS \(message)"); fflush(stdout)
         }
         func pump() { RunLoop.main.run(until: Date().addingTimeInterval(0.7)) }
         let unaffected = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
@@ -79,27 +77,28 @@ import SwiftUI
                               userInfo: [NSLocalizedDescriptionKey: "\(label): SwiftUI did not present its sheet"])
             }
             try check(!sheet.preventsApplicationTerminationWhenModal, "\(label): clean sheet allows termination")
-            let before = delegate.requests
-            app.terminate(nil)
-            pump()
-            try check(delegate.requests == before + 1, "\(label): clean Quit reaches delegate")
             policy.dirty = true
             pump()
-            try check(sheet.preventsApplicationTerminationWhenModal, "\(label): dirty sheet protects unapplied edit")
+            let sameSheet = parent.attachedSheet === sheet
+            let protects = sheet.preventsApplicationTerminationWhenModal
             let blocked = delegate.requests
             app.terminate(nil)
             pump()
+            print("DIAGNOSTIC \(label): sameSheet=\(sameSheet) protects=\(protects) presented=\(policy.presented) attached=\(parent.attachedSheet != nil) delegateDelta=\(delegate.requests - blocked)")
+            fflush(stdout)
+            try check(sameSheet && protects, "\(label): dirty edit updates the attached sheet policy")
             try check(delegate.requests == blocked, "\(label): protected Quit never reaches cleanup delegate")
+            try check(policy.presented && parent.attachedSheet === sheet, "\(label): rejected Quit preserves the edit presentation")
             policy.dirty = false
             pump()
             try check(!sheet.preventsApplicationTerminationWhenModal, "\(label): Apply or Discard restores termination")
             app.terminate(nil)
             pump()
-            try check(delegate.requests == blocked + 1, "\(label): Quit works again without reopening the sheet")
+            try check(delegate.requests == blocked + 1, "\(label): clean Quit reaches delegate after Apply or Discard")
             try check(unaffected.preventsApplicationTerminationWhenModal, "\(label): other windows remain untouched")
             policy.presented = false
             pump()
-            try check(parent.attachedSheet == nil, "\(label): SwiftUI dismisses the completed presentation")
+            try check(parent.attachedSheet == nil, "\(label): completed presentation can close")
             parent.orderOut(nil)
             parent.contentView = nil
         }

@@ -67,16 +67,18 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib, signal, subprocess
           out = pathlib.Path('QA/FullAudit')
-          scripts = ['transition_integration', 'generative_integration',
-                     'gentle_start_integration', 'profile_integration', 'paused_selection_integration',
+          scripts = ['paused_selection_integration', 'mix_deletion_integration',
+                     'transition_integration', 'generative_integration',
+                     'gentle_start_integration', 'profile_integration',
                      'relaxation_integration', 'listening_integration', 'transport_integration',
-                     'daily_activity_integration', 'mix_deletion_integration']
+                     'daily_activity_integration']
           results = []
           for name in scripts:
               print('RUN', name, flush=True)
-              with (out / (name + '.log')).open('w') as log:
+              path = out / (name + '.log')
+              with path.open('w') as log:
                   try:
-                      process = subprocess.Popen(['python3', 'Tools/' + name + '_test.py', 'dist/Onde.app'],
+                      process = subprocess.Popen(['python3', '-u', 'Tools/' + name + '_test.py', 'dist/Onde.app'],
                                                  stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                       result = {'suite': name, 'exit_code': process.wait(timeout=300)}
                   except subprocess.TimeoutExpired:
@@ -85,7 +87,8 @@ jobs:
                       result = {'suite': name, 'exit_code': None, 'error': '300s audit timeout'}
               results.append(result)
               print(json.dumps(result), flush=True)
-          (out / 'integration-results.json').write_text(json.dumps(results, indent=2))
+              print(path.read_text(errors='replace'), flush=True)
+              (out / 'integration-results.json').write_text(json.dumps(results, indent=2))
           raise SystemExit(0 if all(r['exit_code'] == 0 for r in results) else 1)
           PY
       - name: Require every audit phase to pass

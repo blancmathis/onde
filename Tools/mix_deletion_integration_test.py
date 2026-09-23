@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Exercise the same mix.delete UUID command used by the native confirmation.
+"""Saved-mix identity and deletion boundaries, using the actual native app.
 
-Disposable muted profile only. Verifies the deletion boundary, not pointer
-interaction with the confirmation dialog; that remains a native UI review.
+Disposable muted profile only. This exercises the model command used by the
+confirmation, not pointer interaction with the confirmation dialog itself.
 """
 import json
 import os
@@ -21,7 +21,6 @@ log = (profile / 'application.log').open('w')
 process = None
 checks = []
 
-
 def call(*words, expected=0):
     reply = subprocess.run([str(cli), *words], env=env, capture_output=True, text=True, timeout=30)
     if reply.returncode != expected:
@@ -30,13 +29,11 @@ def call(*words, expected=0):
     assert payload.get('ok') == (expected == 0)
     return payload['result'] if expected == 0 else payload['error']
 
-
 def check(condition, name):
     if not condition:
         raise AssertionError(name)
     checks.append(name)
     print('PASS', name, flush=True)
-
 
 try:
     process = subprocess.Popen([str(app / 'Contents/MacOS/Onde')], env=env, stdout=log, stderr=log)
@@ -64,19 +61,37 @@ try:
     check(len(mixes) == 2 and mixes[0]['id'] != mixes[1]['id'], 'Duplicate display names keep distinct IDs')
     deleted, kept = mixes[0]['id'], mixes[1]['id']
     before = call('status')
+    check(call('mix', 'delete', 'Same name', expected=2)['code'] == 'ambiguous_mix', 'Ambiguous deletion is rejected')
+    check(call('call', json.dumps({'command': 'mix.load', 'id': 'Same name', 'play': False}), expected=2)['code'] == 'ambiguous_mix', 'Ambiguous loading is rejected')
+    check(call('mixes') == mixes, 'Ambiguous requests do not mutate saved mixes')
+    unchanged = call('status')
+    check(unchanged['layers'] == before['layers'] and unchanged['status'] == before['status'], 'Ambiguous loading does not change playback')
+    # Put an ID-looking name first, with distinguishable layers, then resolve the real ID.
+    call('call', json.dumps({'command': 'sound', 'id': imported['id'], 'volume': .12}))
+    call('mix', 'save', deleted)
+    shadow = call('mixes')[0]['id']
+    loaded = call('call', json.dumps({'command': 'mix.load', 'id': deleted, 'play': False}))
+    check(loaded['layers'] == mixes[0]['layers'], 'Loading by UUID takes priority over an earlier ID-looking name')
+    call('play')
+    before = call('status')
     history = call('history')
     call('mix', 'delete', deleted)
-    check([m['id'] for m in call('mixes')] == [kept], 'Delete by UUID removes only the chosen saved mix')
+    remaining = call('mixes')
+    check(len(remaining) == 2 and {m['id'] for m in remaining} == {kept, shadow}, 'Delete by UUID removes only the chosen saved mix, not a matching name')
     after = call('status')
     check(after['status'] == 'playing' and after['audio_playing_ids'] == before['audio_playing_ids'], 'Deleting a saved mix does not stop its active sound')
     check(after['elapsed_seconds'] >= before['elapsed_seconds'], 'Deleting a saved mix does not reset the session')
     check(after['layers'] == before['layers'] and after['preferences'] == before['preferences'], 'Levels, chimes and layers remain unchanged')
     check(original.exists() and (profile / 'Imports' / imported['filename']).exists(), 'Original and imported audio files remain intact')
     check(call('history') == history, 'Deleting a mix does not remove history')
-    check(call('mix', 'delete', deleted, expected=2)['code'] == 'not_found', 'A stale confirmation cannot delete a different mix')
+    check(call('mix', 'delete', deleted, expected=2)['code'] == 'not_found', 'A stale confirmation never falls back to another mix name')
+    check(call('call', json.dumps({'command': 'mix.load', 'id': deleted, 'play': False}), expected=2)['code'] == 'not_found', 'Stale loading is rejected even when a name matches')
+    check(call('mixes') == remaining, 'Stale requests preserve both remaining mixes')
     call('pause')
-    call('mix', 'delete', kept)
-    check(call('mixes') == [] and call('status')['status'] != 'playing', 'Last mix deletion leaves an empty list without autoplay')
+    call('mix', 'delete', 'Same name')
+    check([m['id'] for m in call('mixes')] == [shadow], 'Unique legacy-name deletion stays compatible')
+    call('mix', 'delete', shadow.lower())
+    check(call('mixes') == [] and call('status')['status'] != 'playing', 'Last mix deletion accepts a lowercase UUID without autoplay')
     call('quit')
     check(process.wait(timeout=8) == 0, 'Native termination remains clean')
     saved = json.loads((profile / 'state.json').read_text())
@@ -91,4 +106,7 @@ finally:
             process.kill()
             process.wait(timeout=3)
     log.close()
-    shutil.rmtree(profile)
+    if sys.exc_info()[0] is None:
+        shutil.rmtree(profile)
+    else:
+        print('Retained failed test profile', profile, file=sys.stderr)
