@@ -1,17 +1,29 @@
 import AppKit
 import SwiftUI
 
-/// Native policy test, not a pointer/VoiceOver or end-to-end draft-edit test.
-/// The delegate rejects every accepted request so this checker never exits early.
+/// Native presentation-policy test, not a pointer/VoiceOver or full draft-edit
+/// test. Use a real SwiftUI .sheet: a modifier in an arbitrary NSHostingView
+/// cannot configure a separately created AppKit sheet's presentation policy.
 @main struct SheetTerminationCheck {
     @MainActor final class Policy: ObservableObject {
         @Published var dirty = false
+        @Published var presented = false
     }
     @MainActor final class Delegate: NSObject, NSApplicationDelegate {
         var requests = 0
         func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
             requests += 1
-            return .terminateCancel
+            return .terminateCancel // Keep the checker alive after accepted requests.
+        }
+    }
+    struct Root: View {
+        @ObservedObject var policy: Policy
+        let legacy: Bool
+        var body: some View {
+            Text("Presentation host").frame(width: 500, height: 300)
+                .sheet(isPresented: $policy.presented) {
+                    Content(policy: policy, legacy: legacy)
+                }
         }
     }
     struct Content: View {
@@ -46,6 +58,7 @@ import SwiftUI
                               userInfo: [NSLocalizedDescriptionKey: message])
             }
             checks.append(message); print("PASS \(message)")
+            fflush(stdout)
         }
         func pump() { RunLoop.main.run(until: Date().addingTimeInterval(0.7)) }
         let unaffected = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
@@ -56,12 +69,15 @@ import SwiftUI
             let policy = Policy()
             let parent = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
-            let sheet = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 160),
-                                 styleMask: [.titled], backing: .buffered, defer: false)
-            sheet.contentView = NSHostingView(rootView: Content(policy: policy, legacy: legacy))
+            parent.contentView = NSHostingView(rootView: Root(policy: policy, legacy: legacy))
             parent.makeKeyAndOrderFront(nil)
-            parent.beginSheet(sheet)
             pump()
+            policy.presented = true
+            pump()
+            guard let sheet = parent.attachedSheet else {
+                throw NSError(domain: "SheetTerminationCheck", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: "\(label): SwiftUI did not present its sheet"])
+            }
             try check(!sheet.preventsApplicationTerminationWhenModal, "\(label): clean sheet allows termination")
             let before = delegate.requests
             app.terminate(nil)
@@ -81,13 +97,14 @@ import SwiftUI
             pump()
             try check(delegate.requests == blocked + 1, "\(label): Quit works again without reopening the sheet")
             try check(unaffected.preventsApplicationTerminationWhenModal, "\(label): other windows remain untouched")
-            parent.endSheet(sheet)
+            policy.presented = false
             pump()
-            sheet.orderOut(nil); parent.orderOut(nil)
-            sheet.contentView = nil
+            try check(parent.attachedSheet == nil, "\(label): SwiftUI dismisses the completed presentation")
+            parent.orderOut(nil)
+            parent.contentView = nil
         }
         let result: [String: Any] = ["ok": true, "passed": checks.count, "checks": checks,
-                                    "scope": "real NSWindow sheet termination policy; no audio or profile"]
+                                    "scope": "real SwiftUI sheet termination policy; no audio or profile"]
         print(String(data: try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]), encoding: .utf8)!)
     }
 }
