@@ -79,6 +79,8 @@ struct PersonalAudioView: View {
                         Spacer()
                         Text(mix.mode.title).font(.system(size: 10)).foregroundStyle(Theme.muted)
                         Button("Play") { do { try model.loadMix(mix.id) } catch { model.fail(error) } }
+                            .accessibilityLabel("Play saved mix \(mix.name), \(mix.mode.title)")
+                            .accessibilityIdentifier("play-mix-\(mix.id)")
                         Button { deleteMixID = mix.id } label: { Image(systemName: "trash") }
                             .buttonStyle(.borderless).help("Delete saved mix")
                             .accessibilityLabel("Delete saved mix \(mix.name)")
@@ -114,6 +116,8 @@ struct PersonalAudioView: View {
                         }
                         Spacer()
                         Button("Play") { play(sound) }
+                            .accessibilityLabel("Play imported audio \(sound.title)")
+                            .accessibilityIdentifier("play-import-\(sound.id)")
                         Button { deleteID = sound.id } label: { Image(systemName: "trash") }
                             .help("Delete only the imported copy").accessibilityLabel("Delete local copy of \(sound.title)")
                     }
@@ -124,7 +128,13 @@ struct PersonalAudioView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Preserved for existing mixes. The main screen uses continuously generated music.").font(.system(size: 11)).foregroundStyle(Theme.muted)
                 ForEach(model.sounds.filter { !$0.imported && ["Music", "Composition"].contains($0.kind) }) { sound in
-                    HStack { Text(sound.title).font(.system(size: 12)); Spacer(); Button("Play") { play(sound) } }
+                    HStack {
+                        Text(sound.title).font(.system(size: 12))
+                        Spacer()
+                        Button("Play") { play(sound) }
+                            .accessibilityLabel("Play recorded sound \(sound.title)")
+                            .accessibilityIdentifier("play-recorded-\(sound.id)")
+                    }
                 }
             }.padding(.top, 12)
         }.font(.system(size: 12))

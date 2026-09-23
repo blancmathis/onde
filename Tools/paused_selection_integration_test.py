@@ -101,8 +101,20 @@ try:
     check(not s['generator']['running'] and s['generator']['composition_id']==0,'Selecting recording discards cached synthesis')
     until(lambda s:s['playback']['recorded_layers'][id]['position_seconds']>3)
     call('pause');time.sleep(.35);offset=call('status')['playback']['recorded_layers'][id]['position_seconds']
-    s=call('play');rec=s['playback']['recorded_layers'][id]
-    check(rec['position_seconds']>=offset and rec['entrance_seconds']==2,'Recorded Play resumes position with short fade')
+    # play() starts AVAudioPlayer asynchronously. Validate actual continuation,
+    # not the first timestamp read in the same command response. A one-second
+    # readiness budget with an offset above three seconds cannot let a player
+    # that incorrectly restarted at zero catch up and pass this assertion.
+    resume_started=time.monotonic()
+    s=call('play');first=dict(s['playback']['recorded_layers'][id])
+    trace=[{'wall_seconds':time.monotonic()-resume_started,'recorded':first}]
+    while s['playback']['recorded_layers'][id]['position_seconds']<offset and time.monotonic()-resume_started<1:
+        time.sleep(.025);s=call('status')
+        trace.append({'wall_seconds':time.monotonic()-resume_started,'recorded':s['playback']['recorded_layers'][id]})
+    rec=s['playback']['recorded_layers'][id];observed=time.monotonic()-resume_started
+    print('RECORDED_RESUME '+json.dumps({'paused_position':offset,'observed_seconds':observed,'trace':trace}),flush=True)
+    check(not last_play()['music_restarted'],'Recorded Play is a resume, not an explicit selection')
+    check(offset>3 and observed<min(2,offset/2) and rec['position_seconds']>=offset and rec['position_seconds']<offset+2 and first['entrance_seconds']==2 and rec['entrance_seconds']==2,'Recorded Play resumes position with short fade')
     call('pause');call('solo','piano');s=call('play')
     check(not s['playback']['recorded_layers'][id]['playing'],'Previously selected recording never restarts')
     check(s['playback']['recorded_layers']['piano']['position_seconds']<1,'Different recorded sound starts from beginning')
