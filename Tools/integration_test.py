@@ -75,6 +75,12 @@ except Exception:
    sample=subprocess.run(['/usr/bin/sample',str(process.pid),'3','1'],capture_output=True,text=True,timeout=8)
    print('FAILURE_PROCESS_SAMPLE\n'+sample.stdout+'\n'+sample.stderr,flush=True)
   except Exception as error:print('Sample capture failed:',error,flush=True)
+ if process and process.poll() is None:
+  try:
+   print('STATUS_AFTER_QUIT_TIMEOUT',json.dumps(call('status')),flush=True)
+   call('ui','page','studio');time.sleep(.5);call('quit');process.wait(timeout=4)
+   print('DIAGNOSTIC_RECOVERY: exited after dismissing sheet; original quit remains FAILED',flush=True)
+  except Exception as error:print('Sheet dismissal recovery failed:',error,flush=True)
  print('FAILURE_APPLICATION_LOG\n'+(profile/'application.log').read_text(errors='replace'),flush=True)
  raise
 finally:

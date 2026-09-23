@@ -44,7 +44,9 @@ exit(app.terminate() ? 0 : 3)
     subprocess.run(['swiftc', str(helper_source), '-o', str(helper)], check=True, timeout=90)
     cases = ['idle', 'preview', 'finished-preview', 'repeated-preview',
              'recorded-preview', 'generated-preview', 'scheduled-chimes',
-             'native-preview', 'native-generated-preview']
+             'native-preview', 'native-generated-preview',
+             'sheet-credits', 'native-sheet-credits', 'sheet-settings',
+             'native-sheet-settings', 'sheet-cycle', 'native-sheet-cycle']
     results = []
     for case in cases:
         destination = output / case
@@ -114,7 +116,7 @@ exit(app.terminate() ? 0 : 3)
                 wait_for(lambda s: s['elapsed_seconds'] > 2.5)
                 events = call('events')
                 assert len([e for e in events if e['type'] == 'chime']) == 2
-            elif case != 'idle':
+            elif 'preview' in case:
                 for _ in range(5 if case == 'repeated-preview' else 1):
                     call('chime', 'preview')
                     time.sleep(.1)
@@ -134,6 +136,12 @@ exit(app.terminate() ? 0 : 3)
                 call('chime', 'preview')  # Keep this case a quit with a live preview.
             if case == 'finished-preview':
                 assert not call('status')['playback']['chime']['retained'], 'Completed preview releases its player'
+            if 'sheet-' in case:
+                pages = (['studio', 'library', 'mixes', 'settings', 'cli', 'history', 'credits']
+                         if 'cycle' in case else ['settings' if 'settings' in case else 'credits'])
+                for page in pages:
+                    call('ui', 'page', page)
+                time.sleep(.5)
             # Persist a private mix and an immediate preference edit on quit.
             call('mix', 'save', 'Shutdown fixture')
             call('timer', 'markers', '10,20,30')
@@ -168,6 +176,16 @@ exit(app.terminate() ? 0 : 3)
                                    capture_output=True, text=True, timeout=8)
                 except Exception as sample_error:
                     result['sample_error'] = str(sample_error)
+                # Diagnostic recovery, NEVER counted as a successful first quit.
+                try:
+                    status = call('status', timeout=4)
+                    (destination / 'after-timeout.json').write_text(json.dumps(status, indent=2))
+                    call('ui', 'page', 'studio', timeout=4)
+                    time.sleep(.5)
+                    call('quit', timeout=4)
+                    result['quit_after_sheet_dismissal'] = process.wait(timeout=4) == 0
+                except Exception as recovery_error:
+                    result['recovery_error'] = str(recovery_error)
         finally:
             # Never hide a failure by treating terminate/kill as a normal exit.
             if process is not None and process.poll() is None:
