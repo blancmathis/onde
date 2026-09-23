@@ -23,16 +23,12 @@ def main() -> int:
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     root = Path(__file__).resolve().parents[1]
-    suites = ['integration_test.py', 'shutdown_integration_test.py',
+    suites = ['community_boundary_test.py', 'integration_test.py', 'shutdown_integration_test.py',
               'paused_selection_integration_test.py', 'mix_deletion_integration_test.py',
               'transition_integration_test.py', 'generative_integration_test.py',
               'gentle_start_integration_test.py', 'profile_integration_test.py',
               'relaxation_integration_test.py', 'listening_integration_test.py',
               'transport_integration_test.py', 'daily_activity_integration_test.py']
-    # Add new release-boundary checks when that source is part of the candidate.
-    boundary = root / 'Tools/community_boundary_test.py'
-    if boundary.is_file():
-        suites.insert(0, boundary.name)
     results = []
     for filename in suites:
         print('RUN', filename, flush=True)

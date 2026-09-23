@@ -8,6 +8,7 @@ import OndeCore
     private static let defaults = UserDefaults(suiteName: "onde.design-capture." + UUID().uuidString)!
     static func runIfRequested(model: AppModel) {
         #if ONDE_DESIGN_CAPTURE
+        if EspaceInteractionCheck.runIfRequested(model: model) { return }
         let env = ProcessInfo.processInfo.environment
         guard !started, let homePath = env["ONDE_HOME"], let outputPath = env["ONDE_DESIGN_SNAPSHOT_DIR"] else { return }
         let home = URL(fileURLWithPath: homePath).standardizedFileURL.resolvingSymlinksInPath()

@@ -44,6 +44,8 @@ jobs:
           bash Tools/package.sh 2>&1 | tee QA/Espace/package.log
           python3 Tools/listening_integration_test.py dist/Onde.app 2>&1 | tee QA/Espace/listening-integration.log
           python3 Tools/check_english.py 2>&1 | tee QA/Espace/copy-check.log
+      - name: Exercise actual native UI actions and protected editing
+        run: python3 Tools/native_ui_interaction.py dist/Onde.app
       - name: Verify transport timing and daily totals in muted native profiles
         run: |
           set -o pipefail
