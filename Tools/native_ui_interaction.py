@@ -7,23 +7,28 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from qa_diagnostics import capture
 
 root = Path(__file__).resolve().parents[1]
 app = Path(sys.argv[1]).resolve()
 output = root / 'QA/Espace/interaction'
 output.mkdir(parents=True, exist_ok=True)
+helper = output / 'native-ax-action'
+subprocess.run(['swiftc', str(root / 'Tools/NativeAXAction.swift'), '-o', str(helper)], check=True, timeout=90)
 with tempfile.TemporaryDirectory(prefix='oui-', dir=os.environ.get('TMPDIR')) as directory:
     home = Path(directory)
     state = dict(version=1, mode='focus', layers={}, modeMixes={}, imported=[], mixes=[], history=[],
                  preferences=dict(masterVolume=0, chimeVolume=0.25, fadeSeconds=0, startFadeSeconds=0,
                                   markers=[600, 1200, 1800], chimesEnabled=True, preventSleep=False, reducedMotion=True))
     (home / 'state.json').write_text(json.dumps(state))
-    env = dict(os.environ, ONDE_HOME=str(home), ONDE_INTERACTION_OUTPUT=str(home / 'results'))
+    env = dict(os.environ, ONDE_HOME=str(home), ONDE_INTERACTION_OUTPUT=str(home / 'results'),
+               ONDE_AX_ACTION_HELPER=str(helper))
     with (output / 'application.log').open('w') as log:
         process = subprocess.Popen([str(app / 'Contents/MacOS/Onde')], env=env, stdout=log, stderr=log)
         try:
             code = process.wait(timeout=120)
         except subprocess.TimeoutExpired:
+            capture(process, output, 'native-ui')
             process.terminate()
             try:
                 process.wait(timeout=3)

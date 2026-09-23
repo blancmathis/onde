@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import wave
+from qa_diagnostics import capture
 
 app = Path(sys.argv[1]).resolve()
 cli = app / 'Contents/MacOS/ondectl'
@@ -130,6 +131,9 @@ try:
     call('quit')
     check(process.wait(timeout=8) == 0, 'Acknowledged profile recovery can quit normally')
     print(json.dumps({'ok': True, 'passed': len(checks), 'checks': checks, 'muted_playback': True}, indent=2), flush=True)
+except Exception:
+    capture(process, profile, 'community-boundary')
+    raise
 finally:
     for child in [secondary, process]:
         if child is not None and child.poll() is None:

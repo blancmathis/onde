@@ -60,12 +60,35 @@ import OndeCore
         return node
     }
     func perform(_ node: NativeAXNode, value: String? = nil) async -> Int32 {
-        await withCheckedContinuation { continuation in
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let executable = Bundle.main.executableURL!.path
+        let helper = ProcessInfo.processInfo.environment["ONDE_AX_ACTION_HELPER"]
+        var request: [String: Any] = ["id": node.id, "label": node.label, "role": node.role, "in_sheet": node.inSheet]
+        if let value { request["value"] = value }
+        guard let helper, let data = try? JSONSerialization.data(withJSONObject: request),
+              let argument = String(data: data, encoding: .utf8) else { return -10 }
+        return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let result: AXError
-                if let value { result = AXUIElementSetAttributeValue(node.element, kAXValueAttribute as CFString, value as CFString) }
-                else { result = AXUIElementPerformAction(node.element, kAXPressAction as CFString) }
-                continuation.resume(returning: result.rawValue)
+                let process = Process(), pipe = Pipe()
+                process.executableURL = URL(fileURLWithPath: helper)
+                process.arguments = [String(pid), executable, argument]
+                process.standardOutput = pipe
+                do {
+                    try process.run()
+                    let reply = pipe.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    guard process.terminationStatus == 0,
+                          let object = try JSONSerialization.jsonObject(with: reply) as? [String: Any],
+                          let code = object["code"] as? Int32 else {
+                        print("AX_HELPER_FAILED \(String(data: reply, encoding: .utf8) ?? "")")
+                        continuation.resume(returning: -11); return
+                    }
+                    print("AX_HELPER \(String(data: reply, encoding: .utf8) ?? "")"); fflush(stdout)
+                    continuation.resume(returning: code)
+                } catch {
+                    print("AX_HELPER_ERROR \(error)"); fflush(stdout)
+                    continuation.resume(returning: -12)
+                }
             }
         }
     }
