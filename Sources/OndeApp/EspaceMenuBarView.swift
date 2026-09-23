@@ -50,7 +50,7 @@ struct EspaceMenuBarView: View {
                 Image(systemName: model.store.preferences.masterVolume == 0 ? "speaker.slash" : "speaker.wave.2")
                     .font(.system(size: 13)).foregroundStyle(EspaceTheme.secondary)
                 Slider(value: Binding(get: { model.store.preferences.masterVolume }, set: model.setMaster), in: 0...1)
-                    .accessibilityLabel("Master volume")
+                    .accessibilityLabel("Master volume").accessibilityValue("\(Int(model.store.preferences.masterVolume * 100)) percent")
                 Text("\(Int(model.store.preferences.masterVolume * 100))%")
                     .font(.system(size: 11)).monospacedDigit().foregroundStyle(EspaceTheme.secondary).frame(width: 32)
             }

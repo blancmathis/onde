@@ -284,7 +284,7 @@ final class AppModel: ObservableObject {
         saveTask?.cancel(); recordSession()
         playbackRequested = false; playbackClockPolicy.reset()
         clock.pause(at: now); elapsed = clock.elapsed(at: now)
-        persistNow(); audio.stopImmediately()
+        persistNow(); audio.shutdown()
         if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }
         if hasAssertion { IOPMAssertionRelease(assertionID); hasAssertion = false }
     }
@@ -298,8 +298,16 @@ final class AppModel: ObservableObject {
         if let volume { layer.volume = clamp(volume) }
         store.layers[id] = layer; applyAudio(); persist()
     }
-    func setMaster(_ n: Double) { store.preferences.masterVolume = clamp(n); applyAudio(); persist() }
-    func setChime(_ n: Double) { store.preferences.chimeVolume = clamp(n); persist() }
+    func setMaster(_ n: Double) {
+        store.preferences.masterVolume = clamp(n)
+        audio.setChimeVolume(store.preferences.chimeVolume * store.preferences.masterVolume)
+        applyAudio(); persist()
+    }
+    func setChime(_ n: Double) {
+        store.preferences.chimeVolume = clamp(n)
+        audio.setChimeVolume(store.preferences.chimeVolume * store.preferences.masterVolume)
+        persist()
+    }
     func setMarkers(_ values: [Double]) throws {
         store.preferences.markers = try validMarkers(values)
         clock.skipPastMarkers(store.preferences.markers, at: now); persist(); event("markers_updated")

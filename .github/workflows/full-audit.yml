@@ -27,6 +27,11 @@ jobs:
           bash Tools/prepare_orchestra.sh
           swift test -c release -j 3 2>&1 | tee QA/FullAudit/swift-tests.log
           ONDE_SKIP_DOWNLOADS=1 ONDE_ORIGINALS_ONLY=1 bash Tools/package.sh 2>&1 | tee QA/FullAudit/package.log
+      - name: Verify chime lifecycle and live gain using digital silence
+        run: |
+          set -o pipefail
+          swiftc Sources/OndeApp/ChimePlayer.swift Tools/ChimeLifecycleCheck.swift -o .build/chime-lifecycle-check
+          .build/chime-lifecycle-check 2>&1 | tee QA/FullAudit/chime-lifecycle.log
       - name: Verify native shutdown after previews and scheduled chimes
         id: shutdown
         continue-on-error: true

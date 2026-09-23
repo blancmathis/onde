@@ -12,6 +12,15 @@ def call(*args,expected=0):
  o=json.loads(p.stdout)
  if o.get('ok') != (expected==0):raise AssertionError(o)
  return o['result'] if expected==0 else o['error']
+def wait_audio(sound_id,seconds=30):
+ deadline=time.monotonic()+seconds
+ while time.monotonic()<deadline:
+  if process.poll() is not None:raise AssertionError('App exited while preparing audio')
+  s=call('status')
+  if s['last_error'] is not None:raise AssertionError(s['last_error'])
+  if sound_id in s['audio_playing_ids']:return s
+  time.sleep(.1)
+ raise AssertionError(('Audio never became ready',sound_id,s))
 def launch():
  global process
  process=subprocess.Popen([str(app/'Contents/MacOS/Onde')],env=env,stdout=log,stderr=log)
@@ -28,7 +37,7 @@ try:
  call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true')
  sounds=call('sounds');check(len(sounds)>=7,'Sound library available')
  for sound in sounds:
-  call('solo',sound['id']);s=call('play');check(sound['id'] in s['audio_playing_ids'] and s['last_error']==None,'Playback '+sound['id'])
+  call('solo',sound['id']);call('play');s=wait_audio(sound['id']);check(sound['id'] in s['audio_playing_ids'] and s['last_error']==None,'Playback '+sound['id'])
  call('stop');call('timer','markers','2,4,6','--seconds');call('meditate','--reset');time.sleep(8.1)
  s=call('status');check(s['status']=='playing' and s['elapsed_seconds']>8,'Timer continues after final chime');check(s['next_chime_seconds']==None,'No next chime')
  check([e['marker_seconds'] for e in call('events') if e['type']=='chime']==[2,4,6],'Exactly three real chimes')

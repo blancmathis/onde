@@ -120,6 +120,16 @@ exit(app.terminate() ? 0 : 3)
                     time.sleep(.1)
                 if case == 'finished-preview':
                     time.sleep(9)
+            if case == 'preview':
+                call('volume', '0')
+                call('settings', 'chimeVolume', '0.63')
+                time.sleep(.3)
+                preview = call('status')
+                assert preview['playback']['chime']['playing'], 'Unrelated stopped-state edits must not cut off a preview'
+                assert preview['playback']['chime']['volume'] == 0, 'Master mute applies to a live preview'
+                assert preview['elapsed_seconds'] == 0, 'A preview never starts the session clock'
+            if case == 'finished-preview':
+                assert not call('status')['playback']['chime']['retained'], 'Completed preview releases its player'
             # Persist a private mix and an immediate preference edit on quit.
             call('mix', 'save', 'Shutdown fixture')
             call('timer', 'markers', '10,20,30')

@@ -262,12 +262,17 @@ private struct EspaceChimeSettings: View {
             Divider().overlay(EspaceTheme.line)
             EspaceSettingSlider(title: "Chime level", value: Binding(get: { model.store.preferences.chimeVolume }, set: model.setChime))
             HStack {
-                Text("Also affected by master volume.").font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary)
+                Text(previewHint).font(.system(size: 12)).foregroundStyle(EspaceTheme.secondary).fixedSize(horizontal: false, vertical: true)
                 Spacer()
-                Button { model.previewChime() } label: { Label("Listen", systemImage: "bell") }.buttonStyle(EspaceButtonStyle())
+                Button { model.previewChime() } label: { Label("Listen", systemImage: "bell") }.buttonStyle(EspaceButtonStyle()).accessibilityHint(previewHint)
             }
         }
         .onChange(of: draft.text) { _, _ in error = "" }
+    }
+    private var previewHint: String {
+        if model.store.preferences.masterVolume == 0 { return "Master volume is muted. Raise it to hear the preview." }
+        if model.store.preferences.chimeVolume == 0 { return "Chime level is zero. Raise it to hear the preview." }
+        return "Also affected by master volume."
     }
     private func apply() {
         do {
