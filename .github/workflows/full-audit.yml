@@ -1,0 +1,76 @@
+name: Full native audit (no publication)
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: onde-full-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-audit:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Record exact source and environment
+        run: |
+          mkdir -p QA/FullAudit
+          git archive --format=zip -o QA/FullAudit/source-snapshot.zip HEAD
+          git rev-parse HEAD > QA/FullAudit/checkout-sha.txt
+          sw_vers > QA/FullAudit/environment.txt
+          swift --version >> QA/FullAudit/environment.txt
+      - name: Prepare verified bank and compile production configuration
+        run: |
+          set -o pipefail
+          bash Tools/prepare_orchestra.sh
+          swift test -c release -j 3 2>&1 | tee QA/FullAudit/swift-tests.log
+          ONDE_SKIP_DOWNLOADS=1 ONDE_ORIGINALS_ONLY=1 bash Tools/package.sh 2>&1 | tee QA/FullAudit/package.log
+      - name: Verify native shutdown after previews and scheduled chimes
+        id: shutdown
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 Tools/shutdown_integration_test.py dist/Onde.app 2>&1 | tee QA/FullAudit/shutdown.log
+      - name: Exercise full integration suite with isolated muted profiles
+        id: integrations
+        if: always() && steps.shutdown.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, signal, subprocess
+          out = pathlib.Path('QA/FullAudit')
+          scripts = ['integration', 'transition_integration', 'generative_integration',
+                     'gentle_start_integration', 'profile_integration', 'paused_selection_integration',
+                     'relaxation_integration', 'listening_integration', 'transport_integration',
+                     'daily_activity_integration']
+          results = []
+          for name in scripts:
+              print('RUN', name, flush=True)
+              with (out / (name + '.log')).open('w') as log:
+                  try:
+                      process = subprocess.Popen(['python3', 'Tools/' + name + '_test.py', 'dist/Onde.app'],
+                                                 stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                      result = {'suite': name, 'exit_code': process.wait(timeout=300)}
+                  except subprocess.TimeoutExpired:
+                      os.killpg(process.pid, signal.SIGKILL)
+                      process.wait()
+                      result = {'suite': name, 'exit_code': None, 'error': '300s audit timeout'}
+              results.append(result)
+              print(json.dumps(result), flush=True)
+          (out / 'integration-results.json').write_text(json.dumps(results, indent=2))
+          raise SystemExit(0 if all(r['exit_code'] == 0 for r in results) else 1)
+          PY
+      - name: Require every audit phase to pass
+        if: always()
+        env:
+          SHUTDOWN: ${{ steps.shutdown.outcome }}
+          INTEGRATIONS: ${{ steps.integrations.outcome }}
+        run: test "$SHUTDOWN" = success && test "$INTEGRATIONS" = success
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-native-audit
+          path: QA/FullAudit/
+          if-no-files-found: error
