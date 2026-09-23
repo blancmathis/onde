@@ -1,0 +1,30 @@
+name: Isolated Apple alert diagnostic (not an app gate)
+on:
+  push:
+    branches: [audit/iconservices-af6d7ce]
+permissions:
+  contents: read
+jobs:
+  framework:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26-intel, macos-26]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Record environment and exercise unmodified Apple alert APIs
+        run: |
+          mkdir -p QA/AlertFramework
+          sw_vers > QA/AlertFramework/environment.txt
+          uname -m >> QA/AlertFramework/environment.txt
+          python3 Tools/test_hosted_alert.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alert-framework-${{ matrix.runner }}
+          path: QA/AlertFramework/
+          if-no-files-found: error
