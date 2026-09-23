@@ -60,7 +60,11 @@ import OndeCore
                 }
                 try await take(EspaceRootView().environmentObject(model), size:NSSize(width:860,height:640), file:output.appendingPathComponent("contrast-compact-native.png"), highContrast:true)
                 try await take(EspaceMenuBarView().environmentObject(model), size:NSSize(width:340,height:480), file:output.appendingPathComponent("menubar-native.png"))
-                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":17, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
+                try await take(EspaceSheetView(sheet:.personal).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("personal-empty-native.png"))
+                try model.saveMix(name: "A saved soundscape")
+                try model.saveMix(name: "A saved soundscape")
+                try await take(EspaceSheetView(sheet:.personal).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("personal-mixes-native.png"))
+                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":19, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
                 try JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("capture.json"))
                 NSApp.terminate(nil)
             } catch { fputs("Design capture failed: \(error)\n",stderr); exit(4) }
