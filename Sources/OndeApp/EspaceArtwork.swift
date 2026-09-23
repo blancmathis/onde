@@ -172,6 +172,10 @@ struct EspaceSurface: View {
     var economical = false
     var motifOverride: OndeMotif?
     var body: some View {
+        Group {
+            if EspaceRenderingSupport.needsSoftwareCanvas {
+                EspaceSoftwareSurface(id: id, mode: mode, time: time, economical: economical, motifOverride: motifOverride)
+            } else {
         Canvas(opaque: false, rendersAsynchronously: false) { context, size in
             guard size.width > 0, size.height > 0 else { return }
             let motif = motifOverride ?? OndeMotif.forMusic(id, meditation: mode == .meditation)
@@ -209,6 +213,8 @@ struct EspaceSurface: View {
                 }
             }
         }.clipped().accessibilityHidden(true)
+            }
+        }
     }
 }
 

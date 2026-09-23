@@ -1,11 +1,11 @@
 name: Hosted SwiftUI framework diagnostic
+# Manual diagnostic of Apple's unmodified Canvas; not an app regression suite.
+# Intel 15's virtual GPU fails this baseline. Onde's own Intel 15 candidate tests
+# remain required and must pass using its scoped Core Graphics fallback.
 on:
-  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: onde-framework-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   framework:
     strategy:
