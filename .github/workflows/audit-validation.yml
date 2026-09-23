@@ -1,0 +1,75 @@
+name: Full functional audit (no publication)
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: full-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  functional:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Record exact source and environment
+        run: |
+          mkdir -p QA/Audit
+          git rev-parse HEAD > QA/Audit/checkout-sha.txt
+          git archive --format=zip -o QA/Audit/source-snapshot.zip HEAD
+          sw_vers > QA/Audit/environment.txt
+          swift --version >> QA/Audit/environment.txt
+      - name: Prepare the verified orchestra bank
+        run: bash Tools/prepare_orchestra.sh
+      - name: Package the actual native app, without publishing or installing
+        env:
+          ONDE_SKIP_DOWNLOADS: '1'
+          ONDE_ORIGINALS_ONLY: '1'
+        run: |
+          set -o pipefail
+          bash Tools/package.sh 2>&1 | tee QA/Audit/package.log
+      - name: Run independent muted functional suites and retain every failure
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, signal, subprocess, sys, time
+          destination = pathlib.Path('QA/Audit')
+          suites = ['shutdown', 'integration', 'transition', 'generative', 'gentle_start',
+                    'paused_selection', 'profile', 'relaxation']
+          results = []
+          for suite in suites:
+              filename = 'integration_test.py' if suite == 'integration' else suite + '_integration_test.py'
+              path = destination / (suite + '.log')
+              start = time.monotonic()
+              with path.open('w') as log:
+                  process = subprocess.Popen(['python3', '-u', 'Tools/' + filename, 'dist/Onde.app'],
+                                             stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                  try:
+                      code = process.wait(timeout=480)
+                  except subprocess.TimeoutExpired:
+                      code = 124
+                      # Only this disposable test's process group. Never treat cleanup as a pass.
+                      try:
+                          os.killpg(process.pid, signal.SIGTERM)
+                          process.wait(timeout=5)
+                      except (ProcessLookupError, subprocess.TimeoutExpired):
+                          pass
+                      try:
+                          os.killpg(process.pid, signal.SIGKILL)
+                      except ProcessLookupError:
+                          pass
+                      process.wait(timeout=5)
+              results.append({'suite': suite, 'exit_code': code,
+                              'seconds': round(time.monotonic() - start, 3)})
+              print(json.dumps(results[-1]), flush=True)
+              print(path.read_text(errors='replace')[-40000:], flush=True)
+          (destination / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+          sys.exit(0 if all(r['exit_code'] == 0 for r in results) else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-functional-audit
+          path: QA/Audit/
+          if-no-files-found: error
