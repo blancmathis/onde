@@ -81,6 +81,8 @@ final class AudioEngine {
         try bell.play(url: soundsDirectory.appendingPathComponent("chime.m4a"), volume: volume)
     }
     func setChimeVolume(_ volume: Double) { bell.setVolume(volume) }
+    /// Explicit Stop also ends a preview while music is already stopped.
+    func stopChime() { bell.stop() }
     /// Drop retained recorded players before AppKit begins process teardown.
     func shutdown() { stopImmediately(); players.removeAll() }
     /// Explicitly choosing music while paused starts a fresh musical timeline.

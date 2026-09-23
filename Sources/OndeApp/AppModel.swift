@@ -269,7 +269,7 @@ final class AppModel: ObservableObject {
         playbackSelection.stop(); recordSession()
         playbackRequested = false; playbackClockPolicy.reset()
         clock.stop(); elapsed = 0; sessionStarted = nil
-        applyAudio(); persist(); event("stop")
+        applyAudio(); audio.stopChime(); persist(); event("stop")
     }
     func resetTimer() {
         let wasRunning = clock.running

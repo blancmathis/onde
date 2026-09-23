@@ -128,6 +128,10 @@ exit(app.terminate() ? 0 : 3)
                 assert preview['playback']['chime']['playing'], 'Unrelated stopped-state edits must not cut off a preview'
                 assert preview['playback']['chime']['volume'] == 0, 'Master mute applies to a live preview'
                 assert preview['elapsed_seconds'] == 0, 'A preview never starts the session clock'
+                stopped = call('stop')
+                assert not stopped['playback']['chime']['retained'], 'Explicit Stop releases a preview even without active music'
+                assert stopped['elapsed_seconds'] == 0, 'Explicit Stop keeps the reset clock at zero'
+                call('chime', 'preview')  # Keep this case a quit with a live preview.
             if case == 'finished-preview':
                 assert not call('status')['playback']['chime']['retained'], 'Completed preview releases its player'
             # Persist a private mix and an immediate preference edit on quit.
