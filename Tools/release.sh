@@ -40,7 +40,9 @@ cat > dist/release-notes.md <<EOF
 ## Onde $VERSION
 
 Native macOS app, universal binary for Apple Silicon and Intel (macOS 14+).
-Built from commit $ONDE_COMMIT after all unit tests passed.
+Built from commit $ONDE_COMMIT. Publication requires the native UI, functional,
+installation and cross-platform candidate gates to pass. The published ZIP is the
+exact archive exercised by the compatibility jobs, not a later rebuild.
 
 Download **Onde-macOS-universal.zip**, unzip, quit the old app and move Onde.app into Applications.
 Personal settings, saved soundscapes and imports are stored separately and are preserved.
@@ -49,6 +51,19 @@ This community build is ad-hoc signed, **not notarized by Apple**. No security s
 After a verified download, choose Install and Relaunch. Installation requires explicit approval.
 Download-only clients (1.11.3 and earlier) need one manual replacement to receive this updater.
 Future releases are built and published from main; no user Mac is needed for deployment.
+
+### Reliability in 1.11.5
+
+Saved-mix deletion targets exactly one identity; ambiguous names are rejected.
+Clean settings sheets allow Quit, while unapplied chime times stay protected.
+Chime players are released after completion; live master mute affects previews.
+Malformed external controls are rejected before state changes.
+Update checks have a short, separate metadata timeout and can recover after failure.
+The bundled icon is cached before native alerts; no macOS service is reset.
+Native actions and real text input are exercised alongside the functional suites.
+Community-build and physical-device validation limits are documented in the repository.
+
+### Listening
 
 Local audio only: no embedded external streaming player.
 Fresh selection after pause starts only the chosen music; ordinary Play resumes.

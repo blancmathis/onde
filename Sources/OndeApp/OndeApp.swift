@@ -4,6 +4,7 @@ import OndeCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var model: AppModel?
+    func applicationWillFinishLaunching(_ notification: Notification) { OndeApplicationIcon.register() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         sender.windows.first { $0.title == "Onde" }?.makeKeyAndOrderFront(nil); return true

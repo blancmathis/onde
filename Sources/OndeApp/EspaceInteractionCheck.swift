@@ -99,6 +99,21 @@ import OndeCore
         try require(result == AXError.success.rawValue, "Native press accepted: \(id ?? title ?? "unknown") [\(result)]")
         try await pause()
     }
+    func dismiss(title: String, preserving expectedState: () -> Bool) async throws {
+        let node = try await find(title: title)
+        try require(node.enabled, "Dismissal control enabled: \(title)")
+        let result = await perform(node)
+        try await pause()
+        let after = await nodes()
+        let targetGone = !after.contains { $0.label == node.label && $0.role == node.role }
+        // AppKit may remove a confirmation's AX element during its own action.
+        // Do not mistake that invalidated reply for failed cancellation, or
+        // accept it unless both the actual control and expected state agree.
+        let reported = [AXError.success.rawValue, AXError.invalidUIElement.rawValue,
+                        AXError.attributeUnsupported.rawValue].contains(result)
+        try require(reported && targetGone && expectedState(),
+                    "Native dismissal verified: \(title), target removed and state preserved [AX \(result)]")
+    }
     func edit(id: String? = nil, title: String? = nil, text: String, in root: Any? = nil) async throws {
         let node = try await find(id: id, title: title, in: root)
         let result = await perform(node, value: text)
@@ -192,12 +207,12 @@ import OndeCore
             try require(model.store.mixes.count == 1 && !model.playing, "Native Save creates one mix without autoplay")
             let id = model.store.mixes[0].id
             try await press(id: "delete-mix-" + id)
-            try await press(title: "Cancel")
+            try await dismiss(title: "Cancel", preserving: { model.store.mixes.count == 1 })
             try require(model.store.mixes.count == 1, "Cancelling the native deletion preserves the mix")
             try await press(id: "delete-mix-" + id)
-            try await press(title: "Delete saved mix")
+            try await dismiss(title: "Delete saved mix", preserving: { model.store.mixes.isEmpty })
             try require(model.store.mixes.isEmpty && !model.playing, "Confirming native deletion removes only the saved mix")
-            try await press(title: "Done")
+            try await dismiss(title: "Done", preserving: { model.sheet == nil })
             try await waitFor("Done dismisses the real sheet") { window.attachedSheet == nil && model.sheet == nil }
             try require(model.store.preferences.masterVolume == 0 && model.errorMessage == nil, "UI audit stays muted without unhandled errors")
             try await dump("final-elements")

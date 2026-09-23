@@ -10,14 +10,15 @@ Choose a mode, pick your music, and make it yours. Continuously generated audio,
 
 ## A simpler way to listen
 
-**Focus, Relax, Meditation. One screen, no library to figure out.** Each mode
-shows its default music. Click a card to listen now; use its star to set what
-starts next time. Meditation uses the same music as Relax, with its own default,
+**Focus, Relax, Meditation. One screen, no library to figure out.** The tabs
+browse the catalog without changing playback. Click a music row to listen now,
+or Start to play your saved default; the star changes only that default. Meditation uses the same music as Relax, with its own default,
 stopwatch and chimes.
 
-Music level, optional white/pink/brown noise or nature sounds, gentle starts and
-crossfades stay beside the picker. Detailed instrument controls, imports, saved
-mixes and other tools are available when needed, not in the way of listening.
+Open **Adjust sound** for music level, optional white/pink/brown noise or nature
+sounds, gentle starts and crossfades. Detailed instruments are inside its optional
+advanced section. Imports, saved mixes and history are available from More options
+or Settings → Advanced, without getting in the way of listening.
 All existing user data and audio profiles are preserved.
 
 [Listening guide](Documentation/LISTENING.md)
@@ -26,7 +27,7 @@ All existing user data and audio profiles are preserved.
 
 - **Focus, Relax and Meditation:** choose a mode and keep the musical style you like.
 - **Long-form generation:** seven featured compositions, plus earlier soundscapes. Eight-bar phrases, gradual harmonic movement and slower orchestration changes, rather than a whole track on repeat.
-- **Gentle start:** music fades in over eight seconds, with a shorter resume fade. Adjustable in Settings or through `onde settings startFadeSeconds 8`; volume and chimes are preserved.
+- **Gentle start:** music fades in over eight seconds, with a shorter resume fade. Adjustable in Adjust sound → Transitions or through `onde settings startFadeSeconds 8`; volume and chimes are preserved.
 - **Smooth scene changes:** prepare the next scene off the audio thread, then crossfade at a bar boundary. Adjustable from 2 to 30 seconds. This is a musical handover, not DJ beatmatching between different tempos.
 - **Make the sound your own:** control bass, impact, note density, warmth, instrument sections, piano and wordless vocals. Save mixes and import personal audio.
 - **Open-ended meditation:** a count-up stopwatch. By default, a gentle glass chime at 10, 20 and 30 minutes, then no more reminders. The session continues. Chime times and levels are configurable.
@@ -76,7 +77,7 @@ The music is **evidence-informed, not clinically validated**. These compositions
 
 1. Download and unzip `Onde-macOS-universal.zip` from the link above.
 2. Move `Onde.app` into `~/Applications` or `/Applications` and open it.
-3. Choose **Focus**, **Relax** or **Meditation**, then select music and adjust the volume.
+3. Browse **Focus**, **Relax** or **Meditation**, then click a music row or **Start** and adjust the volume.
 
 The acoustic bank is bundled. No plugins, audio accounts, API keys or instrument downloads are required during a session. Closing the main window leaves the menu-bar player running. Pause before leaving; the daily total measures **running session time**, not verified human attention.
 

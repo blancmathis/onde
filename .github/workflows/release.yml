@@ -9,23 +9,40 @@ concurrency:
   group: onde-main-release
   cancel-in-progress: true
 jobs:
-  release:
+  native-ui:
     if: github.ref == 'refs/heads/main'
-    runs-on: macos-15
-    timeout-minutes: 35
+    uses: ./.github/workflows/design-validation.yml
+  native-functional:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/full-audit.yml
+  native-installation:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/update-validation.yml
+  universal-candidate:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/community-candidate.yml
+  publish:
+    needs: [native-ui, native-functional, native-installation, universal-candidate]
+    if: github.ref == 'refs/heads/main' && success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
           persist-credentials: false
-      - name: Test, compile both architectures and package
-        env:
-          ONDE_ORIGINALS_ONLY: '1'
-          ONDE_SKIP_DOWNLOADS: '1'
-        run: bash Tools/release.sh
-      - name: Publish only a complete build of current main
+      - uses: actions/download-artifact@v4
+        with:
+          name: community-candidate
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: publication-assets
+          path: dist
+      - name: Verify the tested archive's identity before publication
+        run: python3 Tools/verify_release_input.py dist "$GITHUB_SHA" "$(cat VERSION)"
+      - name: Publish the tested bytes, without rebuilding or resigning
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 Tools/publish_release.py

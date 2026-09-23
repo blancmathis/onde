@@ -6,7 +6,7 @@ permissions:
   contents: read
 concurrency:
   group: onde-community-candidate-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   package:
     runs-on: macos-15
@@ -21,13 +21,25 @@ jobs:
           ONDE_SKIP_DOWNLOADS: '1'
         run: |
           set -o pipefail
+          python3 Tools/test_release_input.py
           mkdir -p QA/Candidate
           git rev-parse HEAD > QA/Candidate/checkout-sha.txt
           git archive --format=zip -o QA/Candidate/source-snapshot.zip HEAD
           sw_vers > QA/Candidate/environment.txt
           swift --version >> QA/Candidate/environment.txt
           bash Tools/release.sh 2>&1 | tee QA/Candidate/build.log
-          cp dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256 dist/release-notes.md QA/Candidate/
+          cp dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256 dist/release-notes.md dist/release.env QA/Candidate/
+          python3 Tools/verify_release_input.py QA/Candidate "$GITHUB_SHA" "$(cat VERSION)" | tee QA/Candidate/identity.json
+      - name: Preserve publication assets from this exact build
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-assets
+          path: |
+            dist/release.env
+            dist/*-12min.m4a
+            dist/transition-ambre-sanctuaire.m4a
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,6 +76,13 @@ jobs:
           done
           cp candidate/Onde-macOS-universal.zip.sha256 QA/Compatibility/archive.sha256
           cp candidate/checkout-sha.txt QA/Compatibility/checkout-sha.txt
+      - name: Verify the bundled application icon and native alert construction
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          mkdir -p .build
+          swiftc Sources/OndeApp/OndeApplicationIcon.swift Tools/AppIconCheck.swift -o .build/app-icon-check
+          .build/app-icon-check dist/Onde.app QA/Compatibility 2>&1 | tee QA/Compatibility/app-icon.log
       - name: Test first launch, all functional suites and native termination
         run: python3 Tools/run_community_suites.py dist/Onde.app QA/Compatibility
       - uses: actions/upload-artifact@v4
