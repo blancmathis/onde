@@ -24,12 +24,14 @@ final class UpdateManager: ObservableObject {
     private var timer: Timer?
     private var observer: NSObjectProtocol?
     private let session: URLSession
+    private let metadataSession: URLSession
     private var downloadTask: URLSessionDownloadTask?
     private var progressTimer: Timer?
     private var downloadSerial: UInt64 = 0
     private var downloadedBuild: UInt64?
 
-    init() {
+    init(metadataConfiguration: URLSessionConfiguration = UpdateMetadataPolicy.configuration()) {
+        metadataSession = URLSession(configuration: metadataConfiguration)
         isolated = ProcessInfo.processInfo.environment["ONDE_HOME"] != nil
         automatic = !isolated && (UserDefaults.standard.object(forKey: "OndeAutomaticUpdates") as? Bool ?? true)
         let config = URLSessionConfiguration.ephemeral
@@ -50,6 +52,7 @@ final class UpdateManager: ObservableObject {
         downloadTask?.cancel()
         if let observer { NotificationCenter.default.removeObserver(observer) }
         session.invalidateAndCancel()
+        metadataSession.invalidateAndCancel()
     }
 
     private func checkIfNeeded() {
@@ -69,7 +72,7 @@ final class UpdateManager: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let (data, response) = try await self.session.data(for: request)
+                let (data, response) = try await self.metadataSession.data(for: request)
                 guard let http = response as? HTTPURLResponse else { throw OndeError("invalid_response", "Invalid response from GitHub.") }
                 if http.statusCode == 404 {
                     await MainActor.run {
@@ -98,7 +101,7 @@ final class UpdateManager: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self.error = error.localizedDescription
+                    self.error = UpdateMetadataPolicy.message(for: error)
                     self.checking = false
                     self.lastChecked = Date()
                 }

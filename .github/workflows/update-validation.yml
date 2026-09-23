@@ -1,6 +1,7 @@
 name: Validate update installation
 on:
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 concurrency:

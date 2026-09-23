@@ -8,6 +8,7 @@ import OndeCore
     private static let defaults = UserDefaults(suiteName: "onde.design-capture." + UUID().uuidString)!
     static func runIfRequested(model: AppModel) {
         #if ONDE_DESIGN_CAPTURE
+        if EspaceInteractionCheck.runIfRequested(model: model) { return }
         let env = ProcessInfo.processInfo.environment
         guard !started, let homePath = env["ONDE_HOME"], let outputPath = env["ONDE_DESIGN_SNAPSHOT_DIR"] else { return }
         let home = URL(fileURLWithPath: homePath).standardizedFileURL.resolvingSymlinksInPath()
@@ -46,6 +47,8 @@ import OndeCore
                 defaults.set(true, forKey:"onde.espace.showArtwork")
                 try await take(EspaceSurface(id:"sillage",mode:.focus,time:0), size:NSSize(width:720,height:300), file:output.appendingPathComponent("surface-0.png"))
                 try await take(EspaceSurface(id:"sillage",mode:.focus,time:8), size:NSSize(width:720,height:300), file:output.appendingPathComponent("surface-8.png"))
+                try await take(EspaceSoftwareSurface(id:"sillage",mode:.focus,time:0,economical:false,motifOverride:nil), size:NSSize(width:720,height:300), file:output.appendingPathComponent("software-surface-0.png"))
+                try await take(EspaceSoftwareSurface(id:"sillage",mode:.focus,time:8,economical:false,motifOverride:nil), size:NSSize(width:720,height:300), file:output.appendingPathComponent("software-surface-8.png"))
                 model.startDefaultMode(.relax, autostart:false)
                 try await take(EspaceRootView().environmentObject(model), size:NSSize(width:1120,height:800), file:output.appendingPathComponent("relax-native.png"))
                 model.startDefaultMode(.meditation, autostart:false)
@@ -60,7 +63,11 @@ import OndeCore
                 }
                 try await take(EspaceRootView().environmentObject(model), size:NSSize(width:860,height:640), file:output.appendingPathComponent("contrast-compact-native.png"), highContrast:true)
                 try await take(EspaceMenuBarView().environmentObject(model), size:NSSize(width:340,height:480), file:output.appendingPathComponent("menubar-native.png"))
-                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":17, "surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
+                try await take(EspaceSheetView(sheet:.personal).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("personal-empty-native.png"))
+                try model.saveMix(name: "A saved soundscape")
+                try model.saveMix(name: "A saved soundscape")
+                try await take(EspaceSheetView(sheet:.personal).environmentObject(model), size:NSSize(width:740,height:590), file:output.appendingPathComponent("personal-mixes-native.png"))
+                let receipt:[String:Any] = ["scope":"NSHostingView bitmap captures of compiled SwiftUI views; not full interaction or GPU tests", "count":19, "surface_frames":2, "software_surface_frames":2, "timer_driver_checks":3, "muted":model.store.preferences.masterVolume == 0, "playing":model.playing, "os":ProcessInfo.processInfo.operatingSystemVersionString]
                 try JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("capture.json"))
                 NSApp.terminate(nil)
             } catch { fputs("Design capture failed: \(error)\n",stderr); exit(4) }

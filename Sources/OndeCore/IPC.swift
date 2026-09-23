@@ -89,6 +89,7 @@ public final class CommandServer {
                 do {
                     let data = try LocalIPC.readLine(fd: client, limit: 65536)
                     guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw OndeError("invalid_request", "Expected one JSON object.") }
+                    try ControlRequestValidation.validate(object)
                     var response: [String: Any] = [:]
                     DispatchQueue.main.sync { response = handler(object) }
                     var reply = try jsonData(response); reply.append(10)

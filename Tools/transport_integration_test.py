@@ -5,6 +5,7 @@ Timing assertions concern the app's transport, not audible perception or CPU ene
 The missing-bank fixture is a private copy; the supplied bundle is never changed.
 """
 import json, os, pathlib, shutil, socket, subprocess, sys, tempfile, time, wave
+from qa_diagnostics import capture
 
 root = pathlib.Path(__file__).resolve().parents[1]
 app = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else root/'dist/Onde.app').resolve()
@@ -75,6 +76,7 @@ class Fixture:
             self.call('errors.clear'); time.sleep(.3)
             self.call('quit'); self.process.wait(timeout=15)
     def close(self):
+        if sys.exc_info()[0] is not None: capture(self.process, self.home, "transport")
         if self.process and self.process.poll() is None:
             self.process.terminate()
             try:self.process.wait(timeout=10)

@@ -9,6 +9,9 @@ struct EspaceCover: View {
         Color(hex: [UInt32(0x9CC8C0), 0xE0C6A0, 0xA7B7D7, 0xC7BDDE, 0xB7CA9A, 0x9FC3CE][family])
     }
     var body: some View {
+        Group {
+            if EspaceRenderingSupport.needsSoftwareCanvas { EspaceSoftwareCover(family: family, tint: tint) }
+            else {
         Canvas { context, size in
             for line in 0..<8 {
                 let f = Double(line) / 7
@@ -41,6 +44,8 @@ struct EspaceCover: View {
                     if j == 0 { path.move(to: p) } else { path.addLine(to: p) }
                 }
                 context.stroke(path, with: .color(tint.opacity(0.32 + f * 0.35)), lineWidth: 0.65)
+            }
+        }
             }
         }
         .frame(width: 46, height: 52)

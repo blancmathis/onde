@@ -269,7 +269,7 @@ final class AppModel: ObservableObject {
         playbackSelection.stop(); recordSession()
         playbackRequested = false; playbackClockPolicy.reset()
         clock.stop(); elapsed = 0; sessionStarted = nil
-        applyAudio(); persist(); event("stop")
+        applyAudio(); audio.stopChime(); persist(); event("stop")
     }
     func resetTimer() {
         let wasRunning = clock.running
@@ -284,7 +284,7 @@ final class AppModel: ObservableObject {
         saveTask?.cancel(); recordSession()
         playbackRequested = false; playbackClockPolicy.reset()
         clock.pause(at: now); elapsed = clock.elapsed(at: now)
-        persistNow(); audio.stopImmediately()
+        persistNow(); audio.shutdown()
         if let activity = sessionActivity { ProcessInfo.processInfo.endActivity(activity); sessionActivity = nil }
         if hasAssertion { IOPMAssertionRelease(assertionID); hasAssertion = false }
     }
@@ -298,8 +298,16 @@ final class AppModel: ObservableObject {
         if let volume { layer.volume = clamp(volume) }
         store.layers[id] = layer; applyAudio(); persist()
     }
-    func setMaster(_ n: Double) { store.preferences.masterVolume = clamp(n); applyAudio(); persist() }
-    func setChime(_ n: Double) { store.preferences.chimeVolume = clamp(n); persist() }
+    func setMaster(_ n: Double) {
+        store.preferences.masterVolume = clamp(n)
+        audio.setChimeVolume(store.preferences.chimeVolume * store.preferences.masterVolume)
+        applyAudio(); persist()
+    }
+    func setChime(_ n: Double) {
+        store.preferences.chimeVolume = clamp(n)
+        audio.setChimeVolume(store.preferences.chimeVolume * store.preferences.masterVolume)
+        persist()
+    }
     func setMarkers(_ values: [Double]) throws {
         store.preferences.markers = try validMarkers(values)
         clock.skipPastMarkers(store.preferences.markers, at: now); persist(); event("markers_updated")
@@ -312,7 +320,7 @@ final class AppModel: ObservableObject {
         store.mixes.insert(Mix(name: name, mode: mode, layers: store.layers, generatorSettings: generatorConfiguration), at: 0); persist(); notify("Mix saved.")
     }
     func loadMix(_ id: String, autostart: Bool = true) throws {
-        guard let mix = store.mixes.first(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Mix not found.") }
+        let mix = store.mixes[try MixLookup.index(for: id, in: store.mixes)]
         startMode(mix.mode, autostart: false, deferAudio: true); store.layers = mix.layers
         if let settings = mix.generatorSettings { var all = store.generatorSettings ?? [:]; all[mix.mode.rawValue] = settings; store.generatorSettings = all }
         if autostart { play() }; applyAudio(); persist(); notify(mix.name)
@@ -513,8 +521,8 @@ final class AppModel: ObservableObject {
             case "mix.save": try saveMix(name: string("name"))
             case "mix.load": try loadMix(string("id"), autostart: r["play"] as? Bool ?? true)
             case "mix.delete":
-                let id = try string("id"); guard store.mixes.contains(where: { $0.id == id || $0.name == id }) else { throw OndeError("not_found", "Unknown mix.") }
-                store.mixes.removeAll { $0.id == id || $0.name == id }; persist()
+                let index = try MixLookup.index(for: string("id"), in: store.mixes)
+                store.mixes.remove(at: index); persist()
             case "import": result = jsonObject(try importSound(path: string("path"), title: r["title"] as? String))
             case "sound.remove": try removeImport(string("id"))
             case "history": result = jsonObject(store.history)
@@ -555,7 +563,11 @@ final class AppModel: ObservableObject {
                 guard let n = r["enabled"] as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() else { throw OndeError("invalid_argument", "enabled must be a boolean.") }
                 updates.automatic = n.boolValue; result = updates.snapshot()
             case "errors.clear": errorMessage = nil
-            case "quit": shutdown(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSApp.terminate(nil) }
+            case "quit":
+                // A sheet with unapplied edits may reject termination. Do not
+                // stop audio/timing or persistence until AppKit accepts Quit.
+                // applicationWillTerminate performs the idempotent shutdown.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSApp.terminate(nil) }
             default: throw OndeError("unknown_command", "Unknown command: \(cmd). Run onde schema.")
             }
             if result is NSNull { result = snapshot() }

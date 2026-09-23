@@ -13,7 +13,7 @@ final class AudioEngine {
     private var startFade: Double = 8
     var transitionSeconds: Double { get { living.transitionSeconds } set { living.transitionSeconds = newValue } }
     var generatorStatus: [String: Any] { living.snapshot() }
-    private var bell: AVAudioPlayer?
+    private let bell = ChimePlayer()
     var playingIDs: [String] {
         lastDesired.filter { $0 == "living" ? living.running : players[$0]?.selected == true && players[$0]?.player.isPlaying == true }.sorted()
     }
@@ -25,7 +25,7 @@ final class AudioEngine {
     }
     var playbackSnapshot: [String: Any] {
         ["start_fade_seconds": startFade, "resume_fade_seconds": min(2, startFade),
-         "curve": "squared_smoothstep", "recorded_layers": players.mapValues { $0.snapshot }]
+         "curve": "squared_smoothstep", "chime": bell.snapshot, "recorded_layers": players.mapValues { $0.snapshot }]
     }
     var soundsDirectory: URL { Bundle.main.resourceURL!.appendingPathComponent("Sounds") }
     func url(for sound: Sound) -> URL {
@@ -49,6 +49,7 @@ final class AudioEngine {
         startFade = min(20, max(0, startFadeSeconds))
         let desired = Set(sounds.filter { layers[$0.id]?.enabled == true && playing }.map(\.id))
         let resuming = playing && !wasPlaying && !freshStart
+        let pausing = wasPlaying && !playing
         let sum = desired.reduce(0.0) { $0 + (layers[$1]?.volume ?? 0) }
         let normalization = 1.0 / max(1.0, sum)
         var errors: [String] = []
@@ -73,17 +74,17 @@ final class AudioEngine {
             catch { errors.append(error.localizedDescription) }
         }
         wasPlaying = playing; lastDesired = desired; runRamps()
-        if !playing { bell?.setVolume(0, fadeDuration: 0.15) }
+        if pausing { bell.fadeOut() }
         if !errors.isEmpty { throw OndeError("audio_error", errors.joined(separator: "\n")) }
     }
     func chime(volume: Double) throws {
-        if bell == nil {
-            bell = try AVAudioPlayer(contentsOf: soundsDirectory.appendingPathComponent("chime.m4a"))
-            bell?.prepareToPlay()
-        }
-        bell?.stop(); bell?.currentTime = 0; bell?.volume = Float(volume)
-        guard bell?.play() == true else { throw OndeError("chime_error", "The chime could not be played.") }
+        try bell.play(url: soundsDirectory.appendingPathComponent("chime.m4a"), volume: volume)
     }
+    func setChimeVolume(_ volume: Double) { bell.setVolume(volume) }
+    /// Explicit Stop also ends a preview while music is already stopped.
+    func stopChime() { bell.stop() }
+    /// Drop retained recorded players before AppKit begins process teardown.
+    func shutdown() { stopImmediately(); players.removeAll() }
     /// Explicitly choosing music while paused starts a fresh musical timeline.
     /// This does not touch the session clock, activity ledger, settings or chimes.
     func restartMusic() {
@@ -95,6 +96,6 @@ final class AudioEngine {
     func stopImmediately() {
         rampTimer?.invalidate(); rampTimer = nil; living.reset()
         for layer in players.values { layer.stop() }
-        bell?.stop(); wasPlaying = false; lastDesired = []
+        bell.stop(); wasPlaying = false; lastDesired = []
     }
 }

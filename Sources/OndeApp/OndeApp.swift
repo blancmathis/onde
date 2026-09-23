@@ -4,10 +4,13 @@ import OndeCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var model: AppModel?
+    func applicationWillFinishLaunching(_ notification: Notification) { OndeApplicationIcon.register() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         sender.windows.first { $0.title == "Onde" }?.makeKeyAndOrderFront(nil); return true
     }
+    // Each sheet declares its own termination policy before AppKit consults
+    // this delegate. Cleanup runs only after Quit has actually been accepted.
     func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
 }
 @main struct OndeApplication: App {

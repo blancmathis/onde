@@ -1,0 +1,43 @@
+name: Hosted SwiftUI framework diagnostic
+# Manual diagnostic of Apple's unmodified Canvas; not an app regression suite.
+# Intel 15's virtual GPU fails this baseline. Onde's own Intel 15 candidate tests
+# remain required and must pass using its scoped Core Graphics fallback.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  framework:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel, macos-26-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Record graphics capability and test Apple SwiftUI without Onde
+        run: |
+          mkdir -p QA/Framework
+          sw_vers > QA/Framework/environment.txt
+          system_profiler SPDisplaysDataType >> QA/Framework/environment.txt
+          swiftc -parse-as-library Tools/HostedSwiftUISmoke.swift -o /tmp/onde-framework-smoke
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          results = []
+          for args in [[], ['--canvas']]:
+              p = subprocess.run(['/tmp/onde-framework-smoke'] + args, capture_output=True, text=True, timeout=20)
+              result = {'arguments': args, 'exit_code': p.returncode, 'stdout': p.stdout, 'stderr': p.stderr}
+              results.append(result)
+              print(json.dumps(result), flush=True)
+          pathlib.Path('QA/Framework/results.json').write_text(json.dumps(results, indent=2))
+          raise SystemExit(0 if all(r['exit_code'] == 0 for r in results) else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: framework-${{ matrix.runner }}
+          path: QA/Framework/
+          if-no-files-found: error

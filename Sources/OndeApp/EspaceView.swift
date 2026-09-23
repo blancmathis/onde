@@ -193,7 +193,7 @@ struct EspaceRootView: View {
             HStack(spacing: 10) {
                 Image(systemName: model.store.preferences.masterVolume == 0 ? "speaker.slash" : "speaker.wave.2").font(.system(size: 13))
                 Slider(value: Binding(get: { model.store.preferences.masterVolume }, set: model.setMaster), in: 0...1)
-                    .frame(width: 116).accessibilityLabel("Master volume").accessibilityIdentifier("master-volume")
+                    .frame(width: 116).accessibilityLabel("Master volume").accessibilityValue("\(Int(model.store.preferences.masterVolume * 100)) percent").accessibilityIdentifier("master-volume")
                 Text("\(Int(model.store.preferences.masterVolume * 100))%")
                     .font(.system(size: 11)).monospacedDigit().frame(width: 34, alignment: .trailing)
             }

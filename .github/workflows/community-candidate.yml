@@ -1,0 +1,103 @@
+name: Community release candidate (no publication)
+on:
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: onde-community-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build and verify the exact universal distribution archive
+        env:
+          ONDE_ORIGINALS_ONLY: '1'
+          ONDE_SKIP_DOWNLOADS: '1'
+        run: |
+          set -o pipefail
+          python3 Tools/test_release_input.py
+          mkdir -p QA/Candidate
+          git rev-parse HEAD > QA/Candidate/checkout-sha.txt
+          git archive --format=zip -o QA/Candidate/source-snapshot.zip HEAD
+          sw_vers > QA/Candidate/environment.txt
+          swift --version >> QA/Candidate/environment.txt
+          bash Tools/release.sh 2>&1 | tee QA/Candidate/build.log
+          cp dist/Onde-macOS-universal.zip dist/Onde-macOS-universal.zip.sha256 dist/release-notes.md dist/release.env QA/Candidate/
+          python3 Tools/verify_release_input.py QA/Candidate "$GITHUB_SHA" "$(cat VERSION)" | tee QA/Candidate/identity.json
+      - name: Preserve publication assets from this exact build
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-assets
+          path: |
+            dist/release.env
+            dist/*-12min.m4a
+            dist/transition-ambre-sanctuaire.m4a
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: community-candidate
+          path: QA/Candidate/
+          if-no-files-found: error
+  compatibility:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15-intel, macos-26, macos-26-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: community-candidate
+          path: candidate
+      - name: Verify and extract the identical archive without resigning or bypassing security
+        run: |
+          mkdir -p QA/Compatibility dist
+          sw_vers > QA/Compatibility/environment.txt
+          uname -m >> QA/Compatibility/environment.txt
+          (cd candidate && shasum -a 256 -c Onde-macOS-universal.zip.sha256)
+          cmp candidate/checkout-sha.txt <(git rev-parse HEAD)
+          ditto -x -k candidate/Onde-macOS-universal.zip dist
+          codesign --verify --deep --strict dist/Onde.app
+          for name in Onde ondectl onde-updater; do
+            lipo dist/Onde.app/Contents/MacOS/$name -verify_arch arm64 x86_64
+          done
+          cp candidate/Onde-macOS-universal.zip.sha256 QA/Compatibility/archive.sha256
+          cp candidate/checkout-sha.txt QA/Compatibility/checkout-sha.txt
+      - name: Verify the bundled application icon and native alert construction
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          mkdir -p .build
+          swiftc Sources/OndeApp/OndeApplicationIcon.swift Tools/AppIconCheck.swift -o .build/app-icon-check
+          .build/app-icon-check dist/Onde.app QA/Compatibility 2>&1 | tee QA/Compatibility/app-icon.log
+      - name: Test first launch, all functional suites and native termination
+        run: python3 Tools/run_community_suites.py dist/Onde.app QA/Compatibility
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-${{ matrix.runner }}
+          path: QA/Compatibility/
+          if-no-files-found: error
+  distribution-gate:
+    if: always()
+    needs: [package, compatibility]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the archive and every supported-platform check
+        env:
+          PACKAGE: ${{ needs.package.result }}
+          COMPATIBILITY: ${{ needs.compatibility.result }}
+        run: test "$PACKAGE" = success && test "$COMPATIBILITY" = success

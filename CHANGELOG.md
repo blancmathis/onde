@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.11.5 — Community-readiness and native reliability
+
+- Resolve saved mixes by one stable identity. Reject ambiguous names and stale confirmations without changing playback, imported files or history.
+- Keep clean sheets compatible with Quit while protecting unapplied chime edits. Release completed chimes, apply live master/chime gain and prevent stale fades from stopping a new preview.
+- Reject malformed external controls before any state mutation, including numbers masquerading as booleans.
+- Give update metadata checks a separate short timeout; retain bounded progress-aware archive downloads and explicit installation approval.
+- Register the real bundled application icon in AppKit's process-local named-image cache before alerts are created, avoiding a synchronous IconServices lookup. No system service or security setting is changed.
+- Keep the same artwork and motion controls available on unsupported or affected virtual Metal devices through the scoped native software renderer.
+- Verify native controls, typed search, protected settings and saved-mix confirmations rather than relying only on static screenshots or model commands.
+- Gate publication on native UI, functional and installation checks plus the same universal archive tested on the compatibility matrix. Publish those tested bytes without rebuilding or resigning.
+- Community builds remain ad-hoc signed, not Apple-notarized. Automated checks do not replace physical-device, listening, accessibility and energy evaluations.
+
 ## 1.11.4 — Install and relaunch updates
 
 - A completed, verified download now offers Install and Relaunch instead of another download.
