@@ -39,6 +39,60 @@ public enum OndeMotionGeometry {
         let theta = u * TAU
         func sign(_ x: Double) -> Double { x == 0 ? 0 : (x < 0 ? -1 : 1) }
         switch motif {
+        case .driftwood:
+            let r = 0.09 + 0.31 * f
+            let x = 0.5 + r * cos(theta) + 0.026 * m * sin(p + f * 2)
+            let y = 0.5 + r * sin(theta) * (0.38 + 0.06 * m * cos(p)) + 0.085 * cos(theta + f) + 0.025 * m * sin(theta * 2 + p)
+            return .init(x, y)
+        case .atlas:
+            let r = 0.10 + f * 0.28
+            let x = 0.5 + r * cos(theta) * (0.82 + 0.10 * cos(p))
+            let y = 0.5 + r * sin(theta) + 0.075 * sin(theta * 2 + f * 2 + m * sin(p))
+            return .init(x, y)
+        case .ostinato:
+            let env = sin(u * PI)
+            return .init(0.07 + u * 0.86, 0.5 + (f - 0.5) * 0.30 + env * 0.12 * sin(u * TAU * 2 + f * 1.3 + m * sin(p)))
+        case .aurora:
+            let x = 0.1 + u * 0.8 + 0.035 * m * sin(p + f) * sin(u * PI)
+            let y = 0.30 + f * 0.35 + 0.19 * sin(u * PI) * cos(u * PI + f * 0.9 + m * sin(p))
+            return .init(x, y)
+        case .chamber:
+            let r = 0.10 + f * 0.26
+            let exponent = 0.44 + 0.05 * m * sin(p)
+            let x = sign(cos(theta)) * pow(abs(cos(theta)), exponent) * r
+            let y = sign(sin(theta)) * pow(abs(sin(theta)), exponent) * r * 0.76
+            let rotation = 0.12 * m * sin(p + f)
+            return .init(0.5 + x * cos(rotation) - y * sin(rotation), 0.5 + x * sin(rotation) + y * cos(rotation))
+        case .momentum:
+            let x = 0.08 + u * 0.84
+            let y = 0.5 + (f - 0.5) * 0.46 * sin(u * PI) + 0.16 * sin(u * PI * 2 + 0.6 * m * sin(p)) * sin(u * PI)
+            return .init(x, y)
+        case .reactor:
+            let r = 0.1 + f * 0.28
+            let k = 1 + 0.13 * cos(theta * 3 + f * 0.6 + 0.7 * m * sin(p))
+            return .init(0.5 + cos(theta) * r * k, 0.5 + sin(theta) * r * k)
+        case .traction:
+            let env = sin(u * PI)
+            return .init(0.12 + u * 0.76, 0.78 - u * 0.56 + (f - 0.5) * 0.35 * env + 0.09 * m * sin(p + f * 1.5) * env)
+        case .anchor:
+            let r = 0.095 + f * 0.30
+            let x = 0.5 + r * cos(theta) * (0.82 + 0.08 * m * sin(p))
+            let y = 0.53 + r * sin(theta) * 0.72 - 0.06 * cos(theta * 2) + 0.025 * m * cos(p + f * 2)
+            return .init(x, y)
+        case .abyss:
+            let r = 0.07 + f * 0.30
+            let angle = theta + 0.3 * m * sin(p - f * 3)
+            return .init(0.5 + cos(angle) * r + (1 - f) * 0.09 * sin(p + f * 2), 0.5 + sin(angle) * r * 0.88 + (1 - f) * 0.07 * cos(p - f * 2))
+        case .current:
+            let env = sin(u * PI)
+            return .init(0.07 + u * 0.86, 0.5 + (f - 0.5) * 0.34 * env + 0.13 * env * sin(u * TAU + f * 4 + 0.8 * m * sin(p)))
+        case .velvet:
+            let env = sin(u * PI)
+            return .init(0.08 + u * 0.84, 0.26 + f * 0.48 + env * 0.14 * sin(f * PI + 0.8 * m * sin(p)) + 0.055 * m * sin(u * TAU + p) * env)
+        case .shore:
+            let r = 0.10 + f * 0.32
+            let a = PI + u * PI
+            return .init(0.5 + cos(a) * r, 0.66 + sin(a) * r * (0.53 + 0.08 * m * sin(p)) + 0.04 * m * cos(p + u * PI) * sin(u * PI))
         case .laminar:
             let env = pow(sin(u * PI), 1.25)
             let band = (f - 0.5) * (0.36 + 0.10 * m * cos(p)) * (0.35 + 0.65 * pow(cos(u * PI), 2.0))

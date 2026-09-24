@@ -71,5 +71,5 @@ struct EspaceIconButton: View {
 struct EspaceThumbnail: View {
     let id: String
     let mode: SessionMode
-    var body: some View { EspaceCover(id: id) }
+    var body: some View { EspaceCover(id: id).equatable() }
 }

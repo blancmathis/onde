@@ -3,9 +3,23 @@ import Foundation
 /// Original Onde visual identities. No sound processing, telemetry or biometrics.
 public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
     case laminar, prism, bloom, tide, canopy, amber, filigree, confluence, sanctuary, stillwater, hearth, reverie
+    case driftwood, atlas, ostinato, aurora, chamber, momentum, reactor, traction, anchor, abyss, current, velvet, shore
     public var id: String { rawValue }
     public var title: String {
         switch self {
+        case .driftwood: return "Driftwood"
+        case .atlas: return "Atlas"
+        case .ostinato: return "Ostinato"
+        case .aurora: return "Aurora"
+        case .chamber: return "Chamber"
+        case .momentum: return "Momentum"
+        case .reactor: return "Reactor"
+        case .traction: return "Traction"
+        case .anchor: return "Anchor"
+        case .abyss: return "Abyss"
+        case .current: return "Current"
+        case .velvet: return "Velvet"
+        case .shore: return "Shore"
         case .laminar: return "Laminar"
         case .prism: return "Prism"
         case .bloom: return "Bloom"
@@ -22,6 +36,10 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
     }
     public var period: Double {
         switch self {
+        case .driftwood, .chamber, .velvet, .shore: return 24
+        case .atlas, .anchor, .abyss: return 26
+        case .ostinato, .momentum, .reactor, .traction: return 18
+        case .aurora, .current: return 22
         case .laminar: return 16
         case .prism: return 18
         case .bloom: return 24
@@ -36,9 +54,22 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .reverie: return 22
         }
     }
-    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth].contains(self) }
+    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth, .driftwood, .atlas, .chamber, .reactor, .anchor, .abyss].contains(self) }
     public var caption: String {
         switch self {
+        case .driftwood: return "Quiet grain, slowly drifting."
+        case .atlas: return "An ensemble of connected horizons."
+        case .ostinato: return "A pattern with a steady purpose."
+        case .aurora: return "Light moving through the air."
+        case .chamber: return "An intimate space, gently opening."
+        case .momentum: return "A forward motion, without urgency."
+        case .reactor: return "Energy held in concentric contours."
+        case .traction: return "Lines finding their direction."
+        case .anchor: return "A steady place in moving water."
+        case .abyss: return "Depth without distraction."
+        case .current: return "A continuous exchange."
+        case .velvet: return "Soft folds, without an edge."
+        case .shore: return "A place where the current settles."
         case .laminar: return "A quiet current, moving with purpose."
         case .prism: return "Order, without rigidity."
         case .bloom: return "Space to be still."
@@ -54,22 +85,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
     public static func forMusic(_ id: String, meditation: Bool = false) -> Self {
-        if meditation && id == "immersion" { return .bloom }
-        switch id {
-        case "sillage", "ostinato": return .laminar
-        case "meridien", "prisme": return .prism
-        case "canopee", "driftwood": return .canopy
-        case "ambre", "velours", "aurore": return .amber
-        case "filigrane", "chambre": return .filigree
-        case "confluence", "atlas": return .confluence
-        case "sanctuaire": return .sanctuary
-        case "lagoon", "rive": return .tide
-        case "stillwater": return .stillwater
-        case "hearth": return .hearth
-        case "reverie": return .reverie
-        case "immersion": return .bloom
-        default: return .laminar
-        }
+        MusicArtworkIdentity.catalog[id] ?? .laminar
     }
 }
 

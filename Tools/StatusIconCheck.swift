@@ -24,6 +24,11 @@ import AppKit
                 if alpha > 0.5 { opaque += 1 }
                 if alpha < 0.05 { transparent += 1 }
             } }
+            // Upper-right corner formerly contained the detached orbit dot.
+            for y in 0..<(3 * scale) { for x in (14 * scale)..<pixels {
+                precondition(bitmap.colorAt(x:x,y:y)!.alphaComponent < 0.05,
+                             "No detached point is allowed above the right-hand ring")
+            } }
             precondition(opaque > pixels && transparent > pixels,"Icon must be visible on a transparent background")
             try bitmap.representation(using:.png,properties:[:])!.write(to:directory.appendingPathComponent("onde-menu-bar-\(scale)x.png"))
             print("PASS Onde template at \(scale)x: \(pixels) × \(pixels), no title or playback state")

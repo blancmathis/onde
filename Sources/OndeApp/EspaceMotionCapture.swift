@@ -120,7 +120,15 @@ import OndeCore
         try check(changed(first,second) > 1000, "Integrated live view changes rendered pixels without synthetic time")
         var motions: [[String: Any]] = []
         for motif in OndeMotif.allCases {
-            defaults.set(motif.rawValue, forKey: "onde.espace.artworkChoice")
+            let id = MusicArtworkIdentity.catalog.first { $0.value == motif }!.key
+            let mode = SoundProfile.find(id)!.mode
+            try model.selectMusic(id, in: mode, autostart: false)
+            try await wait(0.15)
+            try check(EspaceMotionAudit.live.contains { $0.musicID == id && $0.motif == motif.rawValue },
+                      "Selected music, cover registry and live motif agree: \(id)")
+            if let png = EspacePosterCache.image(motif).tiffRepresentation.flatMap(NSBitmapImageRep.init(data:))?.representation(using: .png, properties: [:]) {
+                try png.write(to: output.appendingPathComponent("poster-\(id).png"))
+            }
             try await wait(0.7) // Let the actual crossfade finish, then compare motion only.
             let a = try frame(host, file: output.appendingPathComponent("\(motif.rawValue)-a.png"))
             try await wait(0.85)
@@ -129,7 +137,7 @@ import OndeCore
             try check(delta > 800, "\(motif.title) moves in the real listening view")
             motions.append(["motif": motif.rawValue, "changed_bytes_over_3": delta])
         }
-        defaults.set("laminar", forKey: "onde.espace.artworkChoice")
+        try model.selectMusic("sillage", in: .focus, autostart: false)
         try await wait(0.7)
         defaults.set(false, forKey: "onde.espace.visualMotion")
         try await wait(0.4); try await running(false, "Pause visual stops every artwork clock")

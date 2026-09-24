@@ -26,11 +26,50 @@ final class GenerativeEngine {
     private(set) var lastError: String?
     var transitionSeconds: Double = 10
     private var entranceSeconds: Double = 8
+    private(set) var preparationMilliseconds: Double = 0
+    private(set) var startMilliseconds: Double = 0
+    private var preparationToken: PreparationToken?
+    private final class PreparationToken {
+        private let lock = NSLock()
+        private var value = false
+        var cancelled: Bool { lock.lock(); defer { lock.unlock() }; return value }
+        func cancel() { lock.lock(); value = true; lock.unlock() }
+    }
+    /// This prepares one likely next scene, not the whole catalogue. It never
+    /// starts Core Audio, modifies a preference or advances a session clock.
+    func prewarm(mode: SessionMode, config: GenerativeSettings) {
+        guard !wantedPlaying, mixer == nil else { return }
+        do {
+            try prepareGraph()
+            self.config = config; self.selectedMode = mode
+            prepareScene(mode: mode, configuration: config, identity: identity(mode, config))
+        } catch { lastError = error.localizedDescription }
+    }
+    private func identity(_ mode: SessionMode, _ config: GenerativeSettings) -> String {
+        mode.rawValue + ":" + (config.profileID ?? "custom") + ":" + String(Int(config.composition)) + ((config.orchestra > 0 || config.piano > 0) ? ":acoustic" : ":synth")
+    }
+    /// The UI only needs these scalar values; no bank lookup or JSON snapshot.
+    var playbackCaption: String {
+        if loading { return "Preparing audio…" }
+        guard let mixer else { return "Playing" }
+        if onde_scene_mixer_state(mixer) == 2 { return "Blending into your sound…" }
+        if onde_scene_mixer_entrance_progress(mixer) < 1 { return "Easing in…" }
+        return "Playing"
+    }
+    private func ensureCollector() {
+        guard collector == nil, wantedPlaying else { return }
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] timer in
+            guard let self, let mixer = self.mixer else { timer.invalidate(); return }
+            onde_scene_mixer_collect(mixer)
+            if !self.loading && onde_scene_mixer_state(mixer) == 0 && onde_scene_mixer_pending(mixer) == 0 {
+                timer.invalidate(); self.collector = nil
+            }
+        }
+        timer.tolerance = 0.1
+        collector = timer; RunLoop.main.add(timer, forMode: .common)
+    }
 
     init() {
-        collector = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            if let mixer = self?.mixer { onde_scene_mixer_collect(mixer) }
-        }
         configurationObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
             guard let self, self.wantedPlaying else { return }
             do { try self.engine.start(); self.lastError = nil }
@@ -38,7 +77,7 @@ final class GenerativeEngine {
         }
     }
     deinit {
-        collector?.invalidate()
+        preparationToken?.cancel(); collector?.invalidate()
         if let configurationObserver { NotificationCenter.default.removeObserver(configurationObserver) }
         engine.stop()
         if let source { engine.detach(source) }
@@ -67,26 +106,34 @@ final class GenerativeEngine {
         onde_dsp_set(ptr, Int32(ONDE_GAIN), 1)
     }
     private func prepareScene(mode: SessionMode, configuration: GenerativeSettings, identity: String) {
+        preparationToken?.cancel()
+        let token = PreparationToken(); preparationToken = token
+        let started = ProcessInfo.processInfo.systemUptime
         requestTicket += 1; let ticket = requestTicket
         requestedIdentity = identity; loading = true; lastError = nil
         let rate = sampleRate
         builder.async { [weak self] in
-            var needed = false
-            DispatchQueue.main.sync { needed = self?.requestTicket == ticket }
-            guard needed else { return }
+            guard !token.cancelled else { return }
             var candidate: OpaquePointer?
             do {
                 let valid = try configuration.validated()
                 guard let ptr = onde_dsp_create(rate, mode.dspMode, valid.seed) else { throw OndeError("generator_init_failed", "Could not prepare the soundscape.") }
                 candidate = ptr
-                try OrchestraBank.load(into: ptr, required: valid.orchestra > 0 || valid.piano > 0)
+                // Pure synthesis must not decode/copy the entire acoustic bank.
+                if valid.orchestra > 0 || valid.piano > 0 {
+                    try OrchestraBank.load(into: ptr, required: true)
+                }
+                if token.cancelled { onde_dsp_destroy(ptr); return }
                 if valid.piano > 0 && (onde_dsp_orchestra_families(ptr) & 2048) == 0 { throw OndeError("piano_missing", "The complete piano sample bank is required.") }
                 for (i, v) in valid.values.enumerated() { onde_dsp_set(ptr, GenerativeSettings.dspIndex(i), Float(v)) }
                 onde_dsp_set(ptr, Int32(ONDE_GAIN), 1)
                 // Warm the harmonic space silently for one whole bar, before publication.
                 var l = [Float](repeating: 0, count: 1024), r = l
                 var remaining = Int((240 / valid.tempo * rate).rounded(.up))
-                while remaining > 0 { let n = min(1024, remaining); onde_dsp_render(ptr, &l, &r, UInt32(n)); remaining -= n }
+                while remaining > 0 {
+                    if token.cancelled { onde_dsp_destroy(ptr); return }
+                    let n = min(1024, remaining); onde_dsp_render(ptr, &l, &r, UInt32(n)); remaining -= n
+                }
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.requestTicket == ticket, let mixer = self.mixer else { onde_dsp_destroy(ptr); return }
                     self.applyControls(ptr, mode: self.selectedMode, configuration: self.config)
@@ -95,6 +142,8 @@ final class GenerativeEngine {
                         self.lastError = "Could not prepare the transition."; return
                     }
                     self.targetCore = ptr; self.loading = false
+                    self.preparationMilliseconds = (ProcessInfo.processInfo.systemUptime - started) * 1000
+                    self.ensureCollector()
                     onde_scene_mixer_gain(mixer, self.wantedPlaying ? self.wantedGain : 0)
                 }
             } catch {
@@ -108,7 +157,7 @@ final class GenerativeEngine {
         }
     }
     func apply(mode: SessionMode, config: GenerativeSettings, gain: Double, playing: Bool, startFadeSeconds: Double = 8, freshStart: Bool = false) throws {
-        let identity = mode.rawValue + ":" + (config.profileID ?? "custom") + ":" + String(Int(config.composition))
+        let identity = identity(mode, config)
         let previousName = self.config.displayName
         let wasPlaying = wantedPlaying, hadMixer = mixer != nil
         let sameScene = requestedIdentity == identity && targetCore != nil
@@ -129,14 +178,30 @@ final class GenerativeEngine {
         }
         onde_scene_mixer_gain(mixer, playing ? wantedGain : 0)
         if playing {
-            if !engine.isRunning { try engine.start() }
+            if !engine.isRunning {
+                let started = ProcessInfo.processInfo.systemUptime
+                try engine.start()
+                startMilliseconds = (ProcessInfo.processInfo.systemUptime - started) * 1000
+            }
+            if loading || onde_scene_mixer_pending(mixer) != 0 || onde_scene_mixer_state(mixer) != 0 { ensureCollector() }
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                guard let self, self.fadeTicket == ticket, !self.wantedPlaying else { return }; self.engine.pause()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                guard let self, self.fadeTicket == ticket, !self.wantedPlaying else { return }
+                self.engine.pause()
+                if let mixer = self.mixer { onde_scene_mixer_collect(mixer) }
+                self.collector?.invalidate(); self.collector = nil
             }
         }
     }
+    func restartIfNeeded(mode: SessionMode, config: GenerativeSettings) {
+        if !wantedPlaying, !engine.isRunning,
+           mixer.flatMap({ onde_scene_mixer_visible($0) }) == nil,
+           requestedIdentity == identity(mode, config), self.config == config { return }
+        reset()
+    }
     func reset() {
+        preparationToken?.cancel(); preparationToken = nil
+        collector?.invalidate(); collector = nil
         requestTicket += 1; loading = false; requestedIdentity = nil; targetCore = nil
         engine.stop(); if let source { engine.detach(source) }; source = nil
         if let mixer { onde_scene_mixer_destroy(mixer) }; mixer = nil
@@ -166,6 +231,10 @@ final class GenerativeEngine {
                              "request_pending": (mixer.map(onde_scene_mixer_entrance_pending) ?? 0) != 0]
         return ["engine": "onde-living-7", "offline": true, "sample_based": config.orchestra>0 && (core.map(onde_dsp_orchestra_samples) ?? 0)>0,
                 "loading": loading,
+                "preparation_ms": preparationMilliseconds,
+                "engine_start_ms": startMilliseconds,
+                "prepared": targetCore != nil && !loading,
+                "preparation_identity": requestedIdentity as Any? ?? NSNull(),
                 "entrance": entrance,
                 "transition": transitionSnapshot,
                 "phrase_index": core.map(onde_dsp_phrase) ?? 0,

@@ -6,13 +6,13 @@ import OndeCore
 @MainActor final class EspaceMotionDriver: ObservableObject {
     @Published private(set) var time: Double = 0
     private var clock = EspaceClock()
+    var musicID = "personal"
+    var motif = "laminar"
     private var timer: Timer?
     private(set) var rate = 0
     private var generation: UInt64 = 0
     init() {
-        #if ONDE_DESIGN_CAPTURE
         EspaceMotionAudit.register(self)
-        #endif
     }
     func configure(fps: Int) {
         let fps = min(60, max(0, fps))
@@ -51,7 +51,7 @@ struct EspaceArtworkWindowProbe: NSViewRepresentable {
         view.identifier = NSUserInterfaceItemIdentifier("onde-artwork-window-probe")
         return view
     }
-    func updateNSView(_ view: Probe, context: Context) { view.changed = changed; view.requestRefresh() }
+    func updateNSView(_ view: Probe, context: Context) { view.changed = changed }
     static func dismantleNSView(_ view: Probe, coordinator: ()) { view.detach() }
     final class Probe: NSView {
         var changed: (EspaceWindowVisibility) -> Void = { _ in }
@@ -64,7 +64,11 @@ struct EspaceArtworkWindowProbe: NSViewRepresentable {
         #endif
         override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); attach() }
         override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); requestRefresh() }
-        override func layout() { super.layout(); requestRefresh() }
+        private var previousBounds = CGRect.null
+        override func layout() {
+            super.layout()
+            if bounds != previousBounds { previousBounds = bounds; requestRefresh() }
+        }
         private func attach() {
             detach(); attached = window != nil; previous = nil
             guard let window else { requestRefresh(); return }
@@ -148,12 +152,15 @@ struct EspaceArtwork: View {
         }
         .onAppear { appeared = true; synchronize() }
         .onChange(of: fps) { _, _ in synchronize() }
+        .onChange(of: id) { _, _ in synchronize() }
+        .onChange(of: motif) { _, _ in synchronize() }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
         .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in hot = ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue }
         .onDisappear { appeared = false; driver.stop() }
         .accessibilityHidden(true).allowsHitTesting(false)
     }
     private func synchronize() {
+        driver.musicID = id; driver.motif = motif.rawValue
         #if ONDE_DESIGN_CAPTURE
         print("ARTWORK id=\(id) appeared=\(appeared) visibility=\(visibility) enabled=\(enabled) reduced=\(reduced) hot=\(hot) lowPower=\(lowPower) fps=\(fps)")
         #endif
@@ -180,13 +187,11 @@ struct EspaceSurface: View {
             guard size.width > 0, size.height > 0 else { return }
             let motif = motifOverride ?? OndeMotif.forMusic(id, meditation: mode == .meditation)
             let quality: OndeMotionQuality = economical ? .economy : .balanced
-            let width = motif.isClosed || motif == .reverie || motif == .sanctuary
-                ? min(size.width * 0.92, size.height * 1.08) : size.width * 0.96
-            let height = motif.isClosed || motif == .reverie || motif == .sanctuary ? width : min(size.height * 0.96, width * 0.61)
-            let ox = (size.width - width) / 2, oy = (size.height - height) / 2 - 8
+            let box = EspaceVectorRenderer.bounds(size, motif: motif)
+            let width = box.width, height = box.height, ox = box.minX, oy = box.minY
             let t = time.isFinite ? time : 0
             let phase = t.truncatingRemainder(dividingBy: motif.period) / motif.period * .pi * 2
-            let tint = EspaceTheme.accent(mode)
+            let tint = Color(hex: MusicArtworkIdentity.color(motif))
             let slide = 0.15 * sin(phase), tilt = 0.12 * cos(phase)
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .radialGradient(Gradient(stops: [
                 .init(color: tint.opacity(0.045), location: 0), .init(color: .clear, location: 1)]),
@@ -197,20 +202,11 @@ struct EspaceSurface: View {
                 .init(color: tint.opacity(0.48), location: 0.76), .init(color: tint.opacity(0.16), location: 1)]),
                 startPoint: CGPoint(x: ox + width * (-0.08 + slide), y: oy + height * (0.12 + tilt)),
                 endPoint: CGPoint(x: ox + width * (1.08 + slide), y: oy + height * (0.88 - tilt)))
-            for stroke in OndeMotionGeometry.strokes(motif, time: t, quality: quality, intensity: 0.85) {
-                var path = Path()
-                for (i, p) in stroke.points.enumerated() {
-                    let point = CGPoint(x: ox + p.x * width, y: oy + p.y * height)
-                    if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
-                }
-                if stroke.closed { path.closeSubpath() }
-                var layer = context
-                layer.opacity = stroke.opacity
-                layer.stroke(path, with: ink, style: StrokeStyle(lineWidth: stroke.width * 1.12, lineCap: .round, lineJoin: .round))
-                if !economical {
-                    layer.opacity = stroke.opacity * 0.10
-                    layer.stroke(path, with: ink, style: StrokeStyle(lineWidth: 2.8, lineCap: .round, lineJoin: .round))
-                }
+            var transform = CGAffineTransform(a: width, b: 0, c: 0, d: height, tx: ox, ty: oy)
+            for group in EspaceVectorRenderer.groups(motif, time: t, quality: quality) {
+                guard let path = group.path.copy(using: &transform) else { continue }
+                var layer = context; layer.opacity = group.opacity
+                layer.stroke(Path(path), with: ink, style: StrokeStyle(lineWidth: group.width, lineCap: .round, lineJoin: .round))
             }
         }.clipped().accessibilityHidden(true)
             }
@@ -218,8 +214,7 @@ struct EspaceSurface: View {
     }
 }
 
-#if ONDE_DESIGN_CAPTURE
-/// Read-only instrumentation, excluded from production. No synthetic time injection.
+/// Read-only instrumentation. No synthetic time injection or extra timer.
 @MainActor enum EspaceMotionAudit {
     private final class WeakDriver {
         weak var value: EspaceMotionDriver?
@@ -231,5 +226,7 @@ struct EspaceSurface: View {
     }
     static var live: [EspaceMotionDriver] { drivers.compactMap(\.value) }
     static var running: [EspaceMotionDriver] { live.filter { $0.rate > 0 } }
+    static var snapshot: [[String: Any]] {
+        live.map { ["music_id": $0.musicID, "motif": $0.motif, "fps": $0.rate, "time": $0.time] }
+    }
 }
-#endif
