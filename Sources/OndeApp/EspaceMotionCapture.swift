@@ -126,9 +126,17 @@ import OndeCore
             try await wait(0.15)
             try check(EspaceMotionAudit.live.contains { $0.musicID == id && $0.motif == motif.rawValue },
                       "Selected music, cover registry and live motif agree: \(id)")
-            if let png = EspacePosterCache.image(motif).tiffRepresentation.flatMap(NSBitmapImageRep.init(data:))?.representation(using: .png, properties: [:]) {
-                try png.write(to: output.appendingPathComponent("poster-\(id).png"))
-            }
+            let poster = NSBitmapImageRep(data: EspacePosterCache.image(motif).tiffRepresentation!)!
+            var occupied = 0, edge = 0
+            for y in 0..<poster.pixelsHigh { for x in 0..<poster.pixelsWide {
+                if poster.colorAt(x: x, y: y)!.alphaComponent > 0.04 {
+                    occupied += 1
+                    if x < 2 || y < 2 || x >= poster.pixelsWide - 2 || y >= poster.pixelsHigh - 2 { edge += 1 }
+                }
+            } }
+            try check(poster.pixelsWide == 92 && poster.pixelsHigh == 104 && occupied > 100 && edge == 0,
+                      "Full Retina cover is visible without clipping: \(id)")
+            try poster.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("poster-\(id).png"))
             try await wait(0.7) // Let the actual crossfade finish, then compare motion only.
             let a = try frame(host, file: output.appendingPathComponent("\(motif.rawValue)-a.png"))
             try await wait(0.85)

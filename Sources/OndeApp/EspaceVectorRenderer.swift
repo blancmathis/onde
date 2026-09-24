@@ -67,19 +67,17 @@ enum EspaceVectorRenderer {
         let key = motif.rawValue as NSString
         if let image = cache.object(forKey: key) { return image }
         let width = 92, height = 104
-        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-            bytesPerRow: 0, bitsPerPixel: 0)!
-        bitmap.size = NSSize(width: 46, height: 52)
-        NSGraphicsContext.saveGraphicsState()
-        let graphics = NSGraphicsContext(bitmapImageRep: bitmap)!
-        NSGraphicsContext.current = graphics
-        let c = graphics.cgContext
+        // Use a pixel-space context explicitly: NSGraphicsContext(bitmap:) can
+        // already apply the representation's point-to-pixel transform. Applying
+        // Retina scale a second time clips the motif at the top and right edges.
+        let c = CGContext(data: nil, width: width, height: height,
+            bitsPerComponent: 8, bytesPerRow: width * 4,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         c.clear(CGRect(x: 0, y: 0, width: width, height: height))
         c.translateBy(x: 0, y: CGFloat(height)); c.scaleBy(x: 2, y: -2)
         EspaceVectorRenderer.paint(c, size: CGSize(width: 46, height: 52), motif: motif, time: 0, quality: .thumbnail, thumbnail: true)
-        NSGraphicsContext.restoreGraphicsState()
-        let image = NSImage(size: NSSize(width: 46, height: 52)); image.addRepresentation(bitmap)
+        let image = NSImage(cgImage: c.makeImage()!, size: NSSize(width: 46, height: 52))
         cache.setObject(image, forKey: key, cost: width * height * 4)
         return image
     }
