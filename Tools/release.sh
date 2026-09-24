@@ -52,6 +52,14 @@ After a verified download, choose Install and Relaunch. Installation requires ex
 Download-only clients (1.11.3 and earlier) need one manual replacement to receive this updater.
 Future releases are built and published from main; no user Mac is needed for deployment.
 
+### Performance in 1.11.7
+
+Animated artwork now invalidates only its native drawing surface instead of the entire listening hierarchy.
+The same 24 fps active animation, authored geometry and per-track identities are preserved.
+Frame rendering batches paths directly without allocating thousands of temporary point objects per frame.
+Hidden, minimized, occluded and settings-covered artwork still suspends its animation clock.
+Audio preparation, transport timing, fades and the verified acoustic bank are unchanged.
+
 ### Reliability in 1.11.5
 
 Saved-mix deletion targets exactly one identity; ambiguous names are rejected.

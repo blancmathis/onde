@@ -4,7 +4,8 @@ import OndeCore
 
 /// This clock belongs exclusively to the artwork. It never advances SessionClock.
 @MainActor final class EspaceMotionDriver: ObservableObject {
-    @Published private(set) var time: Double = 0
+    private(set) var time: Double = 0
+    var onFrame: (() -> Void)?
     private var clock = EspaceClock()
     var musicID = "personal"
     var motif = "laminar"
@@ -23,11 +24,13 @@ import OndeCore
         guard fps > 0 else { return }
         clock.tick(now: ProcessInfo.processInfo.systemUptime, running: true)
         let timer = Timer(timeInterval: 1 / Double(fps), repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                // A queued tick from a cancelled timer cannot move a paused image.
+            // This timer is installed only on the main RunLoop below. Avoid
+            // allocating a Swift concurrency Task for every visual frame.
+            MainActor.assumeIsolated {
                 guard let self, self.rate > 0, self.generation == ticket else { return }
                 self.clock.tick(now: ProcessInfo.processInfo.systemUptime, running: true)
                 self.time = self.clock.elapsed
+                self.onFrame?()
             }
         }
         timer.tolerance = 1 / Double(fps) * 0.15
@@ -97,9 +100,11 @@ struct EspaceArtworkWindowProbe: NSViewRepresentable {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.refreshPending = false
-                let shown = self.attached && self.window?.isVisible == true && self.window?.isMiniaturized == false &&
-                    self.window?.occlusionState.contains(.visible) == true && !NSApp.isHidden &&
-                    !self.isHiddenOrHasHiddenAncestor && !self.visibleRect.isEmpty
+                // The probe only exists while the artwork is attached. Window-level
+                // visibility is more stable than NSView.visibleRect during SwiftUI relayout.
+                let shown = self.attached && self.window?.isVisible == true &&
+                    self.window?.isMiniaturized == false &&
+                    self.window?.occlusionState.contains(.visible) == true && !NSApp.isHidden
                 #if ONDE_DESIGN_CAPTURE
                 let diagnostic = "PROBE title=\(self.window?.title ?? "nil") attached=\(self.attached) frame=\(self.frame) visibleRect=\(self.visibleRect) windowVisible=\(self.window?.isVisible == true) mini=\(self.window?.isMiniaturized == true) exposed=\(self.window?.occlusionState.contains(.visible) == true) appHidden=\(NSApp.isHidden) viewHidden=\(self.isHiddenOrHasHiddenAncestor) active=\(NSApp.isActive)"
                 if diagnostic != self.lastDiagnostic { print(diagnostic); self.lastDiagnostic = diagnostic }
@@ -140,10 +145,8 @@ struct EspaceArtwork: View {
     }
     var body: some View {
         ZStack {
-            EspaceSurface(id: id, mode: mode, time: driver.time, economical: retainedEconomy, motifOverride: motif)
-                .id(motif).transition(.opacity)
+            EspaceLiveSurface(driver: driver, motif: motif, economical: retainedEconomy)
         }
-        .animation(reduced || !enabled ? nil : .easeInOut(duration: 0.45), value: motif)
         .background {
             GeometryReader { geometry in
                 EspaceArtworkWindowProbe { visibility = $0 }
@@ -167,6 +170,91 @@ struct EspaceArtwork: View {
         // Do not change line density while the visual is paused.
         if fps > 0 { retainedEconomy = fps <= 12 }
         driver.configure(fps: fps)
+    }
+}
+
+/// Animated production surface. The animation clock invalidates only this AppKit
+/// view; SwiftUI's listening hierarchy no longer recomputes 12–24 times/second.
+private struct EspaceLiveSurface: NSViewRepresentable {
+    let driver: EspaceMotionDriver
+    let motif: OndeMotif
+    let economical: Bool
+
+    func makeNSView(context: Context) -> PaintView {
+        let view = PaintView()
+        view.setAccessibilityElement(false)
+        view.driver = driver
+        view.setMotif(motif)
+        view.economical = economical
+        driver.onFrame = { [weak view] in view?.needsDisplay = true }
+        return view
+    }
+
+    func updateNSView(_ view: PaintView, context: Context) {
+        view.driver = driver
+        view.setMotif(motif)
+        view.economical = economical
+        driver.onFrame = { [weak view] in view?.needsDisplay = true }
+        view.needsDisplay = true
+    }
+
+    static func dismantleNSView(_ view: PaintView, coordinator: ()) {
+        if view.driver?.onFrame != nil { view.driver?.onFrame = nil }
+        view.driver = nil
+    }
+
+    final class PaintView: NSView {
+        weak var driver: EspaceMotionDriver?
+        private var motif: OndeMotif = .laminar
+        private var hasMotif = false
+        private var previousMotif: OndeMotif?
+        private var transitionStart: Double = 0
+        var economical = false
+
+        func setMotif(_ value: OndeMotif) {
+            guard !hasMotif || value != motif else { return }
+            if !hasMotif || (driver?.rate ?? 0) == 0 {
+                motif = value
+                hasMotif = true
+                previousMotif = nil
+                needsDisplay = true
+                return
+            }
+            previousMotif = motif
+            motif = value
+            transitionStart = ProcessInfo.processInfo.systemUptime
+            needsDisplay = true
+        }
+
+        override var isFlipped: Bool { true }
+        override var isOpaque: Bool { false }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        private func paint(_ motif: OndeMotif, alpha: CGFloat, context: CGContext) {
+            EspaceVectorRenderer.paint(context, size: bounds.size, motif: motif,
+                time: driver?.time ?? 0,
+                quality: economical ? .economy : .balanced,
+                includeGlow: true,
+                alpha: alpha)
+        }
+
+        override func draw(_ dirtyRect: NSRect) {
+            guard bounds.width > 0, bounds.height > 0,
+                  let context = NSGraphicsContext.current?.cgContext else { return }
+            context.saveGState()
+            context.clip(to: bounds)
+            context.setShouldAntialias(true)
+            if let previousMotif {
+                let progress = min(1, max(0,
+                    (ProcessInfo.processInfo.systemUptime - transitionStart) / 0.45))
+                paint(previousMotif, alpha: 1 - progress, context: context)
+                paint(motif, alpha: progress, context: context)
+                if progress >= 1 { self.previousMotif = nil }
+            } else {
+                paint(motif, alpha: 1, context: context)
+            }
+            context.restoreGState()
+        }
     }
 }
 
