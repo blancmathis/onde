@@ -1,10 +1,12 @@
 #ifndef ONDE_ORCHESTRA_INTERNAL_H
 #define ONDE_ORCHESTRA_INTERNAL_H
 #include <stdint.h>
+#include "include/OndeDSP.h"
 typedef struct Orchestra Orchestra;
 Orchestra *orc_create(double sample_rate);
 void orc_destroy(Orchestra *o);
 int orc_add(Orchestra *o,int instrument,int root,int rr,const float *left,const float *right,uint32_t frames,double source_rate);
+int orc_add_shared(Orchestra *o,int instrument,int root,int rr,OndeSampleBuffer *buffer);
 int orc_count(const Orchestra *o);
 int orc_families(const Orchestra *o);
 int orc_voices(const Orchestra *o);

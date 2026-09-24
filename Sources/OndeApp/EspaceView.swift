@@ -215,7 +215,7 @@ private struct EspaceListeningPane: View {
     @Environment(\.espaceReduceMotion) private var reduced
     @Binding var visualMotion: Bool
     @Binding var showArtwork: Bool
-    @AppStorage("onde.espace.artworkChoice") private var artworkChoice = "automatic"
+    @State private var artworkChoice = "automatic"
     @Environment(\.accessibilityReduceMotion) private var systemReduced
     let compact: Bool
     var body: some View {
@@ -302,6 +302,8 @@ private struct EspaceListeningPane: View {
             }.padding(.bottom, 10)
             if !showArtwork { Spacer(minLength: 32) }
         }.padding(.horizontal, 6)
+            .onChange(of: model.selectedMusicID) { _, _ in artworkChoice = "automatic" }
+            .onChange(of: model.mode) { _, _ in artworkChoice = "automatic" }
     }
     private var chimeCaption: String {
         guard model.store.preferences.chimesEnabled, !model.store.preferences.markers.isEmpty else { return "No chimes. Stay as long as you like." }
@@ -324,13 +326,7 @@ private struct EspacePlaybackStatus: View {
     private var status: String {
         guard model.playing else { return model.elapsed > 0 ? "Paused" : "Ready to play" }
         guard model.generatorActive else { return "Session active" }
-        let snapshot = model.generatorSnapshot
-        if snapshot["loading"] as? Bool == true { return "Preparing audio…" }
-        let transition = snapshot["transition"] as? [String: Any] ?? [:]
-        if transition["state"] as? String == "crossfading" { return "Blending into your sound…" }
-        let entrance = snapshot["entrance"] as? [String: Any] ?? [:]
-        if ((entrance["progress"] as? NSNumber)?.doubleValue ?? 1) < 1 { return "Easing in…" }
-        return "Playing"
+        return model.generatorCaption
     }
 }
 

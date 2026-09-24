@@ -6,7 +6,13 @@ import OndeDSP
 /// Immutable acoustic notes are decoded and verified before Core Audio starts.
 /// The same bank is used by the app and standalone exports. Nothing is fetched at runtime.
 public enum OrchestraBank {
-    private struct Note { let instrument:Int32; let root:Int32; let rr:Int32; let rate:Double; let left:[Float]; let right:[Float] }
+    private final class Note {
+        let instrument: Int32; let root: Int32; let rr: Int32; let pcm: OpaquePointer
+        init(instrument: Int32, root: Int32, rr: Int32, pcm: OpaquePointer) {
+            self.instrument = instrument; self.root = root; self.rr = rr; self.pcm = pcm
+        }
+        deinit { onde_sample_buffer_release(pcm) }
+    }
     private static let lock=NSLock()
     private static var cache:[String:[Note]]=[:]
     public static func directory() -> URL? {
@@ -29,9 +35,7 @@ public enum OrchestraBank {
         }
         let notes=try decoded(directory)
         for note in notes {
-            let ok=note.left.withUnsafeBufferPointer { l in note.right.withUnsafeBufferPointer { r in
-                onde_dsp_add_sample(core,note.instrument,note.root,note.rr,l.baseAddress!,r.baseAddress!,UInt32(l.count),note.rate)
-            } }
+            let ok = onde_dsp_add_shared_sample(core, note.instrument, note.root, note.rr, note.pcm)
             guard ok==1 else {throw OndeError("orchestra_invalid","Could not load an instrument before audio rendering.")}
         }
         guard (onde_dsp_orchestra_families(core) & 2047)==2047 else {throw OndeError("orchestra_incomplete","The orchestra bank is missing required instrument families.")}
@@ -52,7 +56,10 @@ public enum OrchestraBank {
             total+=Int(f.length);guard total<=24_000_000 else {throw OndeError("orchestra_too_large","The instrument bank exceeds the memory limit.")}
             let buffer=AVAudioPCMBuffer(pcmFormat:f.processingFormat,frameCapacity:AVAudioFrameCount(f.length))!
             try f.read(into:buffer);let channels=buffer.floatChannelData!,count=Int(buffer.frameLength)
-            result.append(Note(instrument:Int32(instrument),root:Int32(root),rr:Int32(rr),rate:f.processingFormat.sampleRate,left:Array(UnsafeBufferPointer(start:channels[0],count:count)),right:Array(UnsafeBufferPointer(start:channels[1],count:count))))
+            guard let pcm = onde_sample_buffer_create(channels[0], channels[1], UInt32(count), f.processingFormat.sampleRate) else {
+                throw OndeError("orchestra_invalid", "The instrument contains invalid PCM samples.")
+            }
+            result.append(Note(instrument: Int32(instrument), root: Int32(root), rr: Int32(rr), pcm: pcm))
         }
         cache[directory.path]=result;return result
     }

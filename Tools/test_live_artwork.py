@@ -54,7 +54,7 @@ def run_case(reduced):
         if reduced:
             assert report['passed'] >= 5, report
         else:
-            assert report['passed'] >= 35 and len(report['motifs']) == 12, report
+            assert report['passed'] >= 35 and len(report['motifs']) == 25, report
             assert len(list((destination/'live-frames').glob('*.png'))) == 48
         print(json.dumps({k:v for k,v in report.items() if k != 'recorded_frame_seconds'}, indent=2))
 

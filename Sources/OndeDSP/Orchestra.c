@@ -5,25 +5,46 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdatomic.h>
 #define MAX_SAMPLES 112
 #define MAX_VOICES 64
 #define MAX_TOTAL_FRAMES 24000000u
 #define PI 3.14159265358979323846
 
-typedef struct {float *l,*r;uint32_t n;double rate;int instrument,root,rr;} Sample;
+struct OndeSampleBuffer { _Atomic uint32_t references; float *l,*r; uint32_t n; double rate; };
+typedef struct {const float *l,*r;uint32_t n;double rate;int instrument,root,rr;OndeSampleBuffer *buffer;} Sample;
 typedef struct {const Sample *sample;double at,step;uint64_t age,life;float attack,release,gain,panL,panR,lpL,lpR;int active,group,held;double loopStart,loopEnd,loopFade;} Voice;
-struct Orchestra {double sr;Sample samples[MAX_SAMPLES];Voice voices[MAX_VOICES];int count,families;uint64_t events;uint32_t totalFrames;uint64_t rr[12][128];};
+struct Orchestra {double sr;float lastWarmth,coefficient;Sample samples[MAX_SAMPLES];Voice voices[MAX_VOICES];int count,families;uint64_t events;uint32_t totalFrames;uint64_t rr[12][128];};
 static float clip(float x,float lo,float hi){return x<lo?lo:x>hi?hi:x;}
 static float smooth(float x){x=clip(x,0,1);return x*x*(3-2*x);}
-Orchestra *orc_create(double sr){if(!isfinite(sr)||sr<8000||sr>96000)return NULL;Orchestra *o=calloc(1,sizeof(*o));if(o)o->sr=sr;return o;}
-void orc_destroy(Orchestra *o){if(!o)return;for(int i=0;i<o->count;i++){free(o->samples[i].l);free(o->samples[i].r);}free(o);}
-int orc_add(Orchestra *o,int inst,int root,int rr,const float *l,const float *r,uint32_t n,double rate){
- if(!o||!l||inst<0||inst>11||root<0||root>127||rr<0||rr>7||n<64||n>1500000||o->count>=MAX_SAMPLES||!isfinite(rate)||rate<8000||rate>96000||o->totalFrames+n>MAX_TOTAL_FRAMES)return 0;
+Orchestra *orc_create(double sr){if(!isfinite(sr)||sr<8000||sr>96000)return NULL;Orchestra *o=calloc(1,sizeof(*o));if(o){o->sr=sr;o->lastWarmth=NAN;}return o;}
+/* Immutable PCM is validated once and retained by each scene. Reference counts
+   change only during preparation/disposal, never in the real-time callback. */
+OndeSampleBuffer *onde_sample_buffer_create(const float *l,const float *r,uint32_t n,double rate){
+ if(!l||n<64||n>1500000||!isfinite(rate)||rate<8000||rate>96000)return NULL;
+ for(uint32_t i=0;i<n;i++)if(!isfinite(l[i])||fabsf(l[i])>1.01f||(r&&(!isfinite(r[i])||fabsf(r[i])>1.01f)))return NULL;
+ OndeSampleBuffer *b=calloc(1,sizeof(*b));if(!b)return NULL;
+ b->l=malloc(n*sizeof(float));b->r=malloc(n*sizeof(float));
+ if(!b->l||!b->r){free(b->l);free(b->r);free(b);return NULL;}
+ memcpy(b->l,l,n*sizeof(float));memcpy(b->r,r?r:l,n*sizeof(float));
+ b->n=n;b->rate=rate;atomic_init(&b->references,1);return b;
+}
+void onde_sample_buffer_release(OndeSampleBuffer *b){
+ if(b&&atomic_fetch_sub_explicit(&b->references,1,memory_order_acq_rel)==1){free(b->l);free(b->r);free(b);}
+}
+uint32_t onde_sample_buffer_references(const OndeSampleBuffer *b){return b?atomic_load_explicit(&b->references,memory_order_relaxed):0;}
+void orc_destroy(Orchestra *o){if(!o)return;for(int i=0;i<o->count;i++)onde_sample_buffer_release(o->samples[i].buffer);free(o);}
+int orc_add_shared(Orchestra *o,int inst,int root,int rr,OndeSampleBuffer *b){
+ if(!o||!b||inst<0||inst>11||root<0||root>127||rr<0||rr>7||o->count>=MAX_SAMPLES||o->totalFrames+b->n>MAX_TOTAL_FRAMES)return 0;
  for(int j=0;j<o->count;j++)if(o->samples[j].instrument==inst&&o->samples[j].root==root&&o->samples[j].rr==rr)return 0;
- for(uint32_t i=0;i<n;i++)if(!isfinite(l[i])||fabsf(l[i])>1.01f||(r&&(!isfinite(r[i])||fabsf(r[i])>1.01f)))return 0;
- float *a=malloc(n*sizeof(float)),*b=malloc(n*sizeof(float));if(!a||!b){free(a);free(b);return 0;}
- memcpy(a,l,n*sizeof(float));memcpy(b,r?r:l,n*sizeof(float));
- Sample *s=&o->samples[o->count++];s->l=a;s->r=b;s->n=n;s->rate=rate;s->root=root;s->rr=rr;s->instrument=inst;o->totalFrames+=n;o->families|=(1<<inst);return 1;
+ atomic_fetch_add_explicit(&b->references,1,memory_order_relaxed);
+ Sample *s=&o->samples[o->count++];s->l=b->l;s->r=b->r;s->n=b->n;s->rate=b->rate;s->root=root;s->rr=rr;s->instrument=inst;s->buffer=b;
+ o->totalFrames+=b->n;o->families|=(1<<inst);return 1;
+}
+int orc_add(Orchestra *o,int inst,int root,int rr,const float *l,const float *r,uint32_t n,double rate){
+ if(!o)return 0;
+ OndeSampleBuffer *b=onde_sample_buffer_create(l,r,n,rate);if(!b)return 0;
+ int result=orc_add_shared(o,inst,root,rr,b);onde_sample_buffer_release(b);return result;
 }
 int orc_count(const Orchestra *o){return o?o->count:0;}
 int orc_families(const Orchestra *o){return o?o->families:0;}
@@ -58,9 +79,10 @@ static float cubic(const float *p,uint32_t n,double pos){
  return b+.5f*t*(c-a+t*(2*a-5*b+4*c-d+t*(3*(b-c)+d-a)));
 }
 void orc_frame(Orchestra *o,const float levels[7],float warmth,float *l,float *r){
- *l=0;*r=0;if(!o)return;
+ *l=0;*r=0;if(!o||o->count==0)return;
  /* A gentle, fixed-band smoothing filter preserves real instrument attacks. */
- float coef=1-expf(-2*PI*(5100-2200*clip(warmth,0,1))/o->sr);
+ if(warmth!=o->lastWarmth){o->lastWarmth=warmth;o->coefficient=1-expf(-2*PI*(5100-2200*clip(warmth,0,1))/o->sr);}
+ float coef=o->coefficient;
  for(int i=0;i<MAX_VOICES;i++){
   Voice *v=&o->voices[i];if(!v->active)continue;
   if(v->age>=v->life||v->at>=v->sample->n-3){v->active=0;continue;}

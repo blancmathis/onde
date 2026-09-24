@@ -18,8 +18,6 @@ for i in 0..<29 {
     p.close(); p.lineWidth = i % 5 == 0 ? 3 : 1.7
     NSColor(srgbRed: 0.82, green: 0.92, blue: 0.73, alpha: 0.28 + f*0.55).setStroke(); p.stroke()
 }
-NSColor(srgbRed: 0.89, green: 0.94, blue: 0.79, alpha: 1).setFill()
-NSBezierPath(ovalIn: NSRect(x: 746, y: 699, width: 22, height: 22)).fill()
 image.unlockFocus()
 let rep = NSBitmapImageRep(data: image.tiffRepresentation!)!
 try rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: path))

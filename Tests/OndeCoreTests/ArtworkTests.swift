@@ -2,8 +2,8 @@ import XCTest
 @testable import OndeCore
 
 final class ArtworkTests: XCTestCase {
-    func testTwelveRecoveredIdentitiesWithStableMusicMapping() {
-        XCTAssertEqual(OndeMotif.allCases.count, 12)
+    func testRecoveredAndNewIdentitiesWithStableMusicMapping() {
+        XCTAssertEqual(OndeMotif.allCases.count, 25)
         for (id, motif) in [("ambre", OndeMotif.amber), ("sillage", .laminar), ("meridien", .prism),
                             ("canopee", .canopy), ("filigrane", .filigree), ("confluence", .confluence),
                             ("sanctuaire", .sanctuary), ("lagoon", .tide), ("stillwater", .stillwater),

@@ -76,7 +76,7 @@ if not commit:
 d.update(CFBundleShortVersionString=v, CFBundleVersion=v, OndeBuild=build, OndeCommit=commit, OndeRepository='blancmathis/onde')
 p.write_bytes(plistlib.dumps(d))
 STAMP
-if [[ ! -f Assets/AppIcon.icns ]]; then
+if [[ ! -f Assets/AppIcon.icns || Tools/Icon.swift -nt Assets/AppIcon.icns ]]; then
   swift Tools/Icon.swift "$ROOT/Assets/icon1024.png"
   mkdir -p Assets/AppIcon.iconset
   for px in 16 32 128 256 512; do

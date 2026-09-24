@@ -440,6 +440,9 @@ void onde_dsp_destroy(OndeDSP *s){if(s){orc_destroy(s->orchestra);choir_destroy(
 int onde_dsp_add_sample(OndeDSP *s,int instrument,int root,int rr,const float *left,const float *right,uint32_t frames,double rate){
     if(!s||s->frame!=0)return 0;return orc_add(s->orchestra,instrument,root,rr,left,right,frames,rate);
 }
+int onde_dsp_add_shared_sample(OndeDSP *s,int instrument,int root,int rr,OndeSampleBuffer *buffer){
+    if(!s||s->frame!=0)return 0;return orc_add_shared(s->orchestra,instrument,root,rr,buffer);
+}
 int onde_dsp_orchestra_samples(const OndeDSP *s){return s?orc_count(s->orchestra):0;}
 int onde_dsp_orchestra_families(const OndeDSP *s){return s?orc_families(s->orchestra):0;}
 int onde_dsp_orchestra_voices(const OndeDSP *s){return s?atomic_load_explicit(&s->publishedOrchestraVoices,memory_order_relaxed):0;}
@@ -509,6 +512,9 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
            No white noise, clipping-based distortion or randomized drum omissions. */
         float drive=s->score>=8?0:s->now[ONDE_DRIVE]*s->focus*s->rhythmWeight;
         float punch=s->score>=8?0:s->now[ONDE_PUNCH]*s->focus*s->rhythmWeight;
+        // A disabled rhythm rack must not compute kick exponentials and
+        // harmonics on all 44,100 samples/second. Phase advancement stays below.
+        if(drive>0 || punch>0){
         float beatSeconds=(float)(s->beatPhase*60.0/s->bpm);
         float beatDuration=(float)(60.0/s->bpm);
         float attack=smooth(beatSeconds/.010f);
@@ -542,6 +548,7 @@ void onde_dsp_render(OndeDSP *s,float *left,float *right,uint32_t count){
         float duck=1.f-(.34f*punch+.16f*drive)*kickEnvelope;
         l*=duck;r*=duck;sendL*=duck;sendR*=duck;
         l+=(impact+motion)*s->bassMix;r+=(impact+motion)*s->bassMix;
+        }
         /* Smooth continuous sub, 43.65 Hz + octave. Mono, no pitch glide, no hiss.
            Pulse and its harmonics are phase-locked; never random kick omissions. */
         float sub=osc(s,&s->bassPhase,s->bassStep);

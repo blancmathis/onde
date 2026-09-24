@@ -6,9 +6,9 @@ import OndeCore
 
 final class AppModel: ObservableObject {
     @Published var store = StoredState()
-    @Published var clock = SessionClock()
+    var clock = SessionClock()
     @Published var elapsed: Double = 0
-    @Published private(set) var todaySeconds: Double = 0
+    private(set) var todaySeconds: Double = 0
     private var activity = ActivityTracker()
     private var lastActivitySave: Double = 0
     @Published var page = "studio" {
@@ -27,6 +27,7 @@ final class AppModel: ObservableObject {
     private let audio = AudioEngine()
     private var playbackSelection = PlaybackSelection()
     private let server = CommandServer()
+    private var heartbeatInterval: Double = 0
     private var heartbeat: Timer?
     private var saveTask: DispatchWorkItem?
     private var assertionID: IOPMAssertionID = 0
@@ -57,6 +58,7 @@ final class AppModel: ObservableObject {
             activity.sample(at: wall, uptime: uptime)
         } else if activity.running { activity.pause(at: wall, uptime: uptime) }
         let value = activity.ledger.seconds(on: wall, until: wall)
+        if Int(value / 60) != Int(todaySeconds / 60) { objectWillChange.send() }
         if value != todaySeconds { todaySeconds = value }
         if checkpoint && clock.running && uptime - lastActivitySave >= 15 {
             lastActivitySave = uptime; persist()
@@ -120,20 +122,34 @@ final class AppModel: ObservableObject {
             NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == Bundle.main.bundleIdentifier && $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }?.activate()
             DispatchQueue.main.async { NSApp.terminate(nil) }
         } catch { errorMessage = error.localizedDescription }
-        heartbeat = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.tick() }
-        if let heartbeat { RunLoop.main.add(heartbeat, forMode: .common) }
+        updateHeartbeat()
         sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self, self.playing else { return }; self.pause(); self.notify("Session paused while your Mac sleeps.")
         }
         event("app_ready")
+        // After first presentation, prepare the current music off the audio path.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self, self.ownsProfile, !self.shuttingDown, !self.playing, self.generatorActive else { return }
+            self.audio.prewarm(mode: self.musicRenderMode, config: self.generatorConfiguration)
+        }
     }
     private func clamp(_ n: Double) -> Double { n.isFinite ? min(1, max(0, n)) : 0 }
+    private func updateHeartbeat() {
+        let interval = playing ? 0.25 : 30.0
+        guard heartbeatInterval != interval || heartbeat == nil else { return }
+        heartbeat?.invalidate(); heartbeatInterval = interval
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in self?.tick() }
+        timer.tolerance = playing ? 0.04 : 3
+        heartbeat = timer; RunLoop.main.add(timer, forMode: .common)
+    }
     func tick() {
         guard !shuttingDown else { return }
         synchronizePlaybackClock()
         refreshActivity()
         let current = clock.elapsed(at: now)
-        if current != elapsed { elapsed = current }
+        // Display seconds, not four near-identical whole-window layouts per second.
+        // IPC and the activity ledger still read the full-resolution clock.
+        if Int(current) != Int(elapsed) { elapsed = current }
         if mode == .meditation && clock.running {
             if let marker = clock.tick(at: now, markers: store.preferences.markers), store.preferences.chimesEnabled {
                 do { try audio.chime(volume: store.preferences.chimeVolume * store.preferences.masterVolume); event("chime", ["marker_seconds": marker]) }
@@ -178,6 +194,7 @@ final class AppModel: ObservableObject {
         }
         synchronizePlaybackClock()
         updateSleepAssertion()
+        updateHeartbeat()
     }
     /// All controls (window, menu-bar player and CLI) share this reconciliation.
     /// Volume/mute is not Pause: a running stream still has a musical timeline.
@@ -246,7 +263,7 @@ final class AppModel: ObservableObject {
         let fresh = restart || clock.elapsed(at: now) == 0
         // Explicit selection after pause is not a resume: discard BOTH scenes and
         // any queued/preparing scene before permitting the new audio graph to run.
-        if restart { audio.restartMusic() }
+        if restart { audio.restartMusic(mode: musicRenderMode, config: generatorConfiguration) }
         playbackRequested = true; playbackClockPolicy.reset()
         applyAudio(freshStart: fresh); event("play", ["music_restarted": restart])
     }
@@ -355,6 +372,7 @@ final class AppModel: ObservableObject {
 
     var generatorConfiguration: GenerativeSettings { store.generatorSettings?[mode.rawValue] ?? .preset(mode) }
     var generatorActive: Bool { store.layers["living"]?.enabled == true }
+    var generatorCaption: String { audio.generatorCaption }
     var generatorSnapshot: [String: Any] {
         var state = audio.generatorStatus
         state["configuration"] = jsonObject(generatorConfiguration)
@@ -424,7 +442,7 @@ final class AppModel: ObservableObject {
     func snapshot() -> [String: Any] {
         synchronizePlaybackClock()
         refreshActivity(checkpoint: false)
-        return ["listening": listeningSnapshot, "playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
+        return ["artwork": MainActor.assumeIsolated { EspaceMotionAudit.snapshot }, "listening": listeningSnapshot, "playback": audio.playbackSnapshot, "today_seconds": todaySeconds, "today_time_zone": TimeZone.autoupdatingCurrent.identifier, "daily_history_estimated": activity.ledger.legacyRecordCount > 0, "version": AppBuild.version, "updates": updates.snapshot(), "generator": generatorSnapshot, "mode": mode.rawValue, "status": playing ? "playing" : (elapsed > 0 ? "paused" : "stopped"),
          "timer_running": clock.running, "playback_requested": playbackRequested,
          "elapsed_seconds": clock.elapsed(at: now), "formatted_elapsed": clockText(clock.elapsed(at: now)),
          "next_chime_seconds": nextMarker as Any? ?? NSNull(), "fired_markers": clock.fired.sorted(),

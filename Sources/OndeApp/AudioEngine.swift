@@ -12,6 +12,8 @@ final class AudioEngine {
     private var lastDesired: Set<String> = []
     private var startFade: Double = 8
     var transitionSeconds: Double { get { living.transitionSeconds } set { living.transitionSeconds = newValue } }
+    var generatorCaption: String { living.playbackCaption }
+    func prewarm(mode: SessionMode, config: GenerativeSettings) { living.prewarm(mode: mode, config: config) }
     var generatorStatus: [String: Any] { living.snapshot() }
     private let bell = ChimePlayer()
     var playingIDs: [String] {
@@ -87,9 +89,9 @@ final class AudioEngine {
     func shutdown() { stopImmediately(); players.removeAll() }
     /// Explicitly choosing music while paused starts a fresh musical timeline.
     /// This does not touch the session clock, activity ledger, settings or chimes.
-    func restartMusic() {
+    func restartMusic(mode: SessionMode, config: GenerativeSettings) {
         rampTimer?.invalidate(); rampTimer = nil
-        living.reset()
+        living.restartIfNeeded(mode: mode, config: config)
         for layer in players.values { layer.stop() }
         wasPlaying = false; lastDesired = []
     }
