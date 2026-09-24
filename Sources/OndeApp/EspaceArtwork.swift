@@ -5,7 +5,24 @@ import OndeCore
 /// This clock belongs exclusively to the artwork. It never advances SessionClock.
 @MainActor final class EspaceMotionDriver: ObservableObject {
     private(set) var time: Double = 0
-    var onFrame: (() -> Void)?
+    private var onFrame: (() -> Void)?
+    private var frameOwner: UUID?
+    let drawMetrics = EspaceDrawMetrics()
+    var drawnFrames: UInt64 { drawMetrics.snapshot().frames }
+    var lastDrawTime: Double { drawMetrics.snapshot().time }
+    var drawnMotif: String { drawMetrics.snapshot().motif }
+    var renderSize: CGSize { drawMetrics.snapshot().size }
+
+    func bindFrame(owner: UUID, action: @escaping () -> Void) {
+        frameOwner = owner; onFrame = action
+    }
+    func unbindFrame(owner: UUID) {
+        guard frameOwner == owner else { return }
+        frameOwner = nil; onFrame = nil
+    }
+    func didDraw(motif: OndeMotif, size: CGSize) {
+        drawMetrics.record(motif: motif, time: time, size: size)
+    }
     private var clock = EspaceClock()
     var musicID = "personal"
     var motif = "laminar"
@@ -145,7 +162,8 @@ struct EspaceArtwork: View {
     }
     var body: some View {
         ZStack {
-            EspaceLiveSurface(driver: driver, motif: motif, economical: retainedEconomy)
+            EspaceLiveSurface(driver: driver, motif: motif, economical: retainedEconomy,
+                              transitionsEnabled: enabled && !reduced && fps > 0)
         }
         .background {
             GeometryReader { geometry in
@@ -175,87 +193,119 @@ struct EspaceArtwork: View {
 
 /// Animated production surface. The animation clock invalidates only this AppKit
 /// view; SwiftUI's listening hierarchy no longer recomputes 12–24 times/second.
-private struct EspaceLiveSurface: NSViewRepresentable {
+struct EspaceLiveSurface: NSViewRepresentable {
     let driver: EspaceMotionDriver
     let motif: OndeMotif
     let economical: Bool
+    var transitionsEnabled = true
 
     func makeNSView(context: Context) -> PaintView {
         let view = PaintView()
+        view.identifier = NSUserInterfaceItemIdentifier("onde-live-artwork")
         view.setAccessibilityElement(false)
-        view.driver = driver
-        view.setMotif(motif)
-        view.economical = economical
-        driver.onFrame = { [weak view] in view?.needsDisplay = true }
+        // Give the decorative surface its own backing store. Invalidating a
+        // transparent non-layer-backed view can otherwise redraw its ancestors.
+        view.wantsLayer = true
+        view.layerContentsRedrawPolicy = .onSetNeedsDisplay
+        view.configure(driver: driver, motif: motif, economical: economical,
+                       transitionsEnabled: transitionsEnabled)
         return view
     }
-
     func updateNSView(_ view: PaintView, context: Context) {
-        view.driver = driver
-        view.setMotif(motif)
-        view.economical = economical
-        driver.onFrame = { [weak view] in view?.needsDisplay = true }
-        view.needsDisplay = true
+        view.configure(driver: driver, motif: motif, economical: economical,
+                       transitionsEnabled: transitionsEnabled)
     }
-
     static func dismantleNSView(_ view: PaintView, coordinator: ()) {
-        if view.driver?.onFrame != nil { view.driver?.onFrame = nil }
+        view.driver?.unbindFrame(owner: view.owner)
         view.driver = nil
     }
-
     final class PaintView: NSView {
+        let owner = UUID()
         weak var driver: EspaceMotionDriver?
+        private let frameState = EspaceFrameState()
+        private var host: NSHostingView<EspaceFrameView>?
         private var motif: OndeMotif = .laminar
         private var hasMotif = false
         private var previousMotif: OndeMotif?
         private var transitionStart: Double = 0
-        var economical = false
+        private var economical = false
 
-        func setMotif(_ value: OndeMotif) {
-            guard !hasMotif || value != motif else { return }
-            if !hasMotif || (driver?.rate ?? 0) == 0 {
-                motif = value
-                hasMotif = true
-                previousMotif = nil
-                needsDisplay = true
-                return
+        func configure(driver: EspaceMotionDriver, motif value: OndeMotif,
+                       economical: Bool, transitionsEnabled: Bool) {
+            if self.driver !== driver {
+                self.driver?.unbindFrame(owner: owner)
+                self.driver = driver
+                frameState.metrics = driver.drawMetrics
+                driver.bindFrame(owner: owner) { [weak self] in self?.updateFrame() }
             }
-            previousMotif = motif
-            motif = value
-            transitionStart = ProcessInfo.processInfo.systemUptime
-            needsDisplay = true
+            self.economical = economical
+            if !hasMotif || value != motif {
+                previousMotif = hasMotif && transitionsEnabled && driver.rate > 0 ? motif : nil
+                motif = value; hasMotif = true; transitionStart = driver.time
+            }
+            updateFrame()
+            if host == nil {
+                // A tiny independent SwiftUI host retains Apple's accelerated
+                // Canvas. Its local frame dependency cannot invalidate the
+                // listening controls, catalog or window-visibility probe.
+                let view = NSHostingView(rootView: EspaceFrameView(state: frameState))
+                view.frame = bounds; view.autoresizingMask = [.width, .height]
+                view.setAccessibilityElement(false)
+                addSubview(view); host = view
+            }
         }
-
+        private func updateFrame() {
+            let time = driver?.time ?? 0
+            let progress = previousMotif == nil ? 1 : min(1, max(0, (time - transitionStart) / 0.45))
+            if progress >= 1 { previousMotif = nil }
+            let next = EspaceFrame(motif: motif, previous: previousMotif, time: time,
+                                   progress: progress, economical: economical)
+            if frameState.frame != next { frameState.frame = next }
+        }
         override var isFlipped: Bool { true }
-        override var isOpaque: Bool { false }
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-        private func paint(_ motif: OndeMotif, alpha: CGFloat, context: CGContext) {
-            EspaceVectorRenderer.paint(context, size: bounds.size, motif: motif,
-                time: driver?.time ?? 0,
-                quality: economical ? .economy : .balanced,
-                includeGlow: true,
-                alpha: alpha)
-        }
-
-        override func draw(_ dirtyRect: NSRect) {
-            guard bounds.width > 0, bounds.height > 0,
-                  let context = NSGraphicsContext.current?.cgContext else { return }
-            context.saveGState()
-            context.clip(to: bounds)
-            context.setShouldAntialias(true)
-            if let previousMotif {
-                let progress = min(1, max(0,
-                    (ProcessInfo.processInfo.systemUptime - transitionStart) / 0.45))
-                paint(previousMotif, alpha: 1 - progress, context: context)
-                paint(motif, alpha: progress, context: context)
-                if progress >= 1 { self.previousMotif = nil }
-            } else {
-                paint(motif, alpha: 1, context: context)
-            }
-            context.restoreGState()
-        }
+        override func layout() { super.layout(); if host?.frame != bounds { host?.frame = bounds } }
     }
+}
+
+private struct EspaceFrame: Equatable {
+    var motif: OndeMotif = .laminar
+    var previous: OndeMotif?
+    var time: Double = 0
+    var progress: Double = 1
+    var economical = false
+}
+@MainActor private final class EspaceFrameState: ObservableObject {
+    @Published var frame = EspaceFrame()
+    var metrics: EspaceDrawMetrics?
+}
+private struct EspaceFrameView: View {
+    @ObservedObject var state: EspaceFrameState
+    var body: some View {
+        let f = state.frame
+        ZStack {
+            if let previous = f.previous {
+                EspaceSurface(id: previous.rawValue, mode: .focus, time: f.time,
+                              economical: f.economical, motifOverride: previous).opacity(1 - f.progress)
+            }
+            EspaceSurface(id: f.motif.rawValue, mode: .focus, time: f.time,
+                          economical: f.economical, motifOverride: f.motif,
+                          metrics: state.metrics).opacity(f.progress)
+        }.transaction { $0.animation = nil }.accessibilityHidden(true).allowsHitTesting(false)
+    }
+}
+
+/// Canvas may be evaluated outside the main actor. This read-only audit store
+/// does not publish changes, touch AppKit or schedule any extra frame.
+final class EspaceDrawMetrics: @unchecked Sendable {
+    struct Snapshot { var frames: UInt64 = 0; var time: Double = 0; var motif = ""; var size = CGSize.zero }
+    private let lock = NSLock()
+    private var value = Snapshot()
+    func record(motif: OndeMotif, time: Double, size: CGSize) {
+        lock.lock(); defer { lock.unlock() }
+        value.frames &+= 1; value.time = time; value.motif = motif.rawValue; value.size = size
+    }
+    func snapshot() -> Snapshot { lock.lock(); defer { lock.unlock() }; return value }
 }
 
 /// Courants II is rendered directly into the Espace listening pane, without videos.
@@ -266,10 +316,11 @@ struct EspaceSurface: View {
     var time: Double = 0
     var economical = false
     var motifOverride: OndeMotif?
+    var metrics: EspaceDrawMetrics? = nil
     var body: some View {
         Group {
             if EspaceRenderingSupport.needsSoftwareCanvas {
-                EspaceSoftwareSurface(id: id, mode: mode, time: time, economical: economical, motifOverride: motifOverride)
+                EspaceSoftwareSurface(id: id, mode: mode, time: time, economical: economical, motifOverride: motifOverride, metrics: metrics)
             } else {
         Canvas(opaque: false, rendersAsynchronously: false) { context, size in
             guard size.width > 0, size.height > 0 else { return }
@@ -296,6 +347,7 @@ struct EspaceSurface: View {
                 var layer = context; layer.opacity = group.opacity
                 layer.stroke(Path(path), with: ink, style: StrokeStyle(lineWidth: group.width, lineCap: .round, lineJoin: .round))
             }
+            metrics?.record(motif: motif, time: t, size: size)
         }.clipped().accessibilityHidden(true)
             }
         }
@@ -315,6 +367,9 @@ struct EspaceSurface: View {
     static var live: [EspaceMotionDriver] { drivers.compactMap(\.value) }
     static var running: [EspaceMotionDriver] { live.filter { $0.rate > 0 } }
     static var snapshot: [[String: Any]] {
-        live.map { ["music_id": $0.musicID, "motif": $0.motif, "fps": $0.rate, "time": $0.time] }
+        live.map { ["music_id": $0.musicID, "motif": $0.motif, "fps": $0.rate, "time": $0.time,
+                    "drawn_frames": $0.drawnFrames, "drawn_time": $0.lastDrawTime,
+                    "drawn_motif": $0.drawnMotif,
+                    "width": $0.renderSize.width, "height": $0.renderSize.height] }
     }
 }

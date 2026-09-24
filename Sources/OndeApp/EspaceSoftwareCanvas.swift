@@ -47,11 +47,13 @@ struct EspaceSoftwareSurface: View {
     let time: Double
     let economical: Bool
     let motifOverride: OndeMotif?
+    var metrics: EspaceDrawMetrics? = nil
     var body: some View {
         EspaceCGCanvas { context, size in
             guard size.width > 0, size.height > 0 else { return }
             let motif = motifOverride ?? OndeMotif.forMusic(id, meditation: mode == .meditation)
             EspaceVectorRenderer.paint(context, size: size, motif: motif, time: time, quality: economical ? .economy : .balanced)
+            metrics?.record(motif: motif, time: time, size: size)
         }.clipped().accessibilityHidden(true)
     }
 }
