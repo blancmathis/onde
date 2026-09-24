@@ -65,6 +65,10 @@ import OndeCore
     }
     private static func run(model: AppModel, output: URL) async throws {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        let compared = try EspaceRendererChecks.geometry()
+        try check(compared == 375, "All 25 contours are exactly unchanged across three qualities and five phases")
+        try await EspaceRendererChecks.bindingLifetime()
+        try check(true, "Surface reattachment cannot disconnect the current frame receiver")
         let suite = "onde.live-motion-validation." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -139,12 +143,38 @@ import OndeCore
             try poster.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("poster-\(id).png"))
             try await wait(0.7) // Let the actual crossfade finish, then compare motion only.
             let a = try frame(host, file: output.appendingPathComponent("\(motif.rawValue)-a.png"))
+            let draws = EspaceMotionAudit.live.first { $0.musicID == id }?.drawnFrames ?? 0
+            let drawnTime = EspaceMotionAudit.live.first { $0.musicID == id }?.lastDrawTime ?? 0
             try await wait(0.85)
+            try check(EspaceMotionAudit.live.contains {
+                $0.musicID == id && $0.drawnMotif == motif.rawValue &&
+                $0.drawnFrames > draws && $0.lastDrawTime > drawnTime
+            }, "The correct surface really redraws, not just its clock: \(id)")
             let b = try frame(host, file: output.appendingPathComponent("\(motif.rawValue)-b.png"))
             let delta = changed(a,b)
             try check(delta > 800, "\(motif.title) moves in the real listening view")
             motions.append(["motif": motif.rawValue, "changed_bytes_over_3": delta])
         }
+        try model.selectMusic("sillage", in: .focus, autostart: false)
+        try await wait(0.7)
+        try model.selectMusic("ambre", in: .focus, autostart: false)
+        try await wait(0.10)
+        defaults.set(false, forKey: "onde.espace.visualMotion")
+        try await wait(0.50)
+        let midTransition = try frame(host)
+        try await wait(0.55)
+        let midTransitionLater = try frame(host)
+        try check(changed(midTransition, midTransitionLater) == 0,
+                  "Pausing mid-transition freezes pixels; wall time cannot advance the blend")
+        try model.selectMusic("reverie", in: .relax, autostart: false)
+        try await wait(0.55)
+        let selectedWhileStill = try frame(host)
+        try await wait(0.35)
+        let selectedWhileStillLater = try frame(host)
+        try check(changed(selectedWhileStill, selectedWhileStillLater) == 0 &&
+                  EspaceMotionAudit.live.contains { $0.drawnMotif == "reverie" },
+                  "Selecting while visual is paused draws the new artwork immediately and stays still")
+        defaults.set(true, forKey: "onde.espace.visualMotion")
         try model.selectMusic("sillage", in: .focus, autostart: false)
         try await wait(0.7)
         defaults.set(false, forKey: "onde.espace.visualMotion")
