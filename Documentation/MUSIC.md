@@ -1,10 +1,10 @@
 # Music, generation and evidence
 
-Onde offers different musical identities rather than one supposedly universal focus track. The seven featured pieces use their own authored palettes, motifs and balances. Earlier soundscapes remain available. English titles map to stable IDs in the main README.
+Onde offers different musical identities rather than one supposedly universal focus track. The eight featured pieces use their own authored palettes, motifs and balances. Earlier soundscapes remain available. English titles map to stable IDs in the main README.
 
 ## How the music continues
 
-The render engine is not a player looping the twelve-minute preview files. A phrase planner develops authored material over eight-bar questions and answers, common-tone harmony, and slower 64-bar orchestration chapters. Recurrence is intentional: the system is not a claim of mathematically unique music forever. Its working voice counts and audio buffers are bounded.
+The render engine is not a player looping the twelve-minute preview files. A phrase planner develops authored material over eight-bar questions and answers, common-tone harmony, and slower 64-bar orchestration chapters. Gravity has its own planner, with harmony held for 32 bars and 128-bar chapters. Recurrence is intentional: the system is not a claim of mathematically unique music forever. Its working voice counts and audio buffers are bounded.
 
 Acoustic notes are from a pinned, checksum-verified VSCO 2 Community Edition bank: 76 recordings, including soft piano. The arrangement is computed in real time. Electronic tones and vowel-like choir textures are generated locally. Sanctuary's voice layer is synthesized, not sampled from human singers or commercial recordings.
 
@@ -25,8 +25,9 @@ Selected research discussed in the historical design notes:
 - Lyrics and cognition (2023): https://journalofcognition.org/articles/10.5334/joc.273
 - Groove and syncopation, Witek et al. (2014): https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0094446
 - Fast modulation and sustained attention (2024, corrected disclosures): https://www.nature.com/articles/s42003-024-07026-3
+- Low-frequency sounds and neural tracking of the beat, Lenc et al. (2018): https://doi.org/10.1073/pnas.1801421115
 
-These studies differ in populations, tasks, comparisons and conflicts of interest. Groove experiments measure musical pleasure/movement, not professional productivity. Vigilance-task benefits are not automatically reading-comprehension benefits. Modulation experiments do not establish a universal frequency rule. **Onde does not currently add a Brain.fm-like modulation protocol to these compositions.**
+These studies differ in populations, tasks, comparisons and conflicts of interest. Groove experiments measure musical pleasure/movement, not professional productivity. Vigilance-task benefits are not automatically reading-comprehension benefits. Modulation experiments do not establish a universal frequency rule. **Seven of the eight featured pieces add no fast modulation. Gravity applies a beat-synchronous tremolo to its chord layer only; it can be set to zero and no attention claim is made for it.** See [Gravity](GRAVITY-1.12.md).
 
 No controlled listener study has established that any Onde piece outperforms silence, another preferred track or a commercial service. Numerical checks for finite audio, headroom, beat timing and transition continuity are engineering tests, not cognitive-effect measurements. Prefer an enjoyable, comfortable volume and change or disable music that distracts you.
 

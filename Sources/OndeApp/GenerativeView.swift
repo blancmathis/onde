@@ -9,6 +9,9 @@ struct SoundControlsView: View {
     @State private var seedText = ""
     @State private var seedError = ""
     @State private var exportMinutes = 10
+    /// Scores 8...12 are the relaxation worlds; 13 is the bass-led Focus score.
+    private var score: Int { Int(model.generatorConfiguration.composition) }
+    private var relaxed: Bool { (8...12).contains(score) }
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 7) {
@@ -23,7 +26,7 @@ struct SoundControlsView: View {
         Panel {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 26), GridItem(.flexible(), spacing: 26)], spacing: 22) {
                 GeneratorControl(key: "bass", title: "Bass", detail: "Weight and depth of the low end")
-                GeneratorControl(key: "density", title: model.generatorConfiguration.composition >= 8 ? "Note presence" : "Notes", detail: "From a minimal bed to a fuller pattern")
+                GeneratorControl(key: "density", title: relaxed ? "Note presence" : "Notes", detail: "From a minimal bed to a fuller pattern")
                 GeneratorControl(key: "warmth", title: "Warmth", detail: "Soften bright edges")
                 GeneratorControl(key: "space", title: "Space", detail: "Intimate room or spacious reverb")
                 if model.generatorConfiguration.vocals > 0 || [4, 11].contains(Int(model.generatorConfiguration.composition)) {
@@ -34,18 +37,20 @@ struct SoundControlsView: View {
                 }
             }
         }
-        DisclosureGroup(model.generatorConfiguration.composition >= 8 ? "Tone & phrasing" : "Rhythm & detail") {
+        DisclosureGroup(relaxed ? "Tone & phrasing" : "Rhythm & detail") {
             Panel {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 26), GridItem(.flexible(), spacing: 26)], spacing: 22) {
                     TempoControl()
-                    if model.generatorConfiguration.composition < 8 {
+                    if !relaxed {
                     GeneratorControl(key: "pulse", title: "Pulse", detail: "The underlying rhythmic motion")
                     GeneratorControl(key: "punch", title: "Impact", detail: "Definition of low-end attacks")
                     GeneratorControl(key: "drive", title: "Drive", detail: "The bass line's forward motion")
                     }
                     GeneratorControl(key: "brightness", title: "Brightness", detail: "Harmonic presence")
                     GeneratorControl(key: "movement", title: "Movement", detail: "Slow changes in timbre and stereo")
-                    if model.generatorConfiguration.composition < 8 {
+                    if score == 13 {
+                    GeneratorControl(key: "texture", title: "Fast pulse", detail: "Rapid tremolo on the chords; zero removes it")
+                    } else if !relaxed {
                     GeneratorControl(key: "texture", title: "Harmonic texture", detail: "Musical texture, not background noise")
                     }
                     GeneratorControl(key: "evolution", title: "Evolution", detail: "Develop phrases without changing tempo")

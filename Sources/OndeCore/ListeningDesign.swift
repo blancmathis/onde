@@ -2,7 +2,7 @@ import Foundation
 
 /// Presentation-only data. No audio, account, timer or persistence writes.
 public enum ListeningDesign {
-    public static let featured = ["ambre", "sillage", "canopee", "filigrane", "meridien", "confluence", "sanctuaire"]
+    public static let featured = ["ambre", "sillage", "canopee", "filigrane", "meridien", "confluence", "sanctuaire", "gravite"]
     public static func detail(_ id: String) -> String {
         switch id {
         case "ambre": return "Warm electric keys & piano"
@@ -12,6 +12,7 @@ public enum ListeningDesign {
         case "meridien": return "Deep bass & minimal house"
         case "confluence": return "Strings, horns & a steady pulse"
         case "sanctuaire": return "Wordless voices & deep bass"
+        case "gravite": return "Layered sub bass & a steady deep pulse"
         case "lagoon": return "Deep ambient, without a beat"
         case "stillwater": return "Spacious acoustic piano"
         case "hearth": return "Warm strings, horns & woodwinds"

@@ -63,5 +63,6 @@ uint64_t onde_dsp_max_beat_gap(const OndeDSP *s);
 #endif
 #include "PhrasePlanner.h"
 #include "RelaxationPlanner.h"
+#include "GravityPlanner.h"
 #include "SceneMixer.h"
 #endif

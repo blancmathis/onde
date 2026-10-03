@@ -4,6 +4,7 @@ import Foundation
 public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
     case laminar, prism, bloom, tide, canopy, amber, filigree, confluence, sanctuary, stillwater, hearth, reverie
     case driftwood, atlas, ostinato, aurora, chamber, momentum, reactor, traction, anchor, abyss, current, velvet, shore
+    case gravity
     public var id: String { rawValue }
     public var title: String {
         switch self {
@@ -20,6 +21,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .current: return "Current"
         case .velvet: return "Velvet"
         case .shore: return "Shore"
+        case .gravity: return "Gravity"
         case .laminar: return "Laminar"
         case .prism: return "Prism"
         case .bloom: return "Bloom"
@@ -39,7 +41,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .driftwood, .chamber, .velvet, .shore: return 24
         case .atlas, .anchor, .abyss: return 26
         case .ostinato, .momentum, .reactor, .traction: return 18
-        case .aurora, .current: return 22
+        case .aurora, .current, .gravity: return 22
         case .laminar: return 16
         case .prism: return 18
         case .bloom: return 24
@@ -54,7 +56,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .reverie: return 22
         }
     }
-    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth, .driftwood, .atlas, .chamber, .reactor, .anchor, .abyss].contains(self) }
+    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth, .driftwood, .atlas, .chamber, .reactor, .anchor, .abyss, .gravity].contains(self) }
     public var caption: String {
         switch self {
         case .driftwood: return "Quiet grain, slowly drifting."
@@ -70,6 +72,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .current: return "A continuous exchange."
         case .velvet: return "Soft folds, without an edge."
         case .shore: return "A place where the current settles."
+        case .gravity: return "A steady pull toward the center."
         case .laminar: return "A quiet current, moving with purpose."
         case .prism: return "Order, without rigidity."
         case .bloom: return "Space to be still."

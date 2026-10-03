@@ -135,7 +135,7 @@ final class RelaxationTests: XCTestCase {
     func testRelaxationControlsRoundTripAndRejectFractionalScores() throws {
         for p in RelaxCompositions.profiles {XCTAssertEqual(try JSONDecoder().decode(GenerativeSettings.self,from:JSONEncoder().encode(p.configuration)),p.configuration)}
         var c=GenerativeSettings()
-        for v in [8.5,12.1,13,-1,Double.infinity]{XCTAssertThrowsError(try c.set("composition",v))}
+        for v in [8.5,12.1,14,-1,Double.infinity]{XCTAssertThrowsError(try c.set("composition",v))}
         try c.set("composition",12);XCTAssertEqual(c.composition,12)
     }
 }
