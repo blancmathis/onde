@@ -2,7 +2,7 @@
 
 ## 1.12.0 — Gravity, a bass-led Focus piece
 
-- Add Gravity (`gravite`, score 13) after the seven featured Focus pieces without changing any default, saved mix or existing piece.
+- Add Gravity (`gravite`, score 13) after the seven featured Focus pieces. It replaces Slipstream as the Focus default for new installations; a Focus default already saved is kept, and no saved mix or existing piece changes.
 - One oscillator, restarted by the sequencer on every beat, is both the soft kick and the sustained sub, so every beat has the same low-end phase and level and shares one clock with the notes. An offbeat bass with decaying harmonics keeps the line audible on small speakers.
 - Slow five-voice chords with common-tone changes every 32 bars, seven soft notes per eight bars at the default setting and 128-bar chapters. No drops, fills, noise layer, samples or voice.
 - A beat-synchronous tremolo on the chord layer only (16 Hz at 120 BPM), set by the Fast pulse control; zero removes it. No attention claim is made for it.

@@ -21,7 +21,7 @@ final class GravityTests: XCTestCase {
         }
         return output
     }
-    func testGravityJoinsFocusWithoutReplacingAnyDefault() throws {
+    func testGravityIsTheNewFocusDefaultWithoutReplacingSavedChoices() throws {
         let p = profile
         XCTAssertEqual(p.title, "Gravity"); XCTAssertEqual(p.mode, .focus)
         XCTAssertEqual(p.configuration.composition, 13); XCTAssertEqual(p.configuration.tempo, 120)
@@ -31,8 +31,13 @@ final class GravityTests: XCTestCase {
         XCTAssertTrue(MusicCatalog.allows("gravite", in: .focus))
         XCTAssertFalse(MusicCatalog.allows("gravite", in: .relax))
         XCTAssertFalse(MusicCatalog.allows("gravite", in: .meditation))
-        XCTAssertEqual(MusicCatalog.fallback(for: .focus), "sillage")
-        XCTAssertEqual(ListeningPreferences().defaultID(for: .focus), "sillage")
+        // New installs start on Gravity; a default someone already saved is kept.
+        XCTAssertEqual(MusicCatalog.fallback(for: .focus), "gravite")
+        XCTAssertEqual(ListeningPreferences().defaultID(for: .focus), "gravite")
+        var saved = ListeningPreferences(); try saved.setDefault("sillage", for: .focus)
+        XCTAssertEqual(saved.defaultID(for: .focus), "sillage")
+        XCTAssertEqual(MusicCatalog.fallback(for: .relax), "velours")
+        XCTAssertEqual(MusicCatalog.fallback(for: .meditation), "immersion")
         XCTAssertEqual(FocusCompositions.ids.last, "gravite")
         XCTAssertEqual(ListeningDesign.featured.last, "gravite")
         XCTAssertEqual(try JSONDecoder().decode(GenerativeSettings.self, from: JSONEncoder().encode(p.configuration)), p.configuration)

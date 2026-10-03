@@ -5,9 +5,11 @@ kick and a sustained sub share one deep pulse at 120 BPM; an offbeat bass, a slo
 chord layer and a few quiet notes sit above it. It is written for listeners who
 work better with a strong low end.
 
-It follows the seven featured Focus pieces in the list. Existing defaults, saved
-mixes, the other 25 pieces, backgrounds, chimes and timers are unchanged. Listening to it
-does not make it a default; the star remains an explicit choice.
+It follows the seven featured Focus pieces in the list and is the Focus default
+for new installations, replacing Slipstream. A Focus default you have already
+saved is kept: choose Gravity with its star, or run
+`onde music default focus gravite`. Saved mixes, the other 25 pieces,
+backgrounds, chimes and timers are unchanged.
 
 ## What the evidence does and does not support
 
@@ -30,7 +32,8 @@ attentional state and performance during a sustained attention task*,
 Scientific Reports. https://doi.org/10.1038/s41598-024-60218-z
 
 **Implementation:** Gravity is one more identity to choose from, for people who
-like bass. It is not the default and is not presented as superior to the others.
+like bass. It is the starting choice for new installations, as a choice made by
+the maintainer, not because it has been shown to be superior to the others.
 
 ### A clear pulse, carried by the low register
 

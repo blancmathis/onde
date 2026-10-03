@@ -56,7 +56,8 @@ Future releases are built and published from main; no user Mac is needed for dep
 
 Gravity, a bass-led Focus piece at 120 BPM. One beat-locked oscillator is both the soft kick and the sub;
 an offbeat bass, slow chords and a few quiet notes sit above it. No drops, fills, samples or voice.
-A fast tremolo on the chords can be set to zero. Existing defaults, saved mixes and the 25 earlier pieces are unchanged.
+A fast tremolo on the chords can be set to zero. New installations start on Gravity in Focus; a Focus default you
+already saved is kept (star Gravity to switch). Saved mixes and the 25 earlier pieces are unchanged.
 
 ### Performance in 1.11.7
 

@@ -108,9 +108,9 @@ corresponding sheet.
 
 A new optional `StoredState.listening` stores mode defaults, background choices,
 music levels and per-piece tuning. A suitable existing generated selection seeds
-the initial default; otherwise the defaults are Slipstream, Velvet and Immersion.
+the initial default; otherwise the defaults are Gravity (Slipstream before 1.12), Velvet and Immersion.
 Existing layers, personal imports, mixes, history and preferences are not rewritten.
-A brand-new install is ready on Slipstream with no background and no autoplay.
+A brand-new install is ready on Gravity with no background and no autoplay.
 
 Run `swift test -c release -j 2`, `Tools/check_english.py`, and
 `python3 Tools/listening_integration_test.py dist/Onde.app`.

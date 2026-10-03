@@ -10,7 +10,7 @@ final class ListeningTests: XCTestCase {
     }
     func testIndependentDefaults() throws {
         var p = ListeningPreferences()
-        XCTAssertEqual(p.defaultID(for: .focus), "sillage")
+        XCTAssertEqual(p.defaultID(for: .focus), "gravite")
         XCTAssertEqual(p.defaultID(for: .relax), "velours")
         XCTAssertEqual(p.defaultID(for: .meditation), "immersion")
         try p.setDefault("rive", for: .meditation)

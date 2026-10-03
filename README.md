@@ -41,8 +41,10 @@ No telemetry or cloud audio engine. The optional update checker contacts GitHub.
 **Gravity** (`gravite`) is written for listeners who work better with a strong
 low end. A soft kick and a sustained sub share one deep pulse at 120 BPM; an
 offbeat bass, slow chords and a few quiet notes sit above it. There are no drops
-or fills. An optional fast tremolo on the chords can be set to zero. Your
-defaults and the other 25 pieces are unchanged.
+or fills. An optional fast tremolo on the chords can be set to zero.
+Gravity is now the Focus default on new installations. If you already saved a
+Focus default, it is kept: click Gravity's star, or run
+`onde music default focus gravite`. The other 25 pieces are unchanged.
 [Listen for 12 minutes](https://github.com/blancmathis/onde/releases/latest/download/gravite-12min.m4a) ·
 [Evidence, score, measurements and limits](Documentation/GRAVITY-1.12.md).
 
