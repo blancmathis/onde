@@ -19,8 +19,8 @@ final class LocalAudioSurfaceTests: XCTestCase {
         XCTAssertTrue(source.contains("\"audio_origin\": \"local_generation\""))
     }
     func testAllMusicalIdentitiesRemainAvailable() throws {
-        XCTAssertEqual(SoundProfile.all.count, 25)
-        XCTAssertEqual(Set(FocusCompositions.ids), Set(["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire"]))
+        XCTAssertEqual(SoundProfile.all.count, 26)
+        XCTAssertEqual(Set(FocusCompositions.ids), Set(["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire", "gravite"]))
         for profile in SoundProfile.all { _ = try profile.configuration.validated() }
     }
 }

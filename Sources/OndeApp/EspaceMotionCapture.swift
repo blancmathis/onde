@@ -66,7 +66,7 @@ import OndeCore
     private static func run(model: AppModel, output: URL) async throws {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         let compared = try EspaceRendererChecks.geometry()
-        try check(compared == 375, "All 25 contours are exactly unchanged across three qualities and five phases")
+        try check(compared == 390, "All 26 contours are exactly unchanged across three qualities and five phases")
         try await EspaceRendererChecks.bindingLifetime()
         try check(true, "Surface reattachment cannot disconnect the current frame receiver")
         let suite = "onde.live-motion-validation." + UUID().uuidString

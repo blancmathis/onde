@@ -5,12 +5,12 @@ final class ListeningTests: XCTestCase {
     func testMeditationAndRelaxShareExactCatalog() {
         XCTAssertEqual(MusicCatalog.profiles(for: .relax).map(\.id), RelaxCompositions.ids + ["velours", "rive", "immersion"])
         XCTAssertEqual(MusicCatalog.profiles(for: .meditation).map(\.id), MusicCatalog.profiles(for: .relax).map(\.id))
-        XCTAssertEqual(MusicCatalog.profiles(for: .focus).count, 17)
+        XCTAssertEqual(MusicCatalog.profiles(for: .focus).count, 18)
         XCTAssertEqual(Set(MusicCatalog.profiles(for: .focus).map(\.id)).intersection(MusicCatalog.profiles(for: .relax).map(\.id)), [])
     }
     func testIndependentDefaults() throws {
         var p = ListeningPreferences()
-        XCTAssertEqual(p.defaultID(for: .focus), "sillage")
+        XCTAssertEqual(p.defaultID(for: .focus), "gravite")
         XCTAssertEqual(p.defaultID(for: .relax), "velours")
         XCTAssertEqual(p.defaultID(for: .meditation), "immersion")
         try p.setDefault("rive", for: .meditation)

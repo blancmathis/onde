@@ -10,7 +10,7 @@ public enum MusicCatalog {
         profiles(for: mode).contains { $0.id == id }
     }
     public static func fallback(for mode: SessionMode) -> String {
-        switch mode { case .focus: return "sillage"; case .relax: return "velours"; case .meditation: return "immersion" }
+        switch mode { case .focus: return "gravite"; case .relax: return "velours"; case .meditation: return "immersion" }
     }
     public static func settingKey(_ id: String, mode: SessionMode) -> String { mode.rawValue + ":" + id }
 }

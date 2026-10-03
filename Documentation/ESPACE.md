@@ -26,7 +26,7 @@ The row star changes only the starting default. Rows do not move after a star is
 
 ### Collection and keyboard
 
-All 17 Focus compositions and the 8 shared Relax/Meditation compositions remain available. Search matches all entered words against the title, stable ID, authored description and displayed instrument details, ignoring case and accents. Search never changes playback. Empty results show a clear-search action. Cmd-F focuses search; Escape clears the query or leaves Quiet view. Existing session shortcuts remain available.
+All 18 Focus compositions and the 8 shared Relax/Meditation compositions remain available. Search matches all entered words against the title, stable ID, authored description and displayed instrument details, ignoring case and accents. Search never changes playback. Empty results show a clear-search action. Cmd-F focuses search; Escape clears the query or leaves Quiet view. Existing session shortcuts remain available.
 
 ### Sound and settings
 

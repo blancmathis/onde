@@ -22,8 +22,8 @@ def launch():
   except Exception:time.sleep(.5)
  raise AssertionError('App not ready')
 try:
- profiles=call('generate','profiles');check(len(profiles)==25,'Twenty-five profiles listed without running app')
- check(len([p for p in profiles if p['mode']=='focus'])==17,'Seventeen distinct focus profiles')
+ profiles=call('generate','profiles');check(len(profiles)==26,'Twenty-six profiles listed without running app')
+ check(len([p for p in profiles if p['mode']=='focus'])==18,'Eighteen distinct focus profiles')
  s=launch();check(s['status']=='stopped','No playback at launch')
  call('generate','transition','2');call('volume','0');call('settings','fadeSeconds','0');call('settings','reducedMotion','true');call('timer','markers','10,20,30,40')
  prefs=call('status')['preferences']

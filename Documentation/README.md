@@ -14,6 +14,10 @@ Earlier French research and design notes are retained, unmodified, in [the histo
 
 [One-screen listening, mode defaults and background sound](LISTENING.md)
 
+## New Focus piece
+
+[Gravity: evidence, score, measurements and limits](GRAVITY-1.12.md).
+
 ## New relaxation collection
 
 [Five relaxation worlds: evidence, scores and limits](RELAXATION-1.11.md).

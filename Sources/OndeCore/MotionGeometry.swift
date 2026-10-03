@@ -93,6 +93,15 @@ public enum OndeMotionGeometry {
             let r = 0.10 + f * 0.32
             let a = PI + u * PI
             return .init(0.5 + cos(a) * r, 0.66 + sin(a) * r * (0.53 + 0.08 * m * sin(p)) + 0.04 * m * cos(p + u * PI) * sin(u * PI))
+        case .gravity:
+            // Rings settle toward a point below the middle: a well seen from above.
+            let r = 0.075 + f * 0.31
+            let depth = 1.0 - f
+            let swell = 1.0 + 0.045 * m * sin(p + f * 2.0)
+            let sway = depth * 0.045 * m * sin(p - f)
+            let squash = 0.52 + 0.36 * f + 0.045 * m * cos(p + f)
+            let sink = depth * (0.115 + 0.055 * m * sin(p - f * 2.0))
+            return .init(0.5 + cos(theta) * r * swell + sway, 0.49 + sin(theta) * r * squash + sink)
         case .laminar:
             let env = pow(sin(u * PI), 1.25)
             let band = (f - 0.5) * (0.36 + 0.10 * m * cos(p)) * (0.35 + 0.65 * pow(cos(u * PI), 2.0))

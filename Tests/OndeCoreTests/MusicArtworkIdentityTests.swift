@@ -4,7 +4,7 @@ import XCTest
 final class MusicArtworkIdentityTests: XCTestCase {
     func testEveryMusicHasAnExplicitUniqueIdentity() {
         let ids = Set(SoundProfile.all.map(\.id))
-        XCTAssertEqual(ids.count, 25)
+        XCTAssertEqual(ids.count, 26)
         XCTAssertEqual(Set(MusicArtworkIdentity.catalog.keys), ids)
         XCTAssertEqual(Set(MusicArtworkIdentity.catalog.values).count, ids.count)
     }

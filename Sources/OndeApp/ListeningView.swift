@@ -159,6 +159,7 @@ struct ListeningMusicCard: View {
         case "filigrane": return "Soft acoustic piano"
         case "confluence": return "Strings, horns & a steady pulse"
         case "sanctuaire": return "Wordless voices & a deep bass"
+        case "gravite": return "Layered sub bass & a steady deep pulse"
         case "velours": return "Warm keys, soft and spacious"
         case "rive": return "Broad pads & a gentle pulse"
         case "immersion": return "Continuous ambient, without a beat"
