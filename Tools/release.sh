@@ -29,7 +29,7 @@ COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc dist/Onde.app dist/Onde-mac
 (cd dist && shasum -a 256 Onde-macOS-universal.zip > Onde-macOS-universal.zip.sha256)
 ONDE_PACKAGED_UPDATE_ARCHIVE="$PWD/dist/Onde-macOS-universal.zip" swift test -c release -j 3 --filter testPackagedUpdateArchiveIsAccepted
 # Audition files use the same just-built DSP and documented profile settings.
-for profile in ambre canopee meridien sillage filigrane confluence sanctuaire gravite lagoon stillwater hearth reverie driftwood; do
+for profile in ambre canopee meridien sillage filigrane confluence sanctuaire gravite orbite lagoon stillwater hearth reverie driftwood; do
   .build/release/ondectl generate render "$profile" "$PWD/dist/$profile-12min.wav" --minutes 12
   /usr/bin/afconvert -f m4af -d aac -b 256000 "dist/$profile-12min.wav" "dist/$profile-12min.m4a"
 done
@@ -51,6 +51,12 @@ This community build is ad-hoc signed, **not notarized by Apple**. No security s
 After a verified download, choose Install and Relaunch. Installation requires explicit approval.
 Download-only clients (1.11.3 and earlier) need one manual replacement to receive this updater.
 Future releases are built and published from main; no user Mac is needed for deployment.
+
+### New in 1.13.0
+
+Orbit, the warm sibling of Gravity. The same rules (one beat-locked kick and sub, an offbeat bass, nothing sudden,
+a fast tremolo on the chords that can be set to zero) in a deep house and dub style in A Dorian, with pumping organ
+chords and soft electric piano echoes. Gravity remains the Focus default; saved defaults and mixes are unchanged.
 
 ### New in 1.12.0
 
@@ -92,7 +98,7 @@ Five new Relax/Meditation pieces: Lagoon, Stillwater, Hearth, Reverie and Driftw
 Separate authored scores, warm continuous synthesis, soft acoustic piano, legato chamber ensemble,
 wordless synthesized choir and wooden resonators with harp. No new private or proprietary samples.
 Existing default selections and all Focus scores are preserved.
-Eight long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence, Sanctuary and Gravity.
+Nine long-form Focus compositions: Amber, Canopy, Meridian, Slipstream, Filigree, Confluence, Sanctuary, Gravity and Orbit.
 Twelve-minute audition recordings use this exact engine and its defaults.
 Filigree uses recorded soft piano; Sanctuary uses original synthesized nonverbal vowels, not recordings of singers.
 Stable CLI IDs, existing mixes, personal imports and chime settings are preserved.

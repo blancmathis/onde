@@ -102,6 +102,13 @@ public enum OndeMotionGeometry {
             let squash = 0.52 + 0.36 * f + 0.045 * m * cos(p + f)
             let sink = depth * (0.115 + 0.055 * m * sin(p - f * 2.0))
             return .init(0.5 + cos(theta) * r * swell + sway, 0.49 + sin(theta) * r * squash + sink)
+        case .orbit:
+            // Tilted rings around one centre, slowly precessing like orbits.
+            let r = 0.08 + f * 0.30
+            let px = cos(theta) * r
+            let py = sin(theta) * r * (0.40 + 0.08 * m * sin(p + f))
+            let tilt = -0.35 + f * 0.90 + 0.36 * m * sin(p + f * 1.5)
+            return .init(0.5 + px * cos(tilt) - py * sin(tilt), 0.5 + px * sin(tilt) + py * cos(tilt))
         case .laminar:
             let env = pow(sin(u * PI), 1.25)
             let band = (f - 0.5) * (0.36 + 0.10 * m * cos(p)) * (0.35 + 0.65 * pow(cos(u * PI), 2.0))

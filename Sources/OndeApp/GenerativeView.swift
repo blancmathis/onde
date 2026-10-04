@@ -9,7 +9,7 @@ struct SoundControlsView: View {
     @State private var seedText = ""
     @State private var seedError = ""
     @State private var exportMinutes = 10
-    /// Scores 8...12 are the relaxation worlds; 13 is the bass-led Focus score.
+    /// Scores 8...12 are the relaxation worlds; 13 and 14 are the bass-led Focus scores.
     private var score: Int { Int(model.generatorConfiguration.composition) }
     private var relaxed: Bool { (8...12).contains(score) }
     var body: some View {
@@ -48,7 +48,7 @@ struct SoundControlsView: View {
                     }
                     GeneratorControl(key: "brightness", title: "Brightness", detail: "Harmonic presence")
                     GeneratorControl(key: "movement", title: "Movement", detail: "Slow changes in timbre and stereo")
-                    if score == 13 {
+                    if score == 13 || score == 14 {
                     GeneratorControl(key: "texture", title: "Fast pulse", detail: "Rapid tremolo on the chords; zero removes it")
                     } else if !relaxed {
                     GeneratorControl(key: "texture", title: "Harmonic texture", detail: "Musical texture, not background noise")

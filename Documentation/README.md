@@ -18,6 +18,8 @@ Earlier French research and design notes are retained, unmodified, in [the histo
 
 [Gravity: evidence, score, measurements and limits](GRAVITY-1.12.md).
 
+[Orbit: the same rules in a warmer style](ORBIT-1.13.md).
+
 ## New relaxation collection
 
 [Five relaxation worlds: evidence, scores and limits](RELAXATION-1.11.md).
