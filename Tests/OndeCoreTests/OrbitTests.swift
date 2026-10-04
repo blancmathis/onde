@@ -2,10 +2,10 @@ import XCTest
 import OndeDSP
 @testable import OndeCore
 
-/// Gravity is score 13: one bass-led Focus piece with its own planner. These are
-/// signal and catalog checks; none of them measures concentration.
-final class GravityTests: XCTestCase {
-    private var profile: SoundProfile { SoundProfile.find("gravite")! }
+/// Orbit is score 14: Gravity's rules in a warmer style, with its own planner. These
+/// are signal and catalog checks; none of them measures concentration.
+final class OrbitTests: XCTestCase {
+    private var profile: SoundProfile { SoundProfile.find("orbite")! }
     private func create(_ config: GenerativeSettings, rate: Double = 8000) throws -> OpaquePointer {
         let p = try XCTUnwrap(onde_dsp_create(rate, 0, config.seed))
         for (i, v) in config.values.enumerated() { onde_dsp_set(p, GenerativeSettings.dspIndex(i), Float(v)) }
@@ -21,37 +21,33 @@ final class GravityTests: XCTestCase {
         }
         return output
     }
-    func testGravityIsTheNewFocusDefaultWithoutReplacingSavedChoices() throws {
+    func testOrbitJoinsFocusBesideGravityWithoutChangingTheDefault() throws {
         let p = profile
-        XCTAssertEqual(p.title, "Gravity"); XCTAssertEqual(p.mode, .focus)
-        XCTAssertEqual(p.configuration.composition, 13); XCTAssertEqual(p.configuration.tempo, 120)
+        XCTAssertEqual(p.title, "Orbit"); XCTAssertEqual(p.mode, .focus)
+        XCTAssertEqual(p.configuration.composition, 14); XCTAssertEqual(p.configuration.tempo, 120)
         XCTAssertEqual(p.configuration.orchestra, 0); XCTAssertEqual(p.configuration.vocals, 0)
         XCTAssertEqual(p.configuration.piano, 0)
+        XCTAssertGreaterThan(p.configuration.texture, 0)
         _ = try p.configuration.validated()
-        XCTAssertTrue(MusicCatalog.allows("gravite", in: .focus))
-        XCTAssertFalse(MusicCatalog.allows("gravite", in: .relax))
-        XCTAssertFalse(MusicCatalog.allows("gravite", in: .meditation))
-        // New installs start on Gravity; a default someone already saved is kept.
+        XCTAssertTrue(MusicCatalog.allows("orbite", in: .focus))
+        XCTAssertFalse(MusicCatalog.allows("orbite", in: .relax))
+        XCTAssertFalse(MusicCatalog.allows("orbite", in: .meditation))
         XCTAssertEqual(MusicCatalog.fallback(for: .focus), "gravite")
-        XCTAssertEqual(ListeningPreferences().defaultID(for: .focus), "gravite")
-        var saved = ListeningPreferences(); try saved.setDefault("sillage", for: .focus)
-        XCTAssertEqual(saved.defaultID(for: .focus), "sillage")
-        XCTAssertEqual(MusicCatalog.fallback(for: .relax), "velours")
-        XCTAssertEqual(MusicCatalog.fallback(for: .meditation), "immersion")
-        XCTAssertEqual(FocusCompositions.ids.firstIndex(of: "gravite"), 7)
-        XCTAssertEqual(ListeningDesign.featured.firstIndex(of: "gravite"), 7)
+        XCTAssertEqual(FocusCompositions.ids.firstIndex(of: "orbite"), 8)
+        XCTAssertEqual(ListeningDesign.featured.firstIndex(of: "orbite"), 8)
+        XCTAssertEqual(MusicArtworkIdentity.catalog["orbite"], .orbit)
         XCTAssertEqual(try JSONDecoder().decode(GenerativeSettings.self, from: JSONEncoder().encode(p.configuration)), p.configuration)
         var c = GenerativeSettings()
-        try c.set("composition", 13); XCTAssertEqual(c.composition, 13)
+        try c.set("composition", 14); XCTAssertEqual(c.composition, 14)
         XCTAssertThrowsError(try c.set("composition", 15))
-        XCTAssertThrowsError(try c.set("composition", 12.5))
+        XCTAssertThrowsError(try c.set("composition", 13.5))
     }
     func testPlannerIsDeterministicBoundedAndReturnsHome() {
         var fingerprints = Set<UInt64>(), previous = [Int32]()
         for phrase: UInt64 in 0..<160 {
             var a = OndePhrasePlan(), b = OndePhrasePlan()
-            XCTAssertEqual(onde_gravity_plan(13, 8113, phrase, 0.38, &a), 1)
-            XCTAssertEqual(onde_gravity_plan(13, 8113, phrase, 0.38, &b), 1)
+            XCTAssertEqual(onde_orbit_plan(14, 8114, phrase, 0.38, &a), 1)
+            XCTAssertEqual(onde_orbit_plan(14, 8114, phrase, 0.38, &b), 1)
             XCTAssertEqual(a.fingerprint, b.fingerprint); fingerprints.insert(a.fingerprint)
             XCTAssertEqual(a.phrase, phrase); XCTAssertEqual(a.chapter, phrase / 16)
             XCTAssertTrue((0...3).contains(a.variant)); XCTAssertTrue((0...5).contains(a.harmony))
@@ -60,15 +56,15 @@ final class GravityTests: XCTestCase {
             let melody = withUnsafeBytes(of: a.melody) { Array($0.bindMemory(to: Int32.self)) }
             let bass = withUnsafeBytes(of: a.bass) { Array($0.bindMemory(to: Int32.self)) }
             let levels = withUnsafeBytes(of: a.levels) { Array($0.bindMemory(to: Float.self)) }
-            // One six-note set over a low F that never moves.
-            XCTAssertEqual(chord.sorted(), chord); XCTAssertEqual(chord[0], 53)
-            XCTAssertTrue(chord.allSatisfy { [53, 58, 60, 63, 65, 67, 68, 70, 72].contains($0) })
+            // A Dorian over a low A that never moves.
+            XCTAssertEqual(chord.sorted(), chord); XCTAssertEqual(chord[0], 57)
+            XCTAssertTrue(chord.allSatisfy { [57, 59, 60, 62, 64, 66, 67, 71, 72, 74].contains($0) })
             XCTAssertTrue(melody.allSatisfy { (0...4).contains($0) })
-            // The landmarks the score actually sounds never use the low F.
+            // The landmarks the score actually sounds never use the low A.
             for index in [0, 1, 3, 4, 5, 7, 8, 9, 11, 12] { XCTAssertGreaterThan(melody[index], 0) }
-            // The offbeat bass holds F2; only the last pickups of bars four and eight move.
-            XCTAssertTrue(bass.allSatisfy { [36, 39, 41, 46].contains($0) })
-            XCTAssertEqual(bass.filter { $0 == 41 }.count, 6)
+            // The offbeat bass holds A2; only the last offbeat of bars four and eight moves.
+            XCTAssertTrue(bass.allSatisfy { [38, 40, 43, 45].contains($0) })
+            XCTAssertEqual(bass.filter { $0 == 45 }.count, 6)
             XCTAssertTrue(levels.allSatisfy { (0.75...1.25).contains($0) })
             if phrase < 4 { XCTAssertEqual(a.harmony, 0) }
             if phrase % 4 != 0 {
@@ -82,18 +78,19 @@ final class GravityTests: XCTestCase {
     }
     func testFrozenEvolutionAndBoundaryValidation() {
         var a = OndePhrasePlan(), b = OndePhrasePlan()
-        XCTAssertEqual(onde_gravity_plan(13, 7, 0, 0, &a), 1)
-        XCTAssertEqual(onde_gravity_plan(13, 7, UInt64.max - 1, 0, &b), 1)
+        XCTAssertEqual(onde_orbit_plan(14, 7, 0, 0, &a), 1)
+        XCTAssertEqual(onde_orbit_plan(14, 7, UInt64.max - 1, 0, &b), 1)
         XCTAssertEqual(a.fingerprint, b.fingerprint)
-        XCTAssertEqual(onde_gravity_plan(13, 7, UInt64.max, 0.4, &b), 1)
-        for style: Int32 in [0, 1, 7, 8, 12, 14] { XCTAssertEqual(onde_gravity_plan(style, 1, 0, 0.4, &a), 0) }
-        XCTAssertEqual(onde_gravity_plan(13, 1, 0, .nan, &a), 0)
-        XCTAssertEqual(onde_gravity_plan(13, 1, 0, -1, &a), 0)
-        XCTAssertEqual(onde_gravity_plan(13, 1, 0, 2, &a), 0)
-        XCTAssertEqual(onde_gravity_plan(13, 1, 0, 0.4, nil), 0)
-        // The other two grammars still refuse this score.
-        XCTAssertEqual(onde_phrase_plan(13, 1, 0, 0.4, &a), 0)
-        XCTAssertEqual(onde_relaxation_plan(13, 1, 0, 0.4, &a), 0)
+        XCTAssertEqual(onde_orbit_plan(14, 7, UInt64.max, 0.4, &b), 1)
+        for style: Int32 in [0, 1, 7, 8, 12, 13, 15] { XCTAssertEqual(onde_orbit_plan(style, 1, 0, 0.4, &a), 0) }
+        XCTAssertEqual(onde_orbit_plan(14, 1, 0, .nan, &a), 0)
+        XCTAssertEqual(onde_orbit_plan(14, 1, 0, -1, &a), 0)
+        XCTAssertEqual(onde_orbit_plan(14, 1, 0, 2, &a), 0)
+        XCTAssertEqual(onde_orbit_plan(14, 1, 0, 0.4, nil), 0)
+        // The other grammars refuse this score.
+        XCTAssertEqual(onde_gravity_plan(14, 1, 0, 0.4, &a), 0)
+        XCTAssertEqual(onde_phrase_plan(14, 1, 0, 0.4, &a), 0)
+        XCTAssertEqual(onde_relaxation_plan(14, 1, 0, 0.4, &a), 0)
     }
     func testRendersBoundedAudioOnAFixedGridAtSeveralSampleRates() throws {
         for rate in [8000.0, 22050.0, 44100.0, 48000.0] {
@@ -114,7 +111,7 @@ final class GravityTests: XCTestCase {
             XCTAssertGreaterThan(peak, 0.10, "\(rate)"); XCTAssertLessThan(peak, 0.60, "\(rate)")
             XCTAssertLessThan(jump, 0.20, "\(rate)")
             XCTAssertGreaterThan((energy / Double(blocks * 1024 * 2)).squareRoot(), 0.03, "\(rate)")
-            XCTAssertEqual(onde_dsp_composition(p), 13)
+            XCTAssertEqual(onde_dsp_composition(p), 14)
             XCTAssertEqual(onde_dsp_grain_events(p), 0)
             XCTAssertGreaterThan(onde_dsp_signature_events(p), 80)
             XCTAssertLessThanOrEqual(onde_dsp_max_beat_gap(p) - onde_dsp_min_beat_gap(p), 1)
@@ -230,17 +227,17 @@ final class GravityTests: XCTestCase {
         }
         return (peak, jump)
     }
-    func testSceneHandoverToAndFromGravityIsBounded() throws {
+    func testSceneHandoverToAndFromOrbitIsBounded() throws {
         let mixer = try XCTUnwrap(onde_scene_mixer_create(22050)); defer { onde_scene_mixer_destroy(mixer) }
         XCTAssertEqual(onde_scene_mixer_submit(mixer, try core("sillage"), 4), 1)
         onde_scene_mixer_gain(mixer, 1)
         _ = advance(mixer, seconds: 6)
-        XCTAssertEqual(onde_scene_mixer_submit(mixer, try core("gravite"), 4), 1)
+        XCTAssertEqual(onde_scene_mixer_submit(mixer, try core("orbite"), 4), 1)
         let arrival = advance(mixer, seconds: 10)
         XCTAssertGreaterThan(arrival.0, 0.015); XCTAssertLessThanOrEqual(arrival.0, 0.951)
         XCTAssertLessThan(arrival.1, 0.25)
         XCTAssertEqual(onde_scene_mixer_state(mixer), 0)
-        XCTAssertEqual(onde_dsp_composition(onde_scene_mixer_visible(mixer)), 13)
+        XCTAssertEqual(onde_dsp_composition(onde_scene_mixer_visible(mixer)), 14)
         XCTAssertEqual(onde_scene_mixer_submit(mixer, try core("meridien"), 4), 1)
         let departure = advance(mixer, seconds: 10)
         XCTAssertGreaterThan(departure.0, 0.015); XCTAssertLessThanOrEqual(departure.0, 0.951)

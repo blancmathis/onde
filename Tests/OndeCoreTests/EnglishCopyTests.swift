@@ -3,10 +3,10 @@ import XCTest
 final class EnglishCopyTests: XCTestCase {
     func testModesAndFeaturedTitlesAreEnglish() {
         XCTAssertEqual(SessionMode.allCases.map(\.title), ["Focus", "Relax", "Meditation"])
-        XCTAssertEqual(FocusCompositions.profiles.map(\.title), ["Amber", "Canopy", "Meridian", "Slipstream", "Filigree", "Confluence", "Sanctuary", "Gravity"])
+        XCTAssertEqual(FocusCompositions.profiles.map(\.title), ["Amber", "Canopy", "Meridian", "Slipstream", "Filigree", "Confluence", "Sanctuary", "Gravity", "Orbit"])
     }
     func testProfileIDsRemainBackwardsCompatible() {
-        XCTAssertEqual(FocusCompositions.ids, ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire", "gravite"])
+        XCTAssertEqual(FocusCompositions.ids, ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire", "gravite", "orbite"])
         XCTAssertEqual(SoundProfile.find("elan")?.title, "Momentum")
         XCTAssertEqual(SoundProfile.find("reacteur")?.title, "Reactor")
         XCTAssertEqual(Sound.builtins.first(where: { $0.id == "aube" })?.filename, "aube.m4a")

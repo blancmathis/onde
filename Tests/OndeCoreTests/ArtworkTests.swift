@@ -3,12 +3,12 @@ import XCTest
 
 final class ArtworkTests: XCTestCase {
     func testRecoveredAndNewIdentitiesWithStableMusicMapping() {
-        XCTAssertEqual(OndeMotif.allCases.count, 26)
+        XCTAssertEqual(OndeMotif.allCases.count, 27)
         for (id, motif) in [("ambre", OndeMotif.amber), ("sillage", .laminar), ("meridien", .prism),
                             ("canopee", .canopy), ("filigrane", .filigree), ("confluence", .confluence),
                             ("sanctuaire", .sanctuary), ("lagoon", .tide), ("stillwater", .stillwater),
                             ("hearth", .hearth), ("reverie", .reverie), ("immersion", .bloom),
-                            ("gravite", .gravity)] {
+                            ("gravite", .gravity), ("orbite", .orbit)] {
             XCTAssertEqual(EspaceArtworkSelection.motif(choice: "automatic", musicID: id, mode: .focus), motif)
         }
     }

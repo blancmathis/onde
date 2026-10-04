@@ -47,6 +47,7 @@ English display names changed in 1.9; IDs did not:
 | Confluence | `confluence` |
 | Sanctuary | `sanctuaire` |
 | Gravity | `gravite` |
+| Orbit | `orbite` |
 
 Use `generate profiles` for all current profiles and exact default settings. Do not derive an ID by lowercasing an English title.
 
@@ -64,7 +65,7 @@ onde mix save 'My soundscape'
 onde mix load 'My soundscape'
 ```
 
-Controls are normally 0–1. Tempo is 40–120 BPM; `settleMinutes` is 0–120; `composition` is an integer 0–13. Use `schema` and profile data as the source of truth. Values must be finite; booleans are not numbers. Seeds are exact nonnegative integers up to 2^53−1.
+Controls are normally 0–1. Tempo is 40–120 BPM; `settleMinutes` is 0–120; `composition` is an integer 0–14. Use `schema` and profile data as the source of truth. Values must be finite; booleans are not numbers. Seeds are exact nonnegative integers up to 2^53−1.
 
 A profile selection prepares the next scene, waits for a bar boundary and crossfades. A successful request means accepted, not necessarily already audible. Poll `generate status` and its `transition` state, `running`, `rendered_seconds`, source/target profiles and `last_error`. Rapid selection resolves to the last request. Switching Focus pieces preserves the session stopwatch. A mode change starts a new session.
 

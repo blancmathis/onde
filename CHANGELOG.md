@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.0 — Orbit, Gravity's warm sibling
+
+- Add Orbit (`orbite`, score 14) after Gravity in the Focus list. Gravity stays the Focus default; saved defaults, mixes and the 26 other pieces are unchanged.
+- The same production rules as Gravity: one oscillator restarted by the sequencer is both the kick and the A1 sub; an offbeat A2 bass with six harmonics; harmony every 32 bars with home every second change; seven soft notes per eight bars; the 16 Hz tremolo on the chord layer only, removable with Fast pulse.
+- A different style: deep house and dub in A Dorian, a plain eighth-note offbeat bass, deeper pump on organ-like chords, soft electric piano feeding the beat-synchronous echo, a pitched tick on two and four.
+- Its own planner (`onde_orbit_plan`) and score; Gravity and the 25 earlier profiles render bit-identically before and after the change.
+- New artwork identity, tests and documentation (Documentation/ORBIT-1.13.md).
+
 ## 1.12.0 — Gravity, a bass-led Focus piece
 
 - Add Gravity (`gravite`, score 13) after the seven featured Focus pieces. It replaces Slipstream as the Focus default for new installations; a Focus default already saved is kept, and no saved mix or existing piece changes.

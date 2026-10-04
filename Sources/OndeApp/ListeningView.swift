@@ -160,6 +160,7 @@ struct ListeningMusicCard: View {
         case "confluence": return "Strings, horns & a steady pulse"
         case "sanctuaire": return "Wordless voices & a deep bass"
         case "gravite": return "Layered sub bass & a steady deep pulse"
+        case "orbite": return "Warm deep bass, pumping chords & dub keys"
         case "velours": return "Warm keys, soft and spacious"
         case "rive": return "Broad pads & a gentle pulse"
         case "immersion": return "Continuous ambient, without a beat"
