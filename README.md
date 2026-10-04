@@ -26,7 +26,7 @@ All existing user data and audio profiles are preserved.
 ## What it does
 
 - **Focus, Relax and Meditation:** choose a mode and keep the musical style you like.
-- **Long-form generation:** nine featured compositions, plus earlier soundscapes. Eight-bar phrases, gradual harmonic movement and slower orchestration changes, rather than a whole track on repeat.
+- **Long-form generation:** ten featured compositions, plus earlier soundscapes. Eight-bar phrases, gradual harmonic movement and slower orchestration changes, rather than a whole track on repeat.
 - **Gentle start:** music fades in over eight seconds, with a shorter resume fade. Adjustable in Adjust sound → Transitions or through `onde settings startFadeSeconds 8`; volume and chimes are preserved.
 - **Smooth scene changes:** prepare the next scene off the audio thread, then crossfade at a bar boundary. Adjustable from 2 to 30 seconds. This is a musical handover, not DJ beatmatching between different tempos.
 - **Make the sound your own:** control bass, impact, note density, warmth, instrument sections, piano and wordless vocals. Save mixes and import personal audio.
@@ -36,7 +36,16 @@ All existing user data and audio profiles are preserved.
 
 No telemetry or cloud audio engine. The optional update checker contacts GitHub. Sound playback does not use external streaming players.
 
-## New: Orbit, Gravity's warm sibling
+## New: Sonar, minimal deep techno
+
+**Sonar** (`sonar`) is the third bass-led Focus piece, after Gravity and Orbit,
+with the same rules in a stripped-back minimal style: a filtered bass line whose
+tone opens and closes over minutes while its notes stay the same, a dark drone,
+distant pings and very little else.
+[Listen for 12 minutes](https://github.com/blancmathis/onde/releases/latest/download/sonar-12min.m4a) ·
+[What changes and what stays](Documentation/SONAR-1.14.md).
+
+## Orbit, Gravity's warm sibling
 
 **Orbit** (`orbite`) keeps every rule Gravity is built on (the pulse in the
 bass, one beat-locked kick and sub, an offbeat bass, nothing sudden, a fast
@@ -89,6 +98,7 @@ These are continuous twelve-minute renders of the same engine and defaults used 
 | **Filigree** (`filigrane`) | Recorded soft piano with a steady left-hand anchor · 78 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/filigrane-12min.m4a) |
 | **Confluence** (`confluence`) | Hybrid orchestra, rhythmic cellos and sustained strings · 88 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/confluence-12min.m4a) |
 | **Sanctuary** (`sanctuaire`) | Synthesized, wordless vowel choir, harp and steady bass · 86 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/sanctuaire-12min.m4a) |
+| **Sonar** (`sonar`) | Minimal deep techno: a slowly filtered bass line, dark drone, distant pings · 120 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/sonar-12min.m4a) |
 | **Orbit** (`orbite`) | Gravity's rules in A Dorian: rounder offbeat bass, pumping organ chords, dub keys · 120 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/orbite-12min.m4a) |
 | **Gravity** (`gravite`) | Soft kick and sustained sub on one pulse, offbeat bass and slow chords · 120 BPM | [12 minutes](https://github.com/blancmathis/onde/releases/latest/download/gravite-12min.m4a) |
 

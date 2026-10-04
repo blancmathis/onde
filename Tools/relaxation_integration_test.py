@@ -50,7 +50,7 @@ try:
     relax=call('music','list','relax');med=call('music','list','meditation')
     check([p['id'] for p in relax]==ids+['velours','rive','immersion'],'Five new scores plus all existing relaxation music')
     check(relax==med,'Meditation and Relax have identical catalogs and scores')
-    check(len(call('music','list','focus'))==19,'All nineteen Focus choices present')
+    check(len(call('music','list','focus'))==20,'All twenty Focus choices present')
     s=launch();check(s['status']=='stopped','No autoplay')
     call('volume','0');call('settings','preventSleep','false');call('settings','reducedMotion','true')
     call('settings','startFadeSeconds','2');call('generate','transition','2');call('timer','markers','10,20,30,40')

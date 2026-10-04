@@ -20,6 +20,8 @@ Earlier French research and design notes are retained, unmodified, in [the histo
 
 [Orbit: the same rules in a warmer style](ORBIT-1.13.md).
 
+[Sonar: the same rules in a minimal deep-techno style](SONAR-1.14.md).
+
 ## New relaxation collection
 
 [Five relaxation worlds: evidence, scores and limits](RELAXATION-1.11.md).

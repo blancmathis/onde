@@ -4,7 +4,7 @@ import Foundation
 public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
     case laminar, prism, bloom, tide, canopy, amber, filigree, confluence, sanctuary, stillwater, hearth, reverie
     case driftwood, atlas, ostinato, aurora, chamber, momentum, reactor, traction, anchor, abyss, current, velvet, shore
-    case gravity, orbit
+    case gravity, orbit, sonar
     public var id: String { rawValue }
     public var title: String {
         switch self {
@@ -23,6 +23,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .shore: return "Shore"
         case .gravity: return "Gravity"
         case .orbit: return "Orbit"
+        case .sonar: return "Sonar"
         case .laminar: return "Laminar"
         case .prism: return "Prism"
         case .bloom: return "Bloom"
@@ -44,6 +45,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .ostinato, .momentum, .reactor, .traction: return 18
         case .aurora, .current, .gravity: return 22
         case .orbit: return 20
+        case .sonar: return 18
         case .laminar: return 16
         case .prism: return 18
         case .bloom: return 24
@@ -58,7 +60,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .reverie: return 22
         }
     }
-    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth, .driftwood, .atlas, .chamber, .reactor, .anchor, .abyss, .gravity, .orbit].contains(self) }
+    public var isClosed: Bool { [.prism, .bloom, .canopy, .amber, .stillwater, .hearth, .driftwood, .atlas, .chamber, .reactor, .anchor, .abyss, .gravity, .orbit, .sonar].contains(self) }
     public var caption: String {
         switch self {
         case .driftwood: return "Quiet grain, slowly drifting."
@@ -76,6 +78,7 @@ public enum OndeMotif: String, CaseIterable, Codable, Identifiable, Sendable {
         case .shore: return "A place where the current settles."
         case .gravity: return "A steady pull toward the center."
         case .orbit: return "Turning, and always coming back."
+        case .sonar: return "A signal, returning steadily."
         case .laminar: return "A quiet current, moving with purpose."
         case .prism: return "Order, without rigidity."
         case .bloom: return "Space to be still."
