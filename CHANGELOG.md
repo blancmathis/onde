@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.0 — Sonar, minimal deep techno
+
+- Add Sonar (`sonar`, score 15) after Orbit in the Focus list. Gravity stays the Focus default; saved defaults, mixes and the 27 other pieces are unchanged.
+- The same production rules as Gravity and Orbit: one oscillator restarted by the sequencer is both the kick and the G1 sub; an offbeat bass with harmonics; harmony every 32 bars with home every second change; seven soft notes per eight bars; the 16 Hz tremolo on the middle layer only, removable with Fast pulse.
+- A stripped-back minimal style: a one-bar bass riff through a resonant filter that opens on accents and drifts over about five minutes, a dark drone of stacked fourths and fifths in G Aeolian, glassy pings into the beat-synchronous echo, soft pitched ticks on the offbeats, a drier room.
+- Its own planner (`onde_sonar_plan`) and score; Gravity, Orbit and the 25 earlier profiles render bit-identically before and after the change.
+- New artwork identity, tests and documentation (Documentation/SONAR-1.14.md).
+
 ## 1.13.0 — Orbit, Gravity's warm sibling
 
 - Add Orbit (`orbite`, score 14) after Gravity in the Focus list. Gravity stays the Focus default; saved defaults, mixes and the 26 other pieces are unchanged.

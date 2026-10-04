@@ -1,9 +1,9 @@
 import Foundation
 
-/// Nine small, authored vocabularies. The long-form planners develop them without
+/// Ten small, authored vocabularies. The long-form planners develop them without
 /// changing genre or promising a clinically established optimum.
 public enum FocusCompositions {
-    public static let ids = ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire", "gravite", "orbite"]
+    public static let ids = ["ambre", "canopee", "meridien", "sillage", "filigrane", "confluence", "sanctuaire", "gravite", "orbite", "sonar"]
     public static let profiles: [SoundProfile] = [
         make(5, "ambre", "Amber", "ELECTRIC KEYS · 82 BPM", "Velvety chords, supple bass and piano responses. Long phrases without added lo-fi hiss.", 82),
         make(6, "canopee", "Canopy", "MELODIC PERCUSSION · 94 BPM", "Wooden resonances, acoustic harp and low strings. Two answering motifs, without random improvisation.", 94),
@@ -13,7 +13,8 @@ public enum FocusCompositions {
         make(3, "confluence", "Confluence", "HYBRID ORCHESTRA · 88 BPM", "Rhythmic cellos, sustained strings and sections that gradually shift their place in the ensemble.", 88),
         make(4, "sanctuaire", "Sanctuary", "SYNTHESIZED VOCALS · 86 BPM", "Sustained vowels, answering harp and a steady bass. Harmony that breathes without words.", 86),
         make(13, "gravite", "Gravity", "DEEP BASS · 120 BPM", "A soft kick and a sustained sub share one deep pulse. Offbeat bass, slow chords and a few quiet notes, with nothing sudden.", 120),
-        make(14, "orbite", "Orbit", "WARM DEEP BASS · 120 BPM", "The same deep pulse as Gravity in a warmer key: a rounder offbeat bass, pumping organ chords and soft electric piano with a dub echo.", 120)
+        make(14, "orbite", "Orbit", "WARM DEEP BASS · 120 BPM", "The same deep pulse as Gravity in a warmer key: a rounder offbeat bass, pumping organ chords and soft electric piano with a dub echo.", 120),
+        make(15, "sonar", "Sonar", "MINIMAL DEEP TECHNO · 120 BPM", "The same deep pulse in a stripped-back minimal style: a filtered bass line that opens and closes over minutes, a dark drone and distant pings.", 120)
     ]
     private static func make(_ score: Double, _ id: String, _ title: String, _ subtitle: String, _ description: String, _ tempo: Double) -> SoundProfile {
         var c = GenerativeSettings()
@@ -54,6 +55,12 @@ public enum FocusCompositions {
             c.bass = 0.90; c.pulse = 0.45; c.drive = 0.62; c.punch = 0.55
             c.space = 0.55; c.density = 0.40; c.orchestra = 0; c.texture = 0.55
             c.warmth = 0.62; c.brightness = 0.42
+        case 15:
+            // Same controls again; a drier room suits the minimal style. The tremolo
+            // is set a little deeper because the bass line shares its frequency band.
+            c.bass = 0.90; c.pulse = 0.45; c.drive = 0.62; c.punch = 0.55
+            c.space = 0.35; c.density = 0.40; c.orchestra = 0; c.texture = 0.70
+            c.warmth = 0.62; c.brightness = 0.42
         default:
             c.bass = 0.85; c.pulse = 0.30; c.drive = 0.72; c.punch = 0.62
             c.space = 0.55; c.density = 0.35; c.orchestra = 0; c.warmth = 0.63; c.brightness = 0.35
@@ -69,6 +76,7 @@ public enum FocusCompositions {
         case "filigrane": return "The acoustic piano keeps its soft touch while developing responses and inversions instead of looping a single cell."
         case "confluence": return "Instrument sections stay coordinated. Their balance changes slowly over minutes, rather than each part changing direction on every beat."
         case "sanctuaire": return "A synthesized choir, not recorded singers. Common notes connect the chords as the harp develops its answers. Vocals can be turned off."
+        case "sonar": return "Built on the same rules as Gravity and Orbit. The bass line changes its tone, not its notes: a resonant filter opens on accents and drifts over several minutes. The chord tremolo can be set to zero."
         case "orbite": return "Built on the same rules as Gravity: one beat-locked kick and sub, an offbeat bass and a fast tremolo on the chords that can be set to zero, in A Dorian rather than F minor."
         case "gravite": return "One beat-locked oscillator is both the soft kick and the sub, so the low end repeats exactly. The chords carry a fast tremolo that can be set to zero."
         default: return ""

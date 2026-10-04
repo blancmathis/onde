@@ -54,7 +54,7 @@ def quit():
     ipc('quit');process.wait(timeout=25)
 try:
     focused=call('music','list','focus');relaxed=call('music','list','relax');med=call('music','list','meditation')
-    check(len(focused)==19,'All nineteen Focus choices remain available')
+    check(len(focused)==20,'All twenty Focus choices remain available')
     check([p['id'] for p in relaxed]==[p['id'] for p in med]==['lagoon','stillwater','hearth','reverie','driftwood','velours','rive','immersion'],'Relax and Meditation share the same eight choices')
     # A genuine old-format profile with preferences and saved content to preserve.
     conf=next(p['configuration'] for p in focused if p['id']=='ambre');conf['bass']=.77

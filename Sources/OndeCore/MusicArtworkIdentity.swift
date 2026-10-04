@@ -12,7 +12,7 @@ public enum MusicArtworkIdentity {
         "aurore": .aurora, "chambre": .chamber, "elan": .momentum,
         "reacteur": .reactor, "traction": .traction, "ancrage": .anchor,
         "abysses": .abyss, "courant": .current, "velours": .velvet, "rive": .shore,
-        "gravite": .gravity, "orbite": .orbit
+        "gravite": .gravity, "orbite": .orbit, "sonar": .sonar
     ]
     public static func color(_ motif: OndeMotif) -> UInt32 {
         switch motif {
@@ -31,6 +31,7 @@ public enum MusicArtworkIdentity {
         case .reactor: return 0xCCA798
         case .gravity: return 0xB4B2E2
         case .orbit: return 0xE6B48E
+        case .sonar: return 0x86C9C0
         }
     }
     public static func aspect(_ motif: OndeMotif) -> Double {

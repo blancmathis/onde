@@ -43,7 +43,7 @@ final class GravityTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GenerativeSettings.self, from: JSONEncoder().encode(p.configuration)), p.configuration)
         var c = GenerativeSettings()
         try c.set("composition", 13); XCTAssertEqual(c.composition, 13)
-        XCTAssertThrowsError(try c.set("composition", 15))
+        XCTAssertThrowsError(try c.set("composition", 16))
         XCTAssertThrowsError(try c.set("composition", 12.5))
     }
     func testPlannerIsDeterministicBoundedAndReturnsHome() {
